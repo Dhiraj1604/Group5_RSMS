@@ -21,6 +21,7 @@ struct DashboardTab: View {
                         greetingSection
                         kpiSection
                         quickStatsSection
+                        quickActionsSection
                         Spacer().frame(height: RSMSTheme.Spacing.xxl)
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.lg)
@@ -148,6 +149,49 @@ struct DashboardTab: View {
                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
         }
         .padding(.vertical, RSMSTheme.Spacing.xs)
+    }
+
+    // MARK: - Quick Actions
+    private var quickActionsSection: some View {
+        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
+            Text("Quick Actions")
+                .font(.headline)
+                .foregroundStyle(RSMSTheme.Colors.textPrimary)
+
+            NavigationLink {
+                TaxSettingsView()
+            } label: {
+                HStack(spacing: RSMSTheme.Spacing.md) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
+                            .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
+                            .frame(width: 40, height: 40)
+
+                        Image(systemName: "percent")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    }
+
+                    VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
+                        Text("Tax Settings")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(RSMSTheme.Colors.textPrimary)
+
+                        Text("Manage regional tax rules & VAT")
+                            .font(.caption)
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                }
+                .cardStyle()
+            }
+        }
     }
 }
 
