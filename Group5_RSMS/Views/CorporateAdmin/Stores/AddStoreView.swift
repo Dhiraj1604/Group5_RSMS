@@ -25,6 +25,7 @@ struct AddStoreView: View {
     @State private var taxRate = "18.0"
     @State private var showValidationErrors = false
     @State private var showSuccessAlert = false
+    @State private var isLoading = false
 
     private let regions = ["North", "South", "East", "West", "Central"]
 
@@ -75,6 +76,14 @@ struct AddStoreView: View {
                 Button("Done") { dismiss() }
             } message: {
                 Text("\(storeName) has been successfully registered. You can now assign staff and inventory to this location.")
+            }
+            .alert("Error", isPresented: Binding<Bool>(
+                get: { appState.storeError != nil },
+                set: { if !$0 { appState.storeError = nil } }
+            )) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(appState.storeError ?? "Unknown error occurred.")
             }
         }
     }
@@ -180,11 +189,19 @@ struct AddStoreView: View {
             }
             Button { registerStore() } label: {
                 HStack(spacing: RSMSTheme.Spacing.sm) {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Register Boutique")
+                    if isLoading {
+                        ProgressView()
+                            .tint(RSMSTheme.Colors.backgroundPrimary)
+                            .padding(.trailing, 4)
+                    } else {
+                        Image(systemName: "checkmark.circle.fill")
+                    }
+                    Text(isLoading ? "Registering..." : "Register Boutique")
                 }
             }
             .buttonStyle(GoldButtonStyle())
+            .disabled(isLoading)
+            .opacity(isLoading ? 0.7 : 1.0)
         }
         .padding(.top, RSMSTheme.Spacing.md)
     }
@@ -252,23 +269,32 @@ struct AddStoreView: View {
     private func registerStore() {
         showValidationErrors = true
         guard isFormValid else { return }
+        
+        isLoading = true
 
         let newStore = Store(
             name: storeName.trimmingCharacters(in: .whitespaces),
             code: storeCode.trimmingCharacters(in: .whitespaces).uppercased(),
             address: address.trimmingCharacters(in: .whitespaces),
             city: city.trimmingCharacters(in: .whitespaces),
+            country: country.trimmingCharacters(in: .whitespaces),
+            currencyCode: country.localizedCaseInsensitiveContains("India") ? "INR" : "USD",
             state: state.trimmingCharacters(in: .whitespaces),
             zipCode: zipCode.trimmingCharacters(in: .whitespaces),
-            country: country.trimmingCharacters(in: .whitespaces),
             phone: phone.trimmingCharacters(in: .whitespaces),
             email: email.trimmingCharacters(in: .whitespaces),
             managerName: managerName.trimmingCharacters(in: .whitespaces),
             region: selectedRegion,
             taxRate: Double(taxRate) ?? 18.0
         )
-        appState.addStore(newStore)
-        showSuccessAlert = true
+        
+        Task {
+            let success = await appState.addStore(newStore)
+            isLoading = false
+            if success {
+                showSuccessAlert = true
+            }
+        }
     }
 }
 
