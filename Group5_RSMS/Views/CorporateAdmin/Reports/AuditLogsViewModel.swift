@@ -1,29 +1,35 @@
-// AuditLogsViewModel.swift
-// Group5_RSMS — Audit Logs ViewModel (inside Reports)
+//
+//  AuditLogsViewModel.swift
+//  Group5_RSMS
+//
 
 import Foundation
 import Combine
 
+@MainActor
 class AuditLogsViewModel: ObservableObject {
     @Published var searchText: String = ""
     @Published var selectedCategory: AuditCategoryFilter   = .all
     @Published var selectedOperation: AuditOperationFilter = .all
+    @Published var logs: [AuditLog] = []
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String? = nil
 
-    let allLogs: [AuditLog] = AuditLogMockData.logs
+    private let service = AuditLogService()
 
     var filteredLogs: [AuditLog] {
-        var result = allLogs
+        var result = logs
 
-        // 1 — Category filter
+        // 1 — Category filter (eventType)
         switch selectedCategory {
         case .all:        break
-        case .products:   result = result.filter { $0.entityType == .product }
-        case .promotions: result = result.filter { $0.entityType == .promotion }
-        case .users:      result = result.filter { $0.entityType == .user }
-        case .tax:        result = result.filter { $0.entityType == .tax }
+        case .products:   result = result.filter { $0.eventType == .product }
+        case .promotions: result = result.filter { $0.eventType == .promotion }
+        case .users:      result = result.filter { $0.eventType == .user }
+        case .tax:        result = result.filter { $0.eventType == .tax }
         }
 
-        // 2 — Operation filter
+        // 2 — Operation filter (actionType)
         switch selectedOperation {
         case .all:     break
         case .created: result = result.filter { $0.actionType == .created }
@@ -36,10 +42,22 @@ class AuditLogsViewModel: ObservableObject {
         let q = searchText.lowercased()
         return result.filter {
             $0.action.lowercased().contains(q) ||
-            $0.user.lowercased().contains(q)   ||
+            $0.userName.lowercased().contains(q)   ||
             $0.entity.lowercased().contains(q)
         }
     }
 
     var isEmpty: Bool { filteredLogs.isEmpty }
+
+    func loadLogs() async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            self.logs = try await service.fetchLogs()
+        } catch {
+            self.errorMessage = "Failed to load logs: \(error.localizedDescription)"
+            print("Fetch error: \(error)")
+        }
+        isLoading = false
+    }
 }

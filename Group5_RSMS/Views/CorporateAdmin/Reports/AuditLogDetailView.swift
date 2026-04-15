@@ -21,19 +21,19 @@ struct AuditLogDetailView: View {
                     activityInfoCard
 
                     // MARK: Changes
-                    if !log.beforeData.isEmpty || !log.afterData.isEmpty {
+                    if !(log.beforeData?.isEmpty ?? true) || !(log.afterData?.isEmpty ?? true) {
                         sectionLabel("Changes")
                         HStack(alignment: .top, spacing: 12) {
                             changeCard(
                                 title: "Before",
-                                data: log.beforeData,
+                                data: log.beforeData ?? [:],
                                 accent: RSMSTheme.Colors.error,
                                 icon: "arrow.uturn.backward.circle.fill",
                                 emptyLabel: "New Record"
                             )
                             changeCard(
                                 title: "After",
-                                data: log.afterData,
+                                data: log.afterData ?? [:],
                                 accent: RSMSTheme.Colors.success,
                                 icon: "checkmark.circle.fill",
                                 emptyLabel: "Record Deleted"
@@ -64,7 +64,7 @@ struct AuditLogDetailView: View {
                         RoundedRectangle(cornerRadius: 14)
                             .stroke(RSMSTheme.Colors.accentGold.opacity(0.25), lineWidth: 0.5)
                     )
-                Image(systemName: log.entityType.iconName)
+                Image(systemName: log.eventType.iconName)
                     .font(.system(size: 26, weight: .medium))
                     .foregroundStyle(RSMSTheme.Colors.goldGradient)
             }
@@ -108,7 +108,7 @@ struct AuditLogDetailView: View {
     private var activityInfoCard: some View {
         VStack(spacing: 0) {
             infoRow(label: "Action",    value: log.action,             isLast: false)
-            infoRow(label: "User",      value: log.user,               isLast: false)
+            infoRow(label: "User",      value: log.userName,               isLast: false)
             infoRow(label: "Entity",    value: log.entity,             isLast: false)
             infoRow(label: "Timestamp", value: log.formattedTimestamp, isLast: true)
         }

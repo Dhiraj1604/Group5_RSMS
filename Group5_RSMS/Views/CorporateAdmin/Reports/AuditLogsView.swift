@@ -1,5 +1,7 @@
-// AuditLogsView.swift
-// Group5_RSMS — Main Audit Logs list screen (inside Reports)
+//
+//  AuditLogsView.swift
+//  Group5_RSMS
+//
 
 import SwiftUI
 
@@ -12,7 +14,6 @@ struct AuditLogsView: View {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
             VStack(spacing: 0) {
-
                 // Search Bar
                 searchBar
                     .padding(.horizontal, 16)
@@ -28,10 +29,16 @@ struct AuditLogsView: View {
                     .background(Color.white.opacity(0.06))
 
                 // Content
-                if viewModel.isEmpty {
-                    emptyState
-                } else {
-                    logList
+                ZStack {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .tint(RSMSTheme.Colors.accentGold)
+                            .scaleEffect(1.5)
+                    } else if viewModel.isEmpty {
+                        emptyState
+                    } else {
+                        logList
+                    }
                 }
             }
         }
@@ -39,8 +46,17 @@ struct AuditLogsView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
-        .onAppear {
+        .task {
+            await viewModel.loadLogs()
             withAnimation(.easeOut(duration: 0.5)) { animateIn = true }
+        }
+        .alert("Database Error", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { _ in viewModel.errorMessage = nil }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(viewModel.errorMessage ?? "")
         }
     }
 
@@ -178,7 +194,7 @@ struct AuditLogsView: View {
     // MARK: - Log List
     private var logList: some View {
         ScrollView(showsIndicators: false) {
-            LazyVStack(spacing: 10) {
+            LazyVStack(spacing: 12) {
                 ForEach(Array(viewModel.filteredLogs.enumerated()), id: \.element.id) { index, log in
                     NavigationLink(destination: AuditLogDetailView(log: log)) {
                         AuditLogCard(log: log)
@@ -192,6 +208,9 @@ struct AuditLogsView: View {
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .padding(.bottom, 40)
+        }
+        .refreshable {
+            await viewModel.loadLogs()
         }
     }
 
@@ -222,6 +241,9 @@ struct AuditLogsView: View {
                     viewModel.selectedCategory  = .all
                     viewModel.selectedOperation = .all
                     viewModel.searchText        = ""
+                }
+                Task {
+                    await viewModel.loadLogs()
                 }
             } label: {
                 HStack(spacing: 6) {

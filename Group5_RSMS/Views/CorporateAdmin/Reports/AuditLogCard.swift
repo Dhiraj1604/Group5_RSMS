@@ -23,7 +23,7 @@ struct AuditLogCard: View {
                 Circle()
                     .fill(RSMSTheme.Colors.accentGold.opacity(0.12))
                     .frame(width: 44, height: 44)
-                Image(systemName: log.entityType.iconName)
+                Image(systemName: log.eventType.iconName)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(RSMSTheme.Colors.goldGradient)
             }
@@ -62,7 +62,7 @@ struct AuditLogCard: View {
                     Image(systemName: "person.circle")
                         .font(.system(size: 11))
                         .foregroundColor(RSMSTheme.Colors.textSecondary)
-                    Text(log.user)
+                    Text(log.userName)
                         .font(.system(size: 11))
                         .foregroundColor(RSMSTheme.Colors.textSecondary)
                         .lineLimit(1)
