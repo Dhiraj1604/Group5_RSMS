@@ -7,7 +7,7 @@ import Foundation
 import Supabase
 
 class AuditLogService {
-    private let client = SupabaseConfig.client
+    private let client = SupabaseManager.shared.client
     
     func fetchLogs() async throws -> [AuditLog] {
         let response: [AuditLog] = try await client
