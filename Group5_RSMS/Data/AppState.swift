@@ -15,6 +15,7 @@ class AppState {
     // MARK: - Auth State
     var isLoggedIn: Bool = false
     var userEmail: String = ""
+    var managerAuthId: UUID? = nil
     var selectedRole: UserRole? = nil
 
     // MARK: - Store State
@@ -22,6 +23,7 @@ class AppState {
     var isLoadingStores: Bool = false
     var storeError: String? = nil
     var selectedStore: Store? = nil
+    var currentStoreID: UUID? = nil
 
     private let sync = SupabaseSyncManager.shared
 
@@ -34,6 +36,7 @@ class AppState {
     func login(email: String) {
         userEmail = email
         isLoggedIn = true
+        managerAuthId = UUID(uuidString: "3bb61198-7f75-4d11-9e72-28c5afdb53a7") // Mock auth user id for current session
     }
 
     func selectRole(_ role: UserRole) {
@@ -57,7 +60,16 @@ class AppState {
         isLoadingStores = true
         storeError = nil
         do {
-            stores = try await sync.fetchStores()
+            let fetchedStores = try await sync.fetchStores()
+            self.stores = fetchedStores
+            
+            // Set current store context for Scanner operations or BM locking
+            if selectedRole == .boutiqueManager {
+                // Lock to the assigned store for Boutique Manager
+                self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id ?? UUID(uuidString: "b3fd8cb6-341b-453e-9ed4-8915aa25245c")
+            } else if self.currentStoreID == nil, let first = fetchedStores.first {
+                self.currentStoreID = first.id
+            }
         } catch let DecodingError.keyNotFound(key, context) {
             print("❌ Key not found: \(key.stringValue)")
             print("❌ Context: \(context.debugDescription)")
@@ -104,12 +116,13 @@ class AppState {
 
     func toggleStoreActive(_ store: Store) async {
         guard let index = stores.firstIndex(where: { $0.id == store.id }) else { return }
-        stores[index].isActive.toggle()          // optimistic update
+        let currentActive = stores[index].isActive ?? false
+        stores[index].isActive = !currentActive          // optimistic update
         let updated = stores[index]
         do {
             try await sync.updateStore(updated)
         } catch {
-            stores[index].isActive.toggle()      // rollback on failure
+            stores[index].isActive = currentActive      // rollback on failure
             storeError = error.localizedDescription
         }
     }

@@ -93,7 +93,7 @@ struct DashboardTab: View {
                 kpiCard(title: "Orders", value: "0", icon: "bag.fill", color: RSMSTheme.Colors.accentGold)
             }
             HStack(spacing: RSMSTheme.Spacing.md) {
-                kpiCard(title: "Active Stores", value: "\(appState.stores.filter(\.isActive).count)", icon: "building.2.fill", color: RSMSTheme.Colors.accentGoldLight)
+                kpiCard(title: "Active Stores", value: "\(appState.stores.filter { $0.isActive == true }.count)", icon: "building.2.fill", color: RSMSTheme.Colors.accentGoldLight)
                 kpiCard(title: "Inventory", value: "–", icon: "shippingbox.fill", color: RSMSTheme.Colors.accentGoldDark)
             }
         }
@@ -129,7 +129,7 @@ struct DashboardTab: View {
 
             VStack(spacing: RSMSTheme.Spacing.sm) {
                 statRow(label: "Total Stores Registered", value: "\(appState.stores.count)")
-                statRow(label: "Active Locations", value: "\(appState.stores.filter(\.isActive).count)")
+                statRow(label: "Active Locations", value: "\(appState.stores.filter { $0.isActive == true }.count)")
                 statRow(label: "Avg Order Value", value: "–")
                 statRow(label: "Avg Basket Size", value: "–")
             }

@@ -255,19 +255,19 @@ struct AddStoreView: View {
 
         let newStore = Store(
             name: storeName.trimmingCharacters(in: .whitespaces),
-            code: storeCode.trimmingCharacters(in: .whitespaces).uppercased(),
-            address: address.trimmingCharacters(in: .whitespaces),
             city: city.trimmingCharacters(in: .whitespaces),
             country: country.trimmingCharacters(in: .whitespaces),
-            currencyCode: "INR",  // hardcode or add @State var currencyCode = "INR"
-            state: state.trimmingCharacters(in: .whitespaces),
-            zipCode: zipCode.trimmingCharacters(in: .whitespaces),
+            code: storeCode.trimmingCharacters(in: .whitespaces).uppercased(),
             phone: phone.trimmingCharacters(in: .whitespaces),
             email: email.trimmingCharacters(in: .whitespaces),
+            address: address.trimmingCharacters(in: .whitespaces),
+            zipCode: zipCode.trimmingCharacters(in: .whitespaces),
+            state: state.trimmingCharacters(in: .whitespaces),
             managerName: managerName.trimmingCharacters(in: .whitespaces),
             region: selectedRegion,
             taxRate: Double(taxRate) ?? 18.0,
-            isActive: true
+            isActive: true,
+            currencyCode: "INR"
         )
         Task {
             await appState.addStore(newStore)

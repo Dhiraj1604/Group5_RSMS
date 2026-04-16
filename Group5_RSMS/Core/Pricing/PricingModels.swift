@@ -14,6 +14,9 @@ public struct Product: Identifiable, Codable, Equatable, Hashable {
     public let name: String
     public let basePrice: Double
     public let categoryId: UUID?
+    public let description: String?
+    public let imageUrl: String?
+    public let inRepair: Bool
     public var isActive: Bool
     
     enum CodingKeys: String, CodingKey {
@@ -22,27 +25,46 @@ public struct Product: Identifiable, Codable, Equatable, Hashable {
         case name
         case basePrice = "base_price"
         case categoryId = "category_id"
+        case description
+        case imageUrl = "image_url"
+        case inRepair
         case isActive = "is_active"
     }
     
-    public init(id: UUID = UUID(), sku: String, name: String, basePrice: Double, categoryId: UUID? = nil, isActive: Bool = true) {
+    public init(
+        id: UUID = UUID(),
+        sku: String,
+        name: String,
+        basePrice: Double,
+        categoryId: UUID? = nil,
+        description: String? = nil,
+        imageUrl: String? = nil,
+        inRepair: Bool = false,
+        isActive: Bool = true
+    ) {
         self.id = id
         self.sku = sku
         self.name = name
         self.basePrice = basePrice
         self.categoryId = categoryId
+        self.description = description
+        self.imageUrl = imageUrl
+        self.inRepair = inRepair
         self.isActive = isActive
     }
-
+    
+    // Custom decoder to provide defaults for missing keys
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        sku = try container.decode(String.self, forKey: .sku)
-        name = try container.decode(String.self, forKey: .name)
-        basePrice = try container.decode(Double.self, forKey: .basePrice)
-        categoryId = try container.decodeIfPresent(UUID.self, forKey: .categoryId)
-        // Default to true if the column is missing in the database
-        isActive = try container.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.sku = try container.decode(String.self, forKey: .sku)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.basePrice = try container.decode(Double.self, forKey: .basePrice)
+        self.categoryId = try container.decodeIfPresent(UUID.self, forKey: .categoryId)
+        self.description = try container.decodeIfPresent(String.self, forKey: .description)
+        self.imageUrl = try container.decodeIfPresent(String.self, forKey: .imageUrl)
+        self.inRepair = (try? container.decode(Bool.self, forKey: .inRepair)) ?? false
+        self.isActive = (try? container.decode(Bool.self, forKey: .isActive)) ?? true
     }
 }
 

@@ -42,7 +42,7 @@ struct EditStoreView: View {
         _phone       = State(initialValue: store.phone ?? "")
         _email       = State(initialValue: store.email ?? "")
         _managerName = State(initialValue: store.managerName ?? "")
-        _selectedRegion = State(initialValue: store.region)
+        _selectedRegion = State(initialValue: store.region ?? "West")
         _taxRate     = State(initialValue: String(store.taxRate ?? 18.0))
     }
 
