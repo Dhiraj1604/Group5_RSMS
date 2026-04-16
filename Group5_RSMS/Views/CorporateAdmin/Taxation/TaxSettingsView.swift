@@ -273,9 +273,12 @@ struct TaxSettingsView: View {
 
 @available(iOS 16.0, *)
 #Preview {
-    let state = AppState()
-    state.stores = Store.samples
-    return NavigationStack {
+    let state: AppState = {
+        let s = AppState()
+        s.stores = Store.samples
+        return s
+    }()
+    NavigationStack {
         TaxSettingsView()
     }
     .environment(state)

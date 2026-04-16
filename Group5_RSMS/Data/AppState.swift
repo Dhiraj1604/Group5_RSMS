@@ -8,8 +8,9 @@
 
 import SwiftUI
 import Observation
-import Supabase
+
 @Observable
+@MainActor
 class AppState {
     // MARK: - Auth State
     var isLoggedIn: Bool = false
@@ -17,16 +18,19 @@ class AppState {
     var managerAuthId: UUID? = nil
     var selectedRole: UserRole? = nil
 
+    // MARK: - Store State
+    var stores: [Store] = []
+    var isLoadingStores: Bool = false
+    var storeError: String? = nil
+    var selectedStore: Store? = nil
+    var currentStoreID: UUID? = nil
+
+    private let sync = SupabaseSyncManager.shared
+
     // MARK: - Navigation
     var hasSelectedRole: Bool {
         selectedRole != nil
     }
-
-    // MARK: - Store Data
-    var stores: [Store] = []
-    var storeError: String? = nil
-    var isLoadingStores: Bool = false
-    var currentStoreID: UUID? = nil
 
     // MARK: - Auth Actions
     func login(email: String) {
@@ -43,25 +47,20 @@ class AppState {
         isLoggedIn = false
         userEmail = ""
         selectedRole = nil
+        stores = []
     }
 
     func goBackToRoleSelection() {
         selectedRole = nil
     }
 
-    // MARK: - Supabase Store Actions
+    // MARK: - Store Actions (Supabase-backed)
 
-    @MainActor
-    func fetchStores() async {
+    func loadStores() async {
         isLoadingStores = true
         storeError = nil
         do {
-            let fetchedStores: [Store] = try await SupabaseManager.shared.client
-                .from("stores")
-                .select()
-                .order("createdAt", ascending: false)
-                .execute()
-                .value
+            let fetchedStores = try await sync.fetchStores()
             self.stores = fetchedStores
             
             // Set current store context for Scanner operations or BM locking
@@ -71,56 +70,72 @@ class AppState {
             } else if self.currentStoreID == nil, let first = fetchedStores.first {
                 self.currentStoreID = first.id
             }
+        } catch let DecodingError.keyNotFound(key, context) {
+            print("❌ Key not found: \(key.stringValue)")
+            print("❌ Context: \(context.debugDescription)")
+            storeError = "Key not found: \(key.stringValue)"
+        } catch let DecodingError.typeMismatch(type, context) {
+            print("❌ Type mismatch: \(type)")
+            print("❌ Context: \(context.debugDescription)")
+            storeError = "Type mismatch: \(context.debugDescription)"
+        } catch let DecodingError.valueNotFound(type, context) {
+            print("❌ Value not found: \(type)")
+            print("❌ Context: \(context.debugDescription)")
+            storeError = "Value not found: \(context.debugDescription)"
         } catch {
-            print("❌ Failed to fetch stores: \(error)")
-            self.storeError = "Failed to load stores: \(error.localizedDescription)"
+            print("❌ Other error: \(error)")
+            storeError = error.localizedDescription
         }
         isLoadingStores = false
     }
 
-    @MainActor
-    func addStore(_ store: Store) async -> Bool {
-        storeError = nil
+    func addStore(_ store: Store) async {
         do {
-            let insertedStore: Store = try await SupabaseManager.shared.client
-                .from("stores")
-                .insert(store.insertPayload)
-                .select()
-                .single()
-                .execute()
-                .value
-            
-            // Insert at the top of the local list
-            self.stores.insert(insertedStore, at: 0)
-            return true
+            try await sync.createStore(store)
+            stores.append(store)
         } catch {
-            print("❌ Failed to insert store: \(error)")
-            self.storeError = "Failed to register boutique: \(error.localizedDescription)"
-            return false
+            storeError = error.localizedDescription
         }
     }
 
-    @MainActor
     func deleteStore(_ store: Store) async {
-        storeError = nil
         do {
-            try await SupabaseManager.shared.client
-                .from("stores")
-                .delete()
-                .eq("id", value: store.id)
-                .execute()
-            
-            self.stores.removeAll { $0.id == store.id }
+            try await sync.deleteStore(id: store.id)
+            stores.removeAll { $0.id == store.id }
         } catch {
-            print("❌ Failed to delete store: \(error)")
-            self.storeError = "Failed to delete store: \(error.localizedDescription)"
+            storeError = error.localizedDescription
         }
     }
 
-    // Toggle active — isActive is now synced with DB as Bool?
-    func toggleStoreActive(_ store: Store) {
-        if let index = stores.firstIndex(where: { $0.id == store.id }) {
-            stores[index].isActive = !(stores[index].isActive ?? true)
+    func deleteStores(at offsets: IndexSet) async {
+        let toDelete = offsets.map { stores[$0] }
+        for store in toDelete {
+            await deleteStore(store)
+        }
+    }
+
+    func toggleStoreActive(_ store: Store) async {
+        guard let index = stores.firstIndex(where: { $0.id == store.id }) else { return }
+        let currentActive = stores[index].isActive ?? false
+        stores[index].isActive = !currentActive          // optimistic update
+        let updated = stores[index]
+        do {
+            try await sync.updateStore(updated)
+        } catch {
+            stores[index].isActive = currentActive      // rollback on failure
+            storeError = error.localizedDescription
+        }
+    }
+
+    func updateStoreDetails(_ store: Store) async {
+        guard let index = stores.firstIndex(where: { $0.id == store.id }) else { return }
+        let backup = stores[index]
+        stores[index] = store // optimistic update
+        do {
+            try await sync.updateStore(store)
+        } catch {
+            stores[index] = backup // rollback on failure
+            storeError = error.localizedDescription
         }
     }
 }

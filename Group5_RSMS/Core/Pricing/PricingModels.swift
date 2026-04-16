@@ -8,7 +8,7 @@
 import Foundation
 
 /// Represents a retail product in the inventory.
-public struct Product: Identifiable, Codable, Equatable {
+public struct Product: Identifiable, Codable, Equatable, Hashable {
     public let id: UUID
     public let sku: String
     public let name: String
@@ -17,6 +17,7 @@ public struct Product: Identifiable, Codable, Equatable {
     public let description: String?
     public let imageUrl: String?
     public let inRepair: Bool
+    public var isActive: Bool
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -27,6 +28,7 @@ public struct Product: Identifiable, Codable, Equatable {
         case description
         case imageUrl = "image_url"
         case inRepair
+        case isActive = "is_active"
     }
     
     public init(
@@ -37,7 +39,8 @@ public struct Product: Identifiable, Codable, Equatable {
         categoryId: UUID? = nil,
         description: String? = nil,
         imageUrl: String? = nil,
-        inRepair: Bool = false
+        inRepair: Bool = false,
+        isActive: Bool = true
     ) {
         self.id = id
         self.sku = sku
@@ -47,6 +50,7 @@ public struct Product: Identifiable, Codable, Equatable {
         self.description = description
         self.imageUrl = imageUrl
         self.inRepair = inRepair
+        self.isActive = isActive
     }
     
     // Custom decoder to provide defaults for missing keys
@@ -60,11 +64,12 @@ public struct Product: Identifiable, Codable, Equatable {
         self.description = try container.decodeIfPresent(String.self, forKey: .description)
         self.imageUrl = try container.decodeIfPresent(String.self, forKey: .imageUrl)
         self.inRepair = (try? container.decode(Bool.self, forKey: .inRepair)) ?? false
+        self.isActive = (try? container.decode(Bool.self, forKey: .isActive)) ?? true
     }
 }
 
 /// Defines a regional tax rule aligned with the `tax_rules` Supabase table.
-public struct TaxRule: Identifiable, Codable, Equatable {
+public struct TaxRule: Identifiable, Codable, Equatable, Hashable {
     public let id: UUID
     public var name: String
     public var rate: Double          // e.g. 0.20 = 20%
@@ -113,7 +118,7 @@ public struct TaxRule: Identifiable, Codable, Equatable {
 }
 
 /// The result format of a pricing calculation.
-public struct PricingBreakdown: Equatable {
+public struct PricingBreakdown: Equatable, Hashable {
     public let subtotal: Double
     public let taxAmount: Double
     public let total: Double

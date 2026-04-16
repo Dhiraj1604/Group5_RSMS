@@ -2,17 +2,13 @@
 //  Store.swift
 //  Group5_RSMS
 //
-//  Sprint 1 — Core data model for boutique store locations.
-//  Every feature in the system (inventory, staff, POS, reporting)
-//  is scoped to a Store. This is the root of the data model.
-//
 
 import Foundation
 
 struct Store: Identifiable, Codable, Hashable {
     var id: UUID = UUID()
     var name: String
-
+    
     // DB synced fields
     var city: String
     var country: String
@@ -29,7 +25,7 @@ struct Store: Identifiable, Codable, Hashable {
     var currencyCode: String? = nil
     var createdAt: Date? = Date()
     var assignedManagerId: UUID? = nil
-
+    
     // MARK: - CodingKeys for Supabase (Read)
     // All DB columns are camelCase — no mapping needed except where Swift property differs.
     enum CodingKeys: String, CodingKey {
@@ -51,7 +47,7 @@ struct Store: Identifiable, Codable, Hashable {
         case createdAt
         case assignedManagerId = "assigned_manager_id"
     }
-
+    
     // MARK: - Insert Payload for Supabase (Write)
     /// Excludes `id` and `createdAt` which are handled by the DB via default rules.
     struct DBPayload: Encodable {
@@ -91,19 +87,18 @@ struct Store: Identifiable, Codable, Hashable {
             assigned_manager_id: assignedManagerId
         )
     }
-
+    
     // MARK: - Computed
     var formattedAddress: String {
         "\(address ?? ""), \(city), \(state ?? "") \(zipCode ?? ""), \(country)"
     }
-
+        
     var formattedTaxRate: String {
         String(format: "%.1f%%", taxRate ?? 0.0)
     }
-
+        
     // MARK: - Sample Data
     static let sample = Store(
-        id: UUID(),
         name: "RSMS Flagship Mumbai",
         city: "Mumbai",
         country: "India",
@@ -116,15 +111,12 @@ struct Store: Identifiable, Codable, Hashable {
         managerName: "Priya Sharma",
         region: "West",
         taxRate: 18.0,
-        isActive: true,
-        currencyCode: "INR",
-        createdAt: Date()
+        isActive: true
     )
-
+        
     static let samples: [Store] = [
         sample,
         Store(
-            id: UUID(),
             name: "RSMS Delhi Boutique",
             city: "New Delhi",
             country: "India",
@@ -142,7 +134,6 @@ struct Store: Identifiable, Codable, Hashable {
             createdAt: Date()
         ),
         Store(
-            id: UUID(),
             name: "RSMS Bangalore Store",
             city: "Bangalore",
             country: "India",

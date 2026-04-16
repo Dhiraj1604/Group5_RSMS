@@ -70,7 +70,7 @@ struct BMInventoryTab: View {
                 // Fetch stores on first appearance if needed
                 if appState.stores.isEmpty && !hasFetchedStores {
                     hasFetchedStores = true
-                    await appState.fetchStores()
+                    await appState.loadStores()
                 }
             }
             .sheet(item: $selectedAlert) { alert in
@@ -372,7 +372,7 @@ struct BMInventoryTab: View {
                     .lineSpacing(4)
             }
             Button {
-                Task { await appState.fetchStores() }
+                Task { await appState.loadStores() }
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.counterclockwise")

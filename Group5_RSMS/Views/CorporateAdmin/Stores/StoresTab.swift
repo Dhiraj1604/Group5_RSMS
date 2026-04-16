@@ -18,7 +18,7 @@ struct StoresTab: View {
         var result = appState.stores
         if !searchText.isEmpty {
             result = result.filter { store in
-                store.name.localizedCaseInsensitiveContains(searchText) ||
+                store.name.localizedCaseInsensitiveContains(searchText) ||  // .storeName → .name
                 store.code.localizedCaseInsensitiveContains(searchText) ||
                 store.city.localizedCaseInsensitiveContains(searchText) ||
                 (store.region ?? "").localizedCaseInsensitiveContains(searchText)
@@ -37,18 +37,7 @@ struct StoresTab: View {
                     .ignoresSafeArea()
 
                 if appState.stores.isEmpty {
-                    if appState.isLoadingStores {
-                        VStack(spacing: RSMSTheme.Spacing.md) {
-                            ProgressView()
-                                .scaleEffect(1.5)
-                                .tint(RSMSTheme.Colors.accentGold)
-                            Text("Loading Boutiques...")
-                                .font(.subheadline)
-                                .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                        }
-                    } else {
-                        emptyState
-                    }
+                    emptyState
                 } else {
                     storesList
                 }
@@ -72,24 +61,13 @@ struct StoresTab: View {
             .sheet(isPresented: $showAddStore) {
                 AddStoreView()
             }
-            .task {
-                if appState.stores.isEmpty {
-                    await appState.fetchStores()
-                }
-            }
-            .refreshable {
-                await appState.fetchStores()
-            }
-            .alert("Error Loading Boutiques", isPresented: Binding<Bool>(
-                get: { appState.storeError != nil },
-                set: { if !$0 { appState.storeError = nil } }
-            )) {
-                Button("Retry", role: .cancel) {
-                    Task { await appState.fetchStores() }
-                }
-                Button("Dismiss", role: .none) { }
+            .alert("Error", isPresented: .constant(appState.storeError != nil)) {
+                Button("OK") { appState.storeError = nil }
             } message: {
-                Text(appState.storeError ?? "Unknown error occurred.")
+                Text(appState.storeError ?? "")
+            }
+            .task {
+                await appState.loadStores()
             }
         }
     }
@@ -241,8 +219,11 @@ struct StoresTab: View {
 }
 
 #Preview("With Stores") {
-    let state = AppState()
-    state.stores = Store.samples
-    return StoresTab()
+    let state: AppState = {
+        let s = AppState()
+        s.stores = Store.samples
+        return s
+    }()
+    StoresTab()
         .environment(state)
 }
