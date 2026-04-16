@@ -21,7 +21,7 @@ struct StoresTab: View {
                 store.name.localizedCaseInsensitiveContains(searchText) ||
                 store.code.localizedCaseInsensitiveContains(searchText) ||
                 store.city.localizedCaseInsensitiveContains(searchText) ||
-                store.region.localizedCaseInsensitiveContains(searchText)
+                (store.region ?? "").localizedCaseInsensitiveContains(searchText)
             }
         }
         if let active = filterActive {
@@ -190,13 +190,13 @@ struct StoresTab: View {
         HStack(spacing: RSMSTheme.Spacing.lg) {
             ZStack {
                 RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                    .fill(store.isActive
+                     .fill((store.isActive == true)
                           ? RSMSTheme.Colors.accentGold.opacity(0.15)
                           : RSMSTheme.Colors.textTertiary.opacity(0.15))
                     .frame(width: 50, height: 50)
                 Image(systemName: "storefront.fill")
                     .font(.title3)
-                    .foregroundStyle(store.isActive
+                    .foregroundStyle((store.isActive == true)
                                      ? RSMSTheme.Colors.accentGold
                                      : RSMSTheme.Colors.textTertiary)
             }
@@ -208,14 +208,14 @@ struct StoresTab: View {
                         .foregroundStyle(RSMSTheme.Colors.textPrimary)
                         .lineLimit(1)
                     Spacer()
-                    Text(store.isActive ? "Active" : "Inactive")
+                    Text((store.isActive == true) ? "Active" : "Inactive")
                         .font(.caption2)
                         .fontWeight(.bold)
-                        .foregroundStyle(store.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
+                        .foregroundStyle((store.isActive == true) ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
                         .padding(.horizontal, RSMSTheme.Spacing.sm)
                         .padding(.vertical, 3)
                         .background(
-                            (store.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
+                            ((store.isActive == true) ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
                                 .opacity(0.15)
                         )
                         .clipShape(Capsule())

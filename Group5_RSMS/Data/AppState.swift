@@ -14,6 +14,7 @@ class AppState {
     // MARK: - Auth State
     var isLoggedIn: Bool = false
     var userEmail: String = ""
+    var managerAuthId: UUID? = nil
     var selectedRole: UserRole? = nil
 
     // MARK: - Navigation
@@ -31,6 +32,7 @@ class AppState {
     func login(email: String) {
         userEmail = email
         isLoggedIn = true
+        managerAuthId = UUID(uuidString: "3bb61198-7f75-4d11-9e72-28c5afdb53a7") // Mock auth user id for current session
     }
 
     func selectRole(_ role: UserRole) {
@@ -57,13 +59,16 @@ class AppState {
             let fetchedStores: [Store] = try await SupabaseManager.shared.client
                 .from("stores")
                 .select()
-                .order("created_at", ascending: false)
+                .order("createdAt", ascending: false)
                 .execute()
                 .value
             self.stores = fetchedStores
             
-            // Set current store context for Scanner operations
-            if self.currentStoreID == nil, let first = fetchedStores.first {
+            // Set current store context for Scanner operations or BM locking
+            if selectedRole == .boutiqueManager {
+                // Lock to the assigned store for Boutique Manager
+                self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id ?? UUID(uuidString: "b3fd8cb6-341b-453e-9ed4-8915aa25245c")
+            } else if self.currentStoreID == nil, let first = fetchedStores.first {
                 self.currentStoreID = first.id
             }
         } catch {
@@ -112,10 +117,10 @@ class AppState {
         }
     }
 
-    // Toggle active remains an in-memory operation for now since isActive isn't in DB Schema
+    // Toggle active — isActive is now synced with DB as Bool?
     func toggleStoreActive(_ store: Store) {
         if let index = stores.firstIndex(where: { $0.id == store.id }) {
-            stores[index].isActive.toggle()
+            stores[index].isActive = !(stores[index].isActive ?? true)
         }
     }
 }

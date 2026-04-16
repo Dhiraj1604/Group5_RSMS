@@ -14,6 +14,9 @@ public struct Product: Identifiable, Codable, Equatable {
     public let name: String
     public let basePrice: Double
     public let categoryId: UUID?
+    public let description: String?
+    public let imageUrl: String?
+    public let inRepair: Bool
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -21,14 +24,42 @@ public struct Product: Identifiable, Codable, Equatable {
         case name
         case basePrice = "base_price"
         case categoryId = "category_id"
+        case description
+        case imageUrl = "image_url"
+        case inRepair
     }
     
-    public init(id: UUID = UUID(), sku: String, name: String, basePrice: Double, categoryId: UUID? = nil) {
+    public init(
+        id: UUID = UUID(),
+        sku: String,
+        name: String,
+        basePrice: Double,
+        categoryId: UUID? = nil,
+        description: String? = nil,
+        imageUrl: String? = nil,
+        inRepair: Bool = false
+    ) {
         self.id = id
         self.sku = sku
         self.name = name
         self.basePrice = basePrice
         self.categoryId = categoryId
+        self.description = description
+        self.imageUrl = imageUrl
+        self.inRepair = inRepair
+    }
+    
+    // Custom decoder to provide defaults for missing keys
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.sku = try container.decode(String.self, forKey: .sku)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.basePrice = try container.decode(Double.self, forKey: .basePrice)
+        self.categoryId = try container.decodeIfPresent(UUID.self, forKey: .categoryId)
+        self.description = try container.decodeIfPresent(String.self, forKey: .description)
+        self.imageUrl = try container.decodeIfPresent(String.self, forKey: .imageUrl)
+        self.inRepair = (try? container.decode(Bool.self, forKey: .inRepair)) ?? false
     }
 }
 

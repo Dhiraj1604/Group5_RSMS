@@ -26,16 +26,16 @@ struct StoreDetailView: View {
                     headerCard
                     detailSection(title: "Location", items: [
                         ("mappin.and.ellipse", "Address", liveStore.formattedAddress),
-                        ("map.circle", "Region", liveStore.region),
+                        ("map.circle", "Region", liveStore.region ?? "—"),
                     ])
                     detailSection(title: "Contact", items: [
-                        ("phone.fill", "Phone", liveStore.phone),
-                        ("envelope.fill", "Email", liveStore.email),
-                        ("person.fill", "Manager", liveStore.managerName),
+                        ("phone.fill", "Phone", liveStore.phone ?? "—"),
+                        ("envelope.fill", "Email", liveStore.email ?? "—"),
+                        ("person.fill", "Manager", liveStore.managerName ?? "—"),
                     ])
                     detailSection(title: "Configuration", items: [
                         ("percent", "Tax Rate", liveStore.formattedTaxRate),
-                        ("calendar", "Registered", liveStore.createdAt.formatted(date: .abbreviated, time: .shortened)),
+                        ("calendar", "Registered", (liveStore.createdAt ?? Date()).formatted(date: .abbreviated, time: .shortened)),
                     ])
                     statusToggle
                     deleteButton
@@ -56,13 +56,13 @@ struct StoreDetailView: View {
         VStack(spacing: RSMSTheme.Spacing.lg) {
             ZStack {
                 Circle()
-                    .fill(liveStore.isActive
+                    .fill((liveStore.isActive == true)
                           ? RSMSTheme.Colors.accentGold.opacity(0.15)
                           : RSMSTheme.Colors.textTertiary.opacity(0.15))
                     .frame(width: 80, height: 80)
                 Image(systemName: "storefront.fill")
                     .font(.system(size: 36))
-                    .foregroundStyle(liveStore.isActive
+                    .foregroundStyle((liveStore.isActive == true)
                                      ? RSMSTheme.Colors.accentGold
                                      : RSMSTheme.Colors.textTertiary)
             }
@@ -76,14 +76,14 @@ struct StoreDetailView: View {
                     .fontWeight(.medium)
                     .foregroundStyle(RSMSTheme.Colors.accentGold)
             }
-            Text(liveStore.isActive ? "● Active" : "● Inactive")
+            Text((liveStore.isActive == true) ? "● Active" : "● Inactive")
                 .font(.caption)
                 .fontWeight(.bold)
-                .foregroundStyle(liveStore.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
+                .foregroundStyle((liveStore.isActive == true) ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
                 .padding(.horizontal, RSMSTheme.Spacing.lg)
                 .padding(.vertical, RSMSTheme.Spacing.sm)
                 .background(
-                    (liveStore.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
+                    ((liveStore.isActive == true) ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
                         .opacity(0.12)
                 )
                 .clipShape(Capsule())
@@ -141,8 +141,8 @@ struct StoreDetailView: View {
             }
         } label: {
             HStack {
-                Image(systemName: liveStore.isActive ? "pause.circle.fill" : "play.circle.fill")
-                Text(liveStore.isActive ? "Deactivate Store" : "Activate Store")
+                Image(systemName: (liveStore.isActive == true) ? "pause.circle.fill" : "play.circle.fill")
+                Text((liveStore.isActive == true) ? "Deactivate Store" : "Activate Store")
             }
         }
         .buttonStyle(SecondaryButtonStyle())
