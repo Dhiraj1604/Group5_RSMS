@@ -121,6 +121,7 @@ final class ICScanViewModel: ObservableObject {
                 .from("products")
                 .select()
                 .eq("sku", value: sku)
+                .eq("is_active", value: true) // Filter for only active products
                 .single()
                 .execute()
                 .value
