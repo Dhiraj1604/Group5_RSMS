@@ -69,6 +69,7 @@ struct ProductDetailView: View {
     @State private var isLoadingHistory = false
     @State private var showSetPrice = false
     @State private var currentProduct: Product
+    @State private var updateError: String? = nil
 
     init(product: Product, onPriceUpdated: (() -> Void)? = nil) {
         self.product = product
@@ -84,6 +85,7 @@ struct ProductDetailView: View {
             ScrollView {
                 VStack(spacing: RSMSTheme.Spacing.xl) {
                     productInfoCard
+                    activeStatusSection
                     priceSection
                     if !priceHistory.isEmpty {
                         priceHistorySection
@@ -105,6 +107,14 @@ struct ProductDetailView: View {
         }
         .task {
             await fetchPriceHistory()
+        }
+        .alert("Update Failed", isPresented: Binding<Bool>(
+            get: { updateError != nil },
+            set: { if !$0 { updateError = nil } }
+        )) {
+            Button("OK") { }
+        } message: {
+            Text(updateError ?? "Unknown error")
         }
     }
 
@@ -142,6 +152,44 @@ struct ProductDetailView: View {
         )
     }
 
+    // MARK: - Global Status Section
+
+    private var activeStatusSection: some View {
+        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
+            Label("Global Visibility", systemImage: "globe")
+                .font(.headline)
+                .foregroundStyle(RSMSTheme.Colors.textPrimary)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Active Status")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                    Text(currentProduct.isActive ? "Available across all boutiques" : "Hidden from staff and customers")
+                        .font(.caption)
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                }
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { currentProduct.isActive },
+                    set: { newValue in
+                        Task { await updateActiveStatus(newState: newValue) }
+                    }
+                ))
+                .labelsHidden()
+                .tint(RSMSTheme.Colors.accentGold)
+            }
+            .padding(RSMSTheme.Spacing.lg)
+            .background(RSMSTheme.Colors.backgroundDeep)
+            .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
+            .overlay(
+                RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+                    .stroke(currentProduct.isActive ? RSMSTheme.Colors.borderLight : RSMSTheme.Colors.warning.opacity(0.3), lineWidth: 1)
+            )
+        }
+    }
+    
     // MARK: - Price Section
 
     private var priceSection: some View {
@@ -325,6 +373,41 @@ struct ProductDetailView: View {
         }
         await fetchPriceHistory()
         onPriceUpdated?()
+    }
+
+    @MainActor
+    private func updateActiveStatus(newState: Bool) async {
+        // Optimistic UI update
+        var updatedProduct = currentProduct
+        updatedProduct.isActive = newState
+        currentProduct = updatedProduct
+        
+        do {
+            let response = try await SupabaseManager.shared.client
+                .from("products")
+                .update(["is_active": newState])
+                .eq("id", value: currentProduct.id)
+                .execute()
+            
+            // Check if we actually updated anything
+            // In the Supabase Swift client, response.data contains the updated rows if returning: .representation is used.
+            // For a basic update, we assume it worked if no error was thrown.
+            
+            print("✅ Status updated successfully in database")
+            
+            // We'll delay the parent refresh slightly to let Supabase replicate if needed
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                onPriceUpdated?()
+            }
+        } catch {
+            print("❌ Failed to update active status: \(error)")
+            self.updateError = error.localizedDescription
+            
+            // Revert on error
+            var revertedProduct = currentProduct
+            revertedProduct.isActive = !newState
+            currentProduct = revertedProduct
+        }
     }
 }
 

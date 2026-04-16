@@ -14,6 +14,7 @@ public struct Product: Identifiable, Codable, Equatable, Hashable {
     public let name: String
     public let basePrice: Double
     public let categoryId: UUID?
+    public var isActive: Bool
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -21,14 +22,27 @@ public struct Product: Identifiable, Codable, Equatable, Hashable {
         case name
         case basePrice = "base_price"
         case categoryId = "category_id"
+        case isActive = "is_active"
     }
     
-    public init(id: UUID = UUID(), sku: String, name: String, basePrice: Double, categoryId: UUID? = nil) {
+    public init(id: UUID = UUID(), sku: String, name: String, basePrice: Double, categoryId: UUID? = nil, isActive: Bool = true) {
         self.id = id
         self.sku = sku
         self.name = name
         self.basePrice = basePrice
         self.categoryId = categoryId
+        self.isActive = isActive
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        sku = try container.decode(String.self, forKey: .sku)
+        name = try container.decode(String.self, forKey: .name)
+        basePrice = try container.decode(Double.self, forKey: .basePrice)
+        categoryId = try container.decodeIfPresent(UUID.self, forKey: .categoryId)
+        // Default to true if the column is missing in the database
+        isActive = try container.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
     }
 }
 

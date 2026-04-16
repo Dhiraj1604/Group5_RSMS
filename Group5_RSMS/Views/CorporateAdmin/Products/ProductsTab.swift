@@ -232,11 +232,23 @@ struct ProductsTab: View {
 
             // Info
             VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
-                Text(product.name)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                    .lineLimit(1)
+                HStack(spacing: RSMSTheme.Spacing.sm) {
+                    Text(product.name)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                        .lineLimit(1)
+                    
+                    if !product.isActive {
+                        Text("Inactive")
+                            .font(.system(size: 10, weight: .bold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.red.opacity(0.15))
+                            .foregroundStyle(.red)
+                            .clipShape(Capsule())
+                    }
+                }
                 Text(product.sku)
                     .font(.caption)
                     .foregroundStyle(RSMSTheme.Colors.textTertiary)
