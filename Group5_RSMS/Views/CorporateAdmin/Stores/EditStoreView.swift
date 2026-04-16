@@ -1,32 +1,50 @@
 //
-//  AddStoreView.swift
+//  EditStoreView.swift
 //  Group5_RSMS
 //
-//  Corporate Admin — Register a new boutique store location.
+//  Corporate Admin — Edit an existing boutique store location.
 //
 
 import SwiftUI
 
-struct AddStoreView: View {
+struct EditStoreView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
-    @State private var storeName = ""
-    @State private var storeCode = ""
-    @State private var address = ""
-    @State private var city = ""
-    @State private var state = ""
-    @State private var zipCode = ""
-    @State private var country = "India"
-    @State private var phone = ""
-    @State private var email = ""
-    @State private var managerName = ""
-    @State private var selectedRegion = "West"
-    @State private var taxRate = "18.0"
+    let store: Store
+
+    @State private var storeName: String
+    @State private var storeCode: String
+    @State private var address: String
+    @State private var city: String
+    @State private var state: String
+    @State private var zipCode: String
+    @State private var country: String
+    @State private var phone: String
+    @State private var email: String
+    @State private var managerName: String
+    @State private var selectedRegion: String
+    @State private var taxRate: String
     @State private var showValidationErrors = false
     @State private var showSuccessAlert = false
 
     private let regions = ["North", "South", "East", "West", "Central"]
+
+    init(store: Store) {
+        self.store = store
+        _storeName   = State(initialValue: store.name)
+        _storeCode   = State(initialValue: store.code)
+        _address     = State(initialValue: store.address ?? "")
+        _city        = State(initialValue: store.city)
+        _state       = State(initialValue: store.state ?? "")
+        _zipCode     = State(initialValue: store.zipCode ?? "")
+        _country     = State(initialValue: store.country)
+        _phone       = State(initialValue: store.phone ?? "")
+        _email       = State(initialValue: store.email ?? "")
+        _managerName = State(initialValue: store.managerName ?? "")
+        _selectedRegion = State(initialValue: store.region)
+        _taxRate     = State(initialValue: String(store.taxRate ?? 18.0))
+    }
 
     private var isFormValid: Bool {
         !storeName.trimmingCharacters(in: .whitespaces).isEmpty &&
@@ -54,14 +72,14 @@ struct AddStoreView: View {
                         locationSection
                         contactSection
                         configSection
-                        registerButton
+                        saveButton
                         Spacer().frame(height: RSMSTheme.Spacing.xxl)
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.lg)
                     .padding(.top, RSMSTheme.Spacing.md)
                 }
             }
-            .navigationTitle("New Boutique")
+            .navigationTitle("Edit Boutique")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -71,10 +89,10 @@ struct AddStoreView: View {
                         .foregroundStyle(RSMSTheme.Colors.textSecondary)
                 }
             }
-            .alert("Boutique Registered! 🎉", isPresented: $showSuccessAlert) {
+            .alert("Store Updated! 🎉", isPresented: $showSuccessAlert) {
                 Button("Done") { dismiss() }
             } message: {
-                Text("\(storeName) has been successfully registered. You can now assign staff and inventory to this location.")
+                Text("\(storeName) details have been successfully updated.")
             }
         }
     }
@@ -86,11 +104,11 @@ struct AddStoreView: View {
                 Circle()
                     .fill(RSMSTheme.Colors.accentGold.opacity(0.12))
                     .frame(width: 70, height: 70)
-                Image(systemName: "storefront.fill")
+                Image(systemName: "pencil.circle.fill")
                     .font(.system(size: 30))
                     .foregroundStyle(RSMSTheme.Colors.accentGold)
             }
-            Text("Register a new boutique location")
+            Text("Update boutique location details")
                 .font(.subheadline)
                 .foregroundStyle(RSMSTheme.Colors.textSecondary)
         }
@@ -170,18 +188,18 @@ struct AddStoreView: View {
         }
     }
 
-    // MARK: - Register Button
-    private var registerButton: some View {
+    // MARK: - Save Button
+    private var saveButton: some View {
         VStack(spacing: RSMSTheme.Spacing.sm) {
             if showValidationErrors && !isFormValid {
                 Text("Please fill in all required fields.")
                     .font(.caption)
                     .foregroundStyle(RSMSTheme.Colors.error)
             }
-            Button { registerStore() } label: {
+            Button { saveStore() } label: {
                 HStack(spacing: RSMSTheme.Spacing.sm) {
                     Image(systemName: "checkmark.circle.fill")
-                    Text("Register Boutique")
+                    Text("Save Changes")
                 }
             }
             .buttonStyle(GoldButtonStyle())
@@ -249,34 +267,32 @@ struct AddStoreView: View {
         }
     }
 
-    private func registerStore() {
+    private func saveStore() {
         showValidationErrors = true
         guard isFormValid else { return }
 
-        let newStore = Store(
-            name: storeName.trimmingCharacters(in: .whitespaces),
-            code: storeCode.trimmingCharacters(in: .whitespaces).uppercased(),
-            address: address.trimmingCharacters(in: .whitespaces),
-            city: city.trimmingCharacters(in: .whitespaces),
-            country: country.trimmingCharacters(in: .whitespaces),
-            currencyCode: "INR",  // hardcode or add @State var currencyCode = "INR"
-            state: state.trimmingCharacters(in: .whitespaces),
-            zipCode: zipCode.trimmingCharacters(in: .whitespaces),
-            phone: phone.trimmingCharacters(in: .whitespaces),
-            email: email.trimmingCharacters(in: .whitespaces),
-            managerName: managerName.trimmingCharacters(in: .whitespaces),
-            region: selectedRegion,
-            taxRate: Double(taxRate) ?? 18.0,
-            isActive: true
-        )
+        var updatedStore = store
+        updatedStore.name = storeName.trimmingCharacters(in: .whitespaces)  // .storeName → .name
+        updatedStore.code = storeCode.trimmingCharacters(in: .whitespaces).uppercased()
+        updatedStore.address = address.trimmingCharacters(in: .whitespaces)
+        updatedStore.city = city.trimmingCharacters(in: .whitespaces)
+        updatedStore.state = state.trimmingCharacters(in: .whitespaces)
+        updatedStore.zipCode = zipCode.trimmingCharacters(in: .whitespaces)
+        updatedStore.country = country.trimmingCharacters(in: .whitespaces)
+        updatedStore.phone = phone.trimmingCharacters(in: .whitespaces)
+        updatedStore.email = email.trimmingCharacters(in: .whitespaces)
+        updatedStore.managerName = managerName.trimmingCharacters(in: .whitespaces)
+        updatedStore.region = selectedRegion
+        updatedStore.taxRate = Double(taxRate) ?? store.taxRate ?? 18.0
+
         Task {
-            await appState.addStore(newStore)
+            await appState.updateStoreDetails(updatedStore)
             showSuccessAlert = true
         }
     }
 }
 
 #Preview {
-    AddStoreView()
+    EditStoreView(store: Store.sample)
         .environment(AppState())
 }

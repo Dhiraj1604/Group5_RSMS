@@ -9,8 +9,10 @@ import SwiftUI
 
 struct StoreDetailView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     let store: Store
     @State private var showDeleteConfirm = false
+    @State private var showEditStore = false
 
     private var liveStore: Store {
         appState.stores.first(where: { $0.id == store.id }) ?? store
@@ -29,9 +31,9 @@ struct StoreDetailView: View {
                         ("map.circle", "Region", liveStore.region),
                     ])
                     detailSection(title: "Contact", items: [
-                        ("phone.fill", "Phone", liveStore.phone),
-                        ("envelope.fill", "Email", liveStore.email),
-                        ("person.fill", "Manager", liveStore.managerName),
+                        ("phone.fill",    "Phone",   liveStore.phone    ?? "—"),
+                        ("envelope.fill", "Email",   liveStore.email    ?? "—"),
+                        ("person.fill",   "Manager", liveStore.managerName ?? "—"),
                     ])
                     detailSection(title: "Configuration", items: [
                         ("percent", "Tax Rate", liveStore.formattedTaxRate),
@@ -49,6 +51,17 @@ struct StoreDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Edit") {
+                    showEditStore = true
+                }
+                .foregroundStyle(RSMSTheme.Colors.accentGold)
+            }
+        }
+        .sheet(isPresented: $showEditStore) {
+            EditStoreView(store: liveStore)
+        }
     }
 
     // MARK: - Header
@@ -136,8 +149,8 @@ struct StoreDetailView: View {
     // MARK: - Toggle
     private var statusToggle: some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                appState.toggleStoreActive(liveStore)
+            Task {
+                await appState.toggleStoreActive(liveStore)
             }
         } label: {
             HStack {
@@ -173,6 +186,7 @@ struct StoreDetailView: View {
             Button("Delete", role: .destructive) {
                 Task {
                     await appState.deleteStore(liveStore)
+                    dismiss()
                 }
             }
         } message: {

@@ -2,81 +2,49 @@
 //  Store.swift
 //  Group5_RSMS
 //
-//  Sprint 1 — Core data model for boutique store locations.
-//  Every feature in the system (inventory, staff, POS, reporting)
-//  is scoped to a Store. This is the root of the data model.
-//
 
 import Foundation
 
 struct Store: Identifiable, Codable, Hashable {
     var id: UUID = UUID()
-    var name: String
-    
-    // Local-only UI fields with defaults
-    var code: String = "BTQ-NEW-001"
-    var address: String = "123 Default Street"
-    
-    // DB synced fields
-    var city: String
-    var country: String
-    var currencyCode: String
-    
-    // Local-only
-    var state: String = "Default State"
-    var zipCode: String = "00000"
-    var phone: String = "+1 000 000 0000"
-    var email: String = "contact@rsms.com"
-    var managerName: String = "Store Manager"
-    var region: String = "West"
-    var taxRate: Double = 18.0
-    var isActive: Bool = true
-    
-    // DB synced
-    var createdAt: Date = Date()
-    
-    
-    
-    // MARK: - CodingKeys for Supabase (Read)
-    enum CodingKeys: String, CodingKey {
-        case id
-        case name
-        case city
-        case country
-        case currencyCode = "currency_code"
-        case createdAt = "created_at"
-    }
+   var name: String
+   var code: String = "BTQ-NEW-001"
+   var address: String? = nil          // was String = ""
+   var city: String
+   var country: String
+   var currencyCode: String? = nil     // was String
+   var state: String? = nil            // was String = ""
+   var zipCode: String? = nil          // was String = ""
+   var phone: String? = nil            // was String = ""
+   var email: String? = nil            // was String = ""
+   var managerName: String? = nil      // was String = ""
+   var region: String = "West"
+   var taxRate: Double? = nil          // was Double = 18.0
+   var isActive: Bool = true
+   var createdAt: Date = Date()
+   var assignedManagerId: UUID? = nil
 
-    // MARK: - Insert Payload for Supabase (Write)
-    /// Excludes `id` and `created_at` which are handled by the DB via default rules.
-    struct DBPayload: Encodable {
-        let name: String
-        let city: String
-        let country: String
-        let currency_code: String
-    }
-    
-    var insertPayload: DBPayload {
-        DBPayload(
-            name: name,
-            city: city,
-            country: country,
-            currency_code: currencyCode
-        )
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, code, address, city, country,
+             state, region, phone, email,
+             currencyCode, zipCode, managerName,
+             taxRate, isActive, createdAt
+        case assignedManagerId = "assigned_manager_id"
     }
 
     // MARK: - Computed
     var formattedAddress: String {
-        "\(address), \(city), \(state) \(zipCode), \(country)"
+        "\(address ?? ""), \(city), \(state ?? "") \(zipCode ?? ""), \(country)"
     }
 
     var formattedTaxRate: String {
-        String(format: "%.1f%%", taxRate)
+        String(format: "%.1f%%", taxRate ?? 0.0)
     }
+
 
     // MARK: - Sample Data
     static let sample = Store(
-        id: UUID(),
         name: "RSMS Flagship Mumbai",
         code: "BTQ-MUM-001",
         address: "123 Linking Road, Bandra West",
@@ -90,14 +58,12 @@ struct Store: Identifiable, Codable, Hashable {
         managerName: "Priya Sharma",
         region: "West",
         taxRate: 18.0,
-        isActive: true,
-        createdAt: Date()
+        isActive: true
     )
 
     static let samples: [Store] = [
         sample,
         Store(
-            id: UUID(),
             name: "RSMS Delhi Boutique",
             code: "BTQ-DEL-001",
             address: "45 Khan Market",
@@ -111,11 +77,9 @@ struct Store: Identifiable, Codable, Hashable {
             managerName: "Arjun Mehta",
             region: "North",
             taxRate: 18.0,
-            isActive: true,
-            createdAt: Date()
+            isActive: true
         ),
         Store(
-            id: UUID(),
             name: "RSMS Bangalore Store",
             code: "BTQ-BLR-001",
             address: "78 MG Road, Indiranagar",
@@ -129,8 +93,7 @@ struct Store: Identifiable, Codable, Hashable {
             managerName: "Kavitha Rao",
             region: "South",
             taxRate: 18.0,
-            isActive: true,
-            createdAt: Date()
+            isActive: true
         )
     ]
 }
