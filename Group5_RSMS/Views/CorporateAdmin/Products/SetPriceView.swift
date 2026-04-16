@@ -279,9 +279,13 @@ struct SetPriceView: View {
     private func savePrice(newPrice: Double) async {
         do {
             // 1. Update base_price on the product
+            struct ProductPriceUpdate: Encodable {
+                let base_price: Double
+            }
+            
             try await SupabaseManager.shared.client
                 .from("products")
-                .update(["base_price": newPrice])
+                .update(ProductPriceUpdate(base_price: newPrice))
                 .eq("id", value: product.id)
                 .execute()
 
