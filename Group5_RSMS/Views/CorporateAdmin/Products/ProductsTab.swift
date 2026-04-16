@@ -17,6 +17,8 @@
 //
 
 import SwiftUI
+import Supabase
+import PostgREST
 
 struct ProductsTab: View {
     @State private var products: [Product] = []

@@ -13,6 +13,9 @@
 //
 
 import SwiftUI
+import Supabase
+import PostgREST
+
 
 // MARK: - Price History model (maps to `price_history` Supabase table)
 

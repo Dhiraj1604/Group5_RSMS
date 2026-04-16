@@ -8,7 +8,7 @@
 import Foundation
 
 /// Represents a retail product in the inventory.
-public struct Product: Identifiable, Codable, Equatable {
+public struct Product: Identifiable, Codable, Equatable, Hashable {
     public let id: UUID
     public let sku: String
     public let name: String
@@ -33,7 +33,7 @@ public struct Product: Identifiable, Codable, Equatable {
 }
 
 /// Defines a regional tax rule aligned with the `tax_rules` Supabase table.
-public struct TaxRule: Identifiable, Codable, Equatable {
+public struct TaxRule: Identifiable, Codable, Equatable, Hashable {
     public let id: UUID
     public var name: String
     public var rate: Double          // e.g. 0.20 = 20%
@@ -82,7 +82,7 @@ public struct TaxRule: Identifiable, Codable, Equatable {
 }
 
 /// The result format of a pricing calculation.
-public struct PricingBreakdown: Equatable {
+public struct PricingBreakdown: Equatable, Hashable {
     public let subtotal: Double
     public let taxAmount: Double
     public let total: Double

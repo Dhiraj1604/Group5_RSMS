@@ -15,6 +15,8 @@
 //
 
 import SwiftUI
+import Supabase
+import PostgREST
 
 struct SetPriceView: View {
     @Environment(AppState.self) private var appState
