@@ -34,6 +34,16 @@ public final class SupabaseManager {
     public let client: SupabaseClient
 
     private init() {
+        #if canImport(Supabase)
+        self.client = SupabaseClient(
+            supabaseURL: supabaseURL,
+            supabaseKey: supabaseKey,
+            options: SupabaseClientOptions(
+                auth: .init(emitLocalSessionAsInitialSession: true)
+            )
+        )
+        #else
         self.client = SupabaseClient(supabaseURL: supabaseURL, supabaseKey: supabaseKey)
+        #endif
     }
 }
