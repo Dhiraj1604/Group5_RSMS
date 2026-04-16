@@ -6,14 +6,21 @@
 //
 
 import SwiftUI
+import AuthenticationServices
+#if canImport(Supabase)
+import Supabase
+#endif
 
 struct LoginView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.webAuthenticationSession) private var webAuthSession
     @State private var email = ""
     @State private var password = ""
+    @State private var confirmPassword = ""
     @State private var isAnimating = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var isSignUp = false
 
     var body: some View {
         ZStack {
@@ -136,6 +143,33 @@ struct LoginView: View {
                 )
             }
 
+            if isSignUp {
+                // Confirm Password Field
+                VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
+                    Text("Confirm Password")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                        .textCase(.uppercase)
+
+                    HStack(spacing: RSMSTheme.Spacing.md) {
+                        Image(systemName: "lock.fill")
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                            .frame(width: 20)
+
+                        SecureField("", text: $confirmPassword, prompt: Text("Confirm your password").foregroundStyle(RSMSTheme.Colors.textTertiary))
+                            .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                    }
+                    .padding(RSMSTheme.Spacing.lg)
+                    .background(RSMSTheme.Colors.backgroundElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                            .stroke(RSMSTheme.Colors.border, lineWidth: 1)
+                    )
+                }
+            }
+
             if showError {
                 Text(errorMessage)
                     .font(.caption)
@@ -154,21 +188,45 @@ struct LoginView: View {
 
     // MARK: - Button
     private var signInButton: some View {
-        Button { attemptLogin() } label: {
-            Text("Sign In")
+        VStack(spacing: RSMSTheme.Spacing.md) {
+            Button { attemptLogin() } label: {
+                Text(isSignUp ? "Sign Up" : "Sign In")
+            }
+            .buttonStyle(GoldButtonStyle())
+            
+            Button { attemptGoogleLogin() } label: {
+                HStack(spacing: RSMSTheme.Spacing.md) {
+                    Image(systemName: "globe")
+                        .font(.system(size: 20))
+                    Text("Continue with Google")
+                }
+            }
+            .buttonStyle(GoldButtonStyle())
+            
+            Button {
+                withAnimation {
+                    isSignUp.toggle()
+                    showError = false
+                    errorMessage = ""
+                }
+            } label: {
+                Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
+                    .font(.subheadline)
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+            }
         }
-        .buttonStyle(GoldButtonStyle())
     }
 
     // MARK: - Actions
     private func attemptLogin() {
         withAnimation(.easeInOut(duration: 0.3)) { showError = false }
 
-        guard !email.trimmingCharacters(in: .whitespaces).isEmpty else {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
+        guard !trimmedEmail.isEmpty else {
             withAnimation { showError = true; errorMessage = "Please enter your email address." }
             return
         }
-        guard email.contains("@") && email.contains(".") else {
+        guard trimmedEmail.contains("@") && trimmedEmail.contains(".") else {
             withAnimation { showError = true; errorMessage = "Please enter a valid email address." }
             return
         }
@@ -176,7 +234,68 @@ struct LoginView: View {
             withAnimation { showError = true; errorMessage = "Please enter your password." }
             return
         }
-        appState.login(email: email)
+        
+        if isSignUp {
+            guard password == confirmPassword else {
+                withAnimation { showError = true; errorMessage = "Passwords do not match." }
+                return
+            }
+        }
+        
+        Task {
+            do {
+                #if canImport(Supabase)
+                if isSignUp {
+                    _ = try await SupabaseManager.shared.client.auth.signUp(email: trimmedEmail, password: password)
+                } else {
+                    _ = try await SupabaseManager.shared.client.auth.signIn(email: trimmedEmail, password: password)
+                }
+                #endif
+                
+                await MainActor.run {
+                    appState.login(email: trimmedEmail)
+                }
+            } catch {
+                await MainActor.run {
+                    withAnimation { 
+                        showError = true
+                        errorMessage = error.localizedDescription 
+                    }
+                }
+            }
+        }
+    }
+
+    private func attemptGoogleLogin() {
+        Task {
+            do {
+                #if canImport(Supabase)
+                let url = try await SupabaseManager.shared.client.auth.getOAuthSignInURL(
+                    provider: .google,
+                    redirectTo: URL(string: "rsms-app://login-callback")
+                )
+                
+                let callbackURL = try await webAuthSession.authenticate(
+                    using: url,
+                    callbackURLScheme: "rsms-app",
+                    preferredBrowserSession: .shared
+                )
+                
+                let session = try await SupabaseManager.shared.client.auth.session(from: callbackURL)
+                
+                await MainActor.run {
+                    appState.login(email: session.user.email ?? "google_user")
+                }
+                #endif
+            } catch {
+                await MainActor.run {
+                    withAnimation {
+                        showError = true
+                        errorMessage = error.localizedDescription
+                    }
+                }
+            }
+        }
     }
 }
 
