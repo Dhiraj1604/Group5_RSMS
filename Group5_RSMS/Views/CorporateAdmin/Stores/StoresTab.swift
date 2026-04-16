@@ -37,7 +37,18 @@ struct StoresTab: View {
                     .ignoresSafeArea()
 
                 if appState.stores.isEmpty {
-                    emptyState
+                    if appState.isLoadingStores {
+                        VStack(spacing: RSMSTheme.Spacing.md) {
+                            ProgressView()
+                                .scaleEffect(1.5)
+                                .tint(RSMSTheme.Colors.accentGold)
+                            Text("Loading Boutiques...")
+                                .font(.subheadline)
+                                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                        }
+                    } else {
+                        emptyState
+                    }
                 } else {
                     storesList
                 }
@@ -60,6 +71,25 @@ struct StoresTab: View {
             .searchable(text: $searchText, prompt: "Search stores...")
             .sheet(isPresented: $showAddStore) {
                 AddStoreView()
+            }
+            .task {
+                if appState.stores.isEmpty {
+                    await appState.fetchStores()
+                }
+            }
+            .refreshable {
+                await appState.fetchStores()
+            }
+            .alert("Error Loading Boutiques", isPresented: Binding<Bool>(
+                get: { appState.storeError != nil },
+                set: { if !$0 { appState.storeError = nil } }
+            )) {
+                Button("Retry", role: .cancel) {
+                    Task { await appState.fetchStores() }
+                }
+                Button("Dismiss", role: .none) { }
+            } message: {
+                Text(appState.storeError ?? "Unknown error occurred.")
             }
         }
     }

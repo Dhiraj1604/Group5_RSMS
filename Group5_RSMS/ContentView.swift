@@ -9,6 +9,7 @@
 
 import SwiftUI
 
+@available(iOS 17.0, *)
 struct ContentView: View {
     @Environment(AppState.self) private var appState
 

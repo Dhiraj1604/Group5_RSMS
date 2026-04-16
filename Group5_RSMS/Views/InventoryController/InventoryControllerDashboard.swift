@@ -13,15 +13,15 @@ struct InventoryControllerDashboard: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            ICDashboardTab()
+            ICStockTab()
                 .tabItem {
-                    Label("Dashboard", systemImage: "chart.bar.fill")
+                    Label("Stock", systemImage: "shippingbox.fill")
                 }
                 .tag(0)
 
-            ICStockTab()
+            ICScanTab()
                 .tabItem {
-                    Label("Stock", systemImage: "cube.box.fill")
+                    Label("Scan", systemImage: "barcode.viewfinder")
                 }
                 .tag(1)
 

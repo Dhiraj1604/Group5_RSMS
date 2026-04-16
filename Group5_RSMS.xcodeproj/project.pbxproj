@@ -6,6 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		BEE457CF2F8F8A6700AFA8BC /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = BEE457CE2F8F8A6700AFA8BC /* Auth */; };
+		BEE457D12F8F8A6700AFA8BC /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = BEE457D02F8F8A6700AFA8BC /* Functions */; };
+		BEE457D32F8F8A6700AFA8BC /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = BEE457D22F8F8A6700AFA8BC /* PostgREST */; };
+		BEE457D52F8F8A6700AFA8BC /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = BEE457D42F8F8A6700AFA8BC /* Realtime */; };
+		BEE457D72F8F8A6700AFA8BC /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = BEE457D62F8F8A6700AFA8BC /* Storage */; };
+		BEE457D92F8F8A6700AFA8BC /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = BEE457D82F8F8A6700AFA8BC /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		40F02A272F88D5F7001F90B5 /* Group5_RSMS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Group5_RSMS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +32,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BEE457D32F8F8A6700AFA8BC /* PostgREST in Frameworks */,
+				BEE457D12F8F8A6700AFA8BC /* Functions in Frameworks */,
+				BEE457D92F8F8A6700AFA8BC /* Supabase in Frameworks */,
+				BEE457CF2F8F8A6700AFA8BC /* Auth in Frameworks */,
+				BEE457D72F8F8A6700AFA8BC /* Storage in Frameworks */,
+				BEE457D52F8F8A6700AFA8BC /* Realtime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -33,6 +48,7 @@
 			isa = PBXGroup;
 			children = (
 				40F02A292F88D5F7001F90B5 /* Group5_RSMS */,
+				BEE457CD2F8F8A6700AFA8BC /* Frameworks */,
 				40F02A282F88D5F7001F90B5 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -43,6 +59,13 @@
 				40F02A272F88D5F7001F90B5 /* Group5_RSMS.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		BEE457CD2F8F8A6700AFA8BC /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -65,6 +88,12 @@
 			);
 			name = Group5_RSMS;
 			packageProductDependencies = (
+				BEE457CE2F8F8A6700AFA8BC /* Auth */,
+				BEE457D02F8F8A6700AFA8BC /* Functions */,
+				BEE457D22F8F8A6700AFA8BC /* PostgREST */,
+				BEE457D42F8F8A6700AFA8BC /* Realtime */,
+				BEE457D62F8F8A6700AFA8BC /* Storage */,
+				BEE457D82F8F8A6700AFA8BC /* Supabase */,
 			);
 			productName = Group5_RSMS;
 			productReference = 40F02A272F88D5F7001F90B5 /* Group5_RSMS.app */;
@@ -94,6 +123,9 @@
 			);
 			mainGroup = 40F02A1E2F88D5F7001F90B5;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BEE457CC2F8F862E00AFA8BC /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 40F02A282F88D5F7001F90B5 /* Products */;
 			projectDirPath = "";
@@ -248,12 +280,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 4S2XNJ3L9Y;
+				DEVELOPMENT_TEAM = PUMDFHHYD3;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "RSMS needs camera access to scan product SKUs for inventory tracking.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -264,7 +297,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.4;
@@ -292,12 +325,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 4S2XNJ3L9Y;
+				DEVELOPMENT_TEAM = 96Z2UYRQ77;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "RSMS needs camera access to scan product SKUs for inventory tracking.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -308,7 +342,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.4;
@@ -351,6 +385,50 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		BEE457CC2F8F862E00AFA8BC /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		BEE457CE2F8F8A6700AFA8BC /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BEE457CC2F8F862E00AFA8BC /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		BEE457D02F8F8A6700AFA8BC /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BEE457CC2F8F862E00AFA8BC /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		BEE457D22F8F8A6700AFA8BC /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BEE457CC2F8F862E00AFA8BC /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		BEE457D42F8F8A6700AFA8BC /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BEE457CC2F8F862E00AFA8BC /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		BEE457D62F8F8A6700AFA8BC /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BEE457CC2F8F862E00AFA8BC /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		BEE457D82F8F8A6700AFA8BC /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BEE457CC2F8F862E00AFA8BC /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 40F02A1F2F88D5F7001F90B5 /* Project object */;
 }

@@ -170,7 +170,11 @@ struct StoreDetailView: View {
             )
         }
         .confirmationDialog("Delete \(liveStore.name)?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
-            Button("Delete", role: .destructive) { appState.deleteStore(liveStore) }
+            Button("Delete", role: .destructive) {
+                Task {
+                    await appState.deleteStore(liveStore)
+                }
+            }
         } message: {
             Text("This action cannot be undone. All data associated with this store will be permanently removed.")
         }
