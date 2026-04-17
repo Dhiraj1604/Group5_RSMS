@@ -18,10 +18,10 @@ struct StoresTab: View {
         var result = appState.stores
         if !searchText.isEmpty {
             result = result.filter { store in
-                store.name.localizedCaseInsensitiveContains(searchText) ||
+                store.name.localizedCaseInsensitiveContains(searchText) ||  // .storeName → .name
                 store.code.localizedCaseInsensitiveContains(searchText) ||
                 store.city.localizedCaseInsensitiveContains(searchText) ||
-                store.region.localizedCaseInsensitiveContains(searchText)
+                (store.region ?? "").localizedCaseInsensitiveContains(searchText)
             }
         }
         if let active = filterActive {
@@ -37,18 +37,7 @@ struct StoresTab: View {
                     .ignoresSafeArea()
 
                 if appState.stores.isEmpty {
-                    if appState.isLoadingStores {
-                        VStack(spacing: RSMSTheme.Spacing.md) {
-                            ProgressView()
-                                .scaleEffect(1.5)
-                                .tint(RSMSTheme.Colors.accentGold)
-                            Text("Loading Boutiques...")
-                                .font(.subheadline)
-                                .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                        }
-                    } else {
-                        emptyState
-                    }
+                    emptyState
                 } else {
                     storesList
                 }
@@ -72,24 +61,13 @@ struct StoresTab: View {
             .sheet(isPresented: $showAddStore) {
                 AddStoreView()
             }
-            .task {
-                if appState.stores.isEmpty {
-                    await appState.fetchStores()
-                }
-            }
-            .refreshable {
-                await appState.fetchStores()
-            }
-            .alert("Error Loading Boutiques", isPresented: Binding<Bool>(
-                get: { appState.storeError != nil },
-                set: { if !$0 { appState.storeError = nil } }
-            )) {
-                Button("Retry", role: .cancel) {
-                    Task { await appState.fetchStores() }
-                }
-                Button("Dismiss", role: .none) { }
+            .alert("Error", isPresented: .constant(appState.storeError != nil)) {
+                Button("OK") { appState.storeError = nil }
             } message: {
-                Text(appState.storeError ?? "Unknown error occurred.")
+                Text(appState.storeError ?? "")
+            }
+            .task {
+                await appState.loadStores()
             }
         }
     }
@@ -190,13 +168,13 @@ struct StoresTab: View {
         HStack(spacing: RSMSTheme.Spacing.lg) {
             ZStack {
                 RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                    .fill(store.isActive
+                     .fill((store.isActive == true)
                           ? RSMSTheme.Colors.accentGold.opacity(0.15)
                           : RSMSTheme.Colors.textTertiary.opacity(0.15))
                     .frame(width: 50, height: 50)
                 Image(systemName: "storefront.fill")
                     .font(.title3)
-                    .foregroundStyle(store.isActive
+                    .foregroundStyle((store.isActive == true)
                                      ? RSMSTheme.Colors.accentGold
                                      : RSMSTheme.Colors.textTertiary)
             }
@@ -208,14 +186,14 @@ struct StoresTab: View {
                         .foregroundStyle(RSMSTheme.Colors.textPrimary)
                         .lineLimit(1)
                     Spacer()
-                    Text(store.isActive ? "Active" : "Inactive")
+                    Text((store.isActive == true) ? "Active" : "Inactive")
                         .font(.caption2)
                         .fontWeight(.bold)
-                        .foregroundStyle(store.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
+                        .foregroundStyle((store.isActive == true) ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
                         .padding(.horizontal, RSMSTheme.Spacing.sm)
                         .padding(.vertical, 3)
                         .background(
-                            (store.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
+                            ((store.isActive == true) ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
                                 .opacity(0.15)
                         )
                         .clipShape(Capsule())
@@ -241,8 +219,11 @@ struct StoresTab: View {
 }
 
 #Preview("With Stores") {
-    let state = AppState()
-    state.stores = Store.samples
-    return StoresTab()
+    let state: AppState = {
+        let s = AppState()
+        s.stores = Store.samples
+        return s
+    }()
+    StoresTab()
         .environment(state)
 }
