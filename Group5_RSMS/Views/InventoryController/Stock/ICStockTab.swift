@@ -11,6 +11,7 @@ import SwiftUI
 
 struct ICStockTab: View {
     @Environment(AppState.self) private var appState
+    @State private var showProductsList = false
 
     var body: some View {
         NavigationStack {
@@ -89,15 +90,22 @@ struct ICStockTab: View {
 
     // MARK: - Stock KPIs
 
-    private var stockKPISection: some View {
+        private var stockKPISection: some View {
         VStack(spacing: RSMSTheme.Spacing.md) {
             HStack(spacing: RSMSTheme.Spacing.md) {
-                stockKPICard(
-                    title: "Total Items",
-                    value: "1,248",
-                    icon: "shippingbox.fill",
-                    color: RSMSTheme.Colors.accentGold
-                )
+                // Total Items — tappable, navigates to ProductsListView
+                NavigationLink(destination: ProductsListView()) {
+                    stockKPICard(
+                        title: "Total Items",
+                        value: appState.isLoadingProducts
+                            ? "…"
+                            : "\(appState.products.count)",
+                        icon: "shippingbox.fill",
+                        color: RSMSTheme.Colors.accentGold
+                    )
+                }
+                .buttonStyle(.plain)
+
                 stockKPICard(
                     title: "Low Stock",
                     value: "23",
@@ -120,7 +128,11 @@ struct ICStockTab: View {
                 )
             }
         }
+        .task {
+            await appState.fetchProducts()
+        }
     }
+
 
     private func stockKPICard(title: String, value: String, icon: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
@@ -152,7 +164,7 @@ struct ICStockTab: View {
                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
 
             VStack(spacing: RSMSTheme.Spacing.sm) {
-                stockRow(label: "Total SKUs Tracked", value: "1,248")
+                stockRow(label: "Total SKUs Tracked", value: "\(appState.products.count)")
                 stockRow(label: "Items Below Reorder Level", value: "23")
                 stockRow(label: "Pending Shipments In", value: "5")
                 stockRow(label: "Pending Shipments Out", value: "3")
