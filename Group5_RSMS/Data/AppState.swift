@@ -8,7 +8,9 @@
 
 import SwiftUI
 import Observation
+#if canImport(Supabase)
 import Supabase
+#endif
 
 @Observable
 @MainActor
@@ -54,6 +56,12 @@ class AppState {
         userEmail = ""
         selectedRole = nil
         stores = []
+        
+        #if canImport(Supabase)
+        Task {
+            try? await SupabaseManager.shared.client.auth.signOut()
+        }
+        #endif
     }
 
     func goBackToRoleSelection() {

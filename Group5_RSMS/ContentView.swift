@@ -8,14 +8,26 @@
 //
 
 import SwiftUI
+#if canImport(Supabase)
+import Supabase
+#endif
 
 @available(iOS 17.0, *)
 struct ContentView: View {
     @Environment(AppState.self) private var appState
+    @State private var isCheckingSession = true
 
     var body: some View {
         Group {
-            if !appState.isLoggedIn {
+            if isCheckingSession {
+                RSMSTheme.Colors.backgroundPrimary
+                    .ignoresSafeArea()
+                    .overlay {
+                        ProgressView()
+                            .tint(RSMSTheme.Colors.accentGold)
+                            .scaleEffect(1.5)
+                    }
+            } else if !appState.isLoggedIn {
                 LoginView()
                     .transition(.opacity.combined(with: .move(edge: .leading)))
             } else if appState.selectedRole == nil {
@@ -28,6 +40,28 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.4), value: appState.isLoggedIn)
         .animation(.easeInOut(duration: 0.4), value: appState.selectedRole)
+        .animation(.easeInOut(duration: 0.3), value: isCheckingSession)
+        .task {
+            await checkSession()
+        }
+    }
+
+    private func checkSession() async {
+        #if canImport(Supabase)
+        do {
+            let session = try await SupabaseManager.shared.client.auth.session
+            await MainActor.run {
+                appState.login(email: session.user.email ?? "")
+                isCheckingSession = false
+            }
+        } catch {
+            await MainActor.run {
+                isCheckingSession = false
+            }
+        }
+        #else
+        isCheckingSession = false
+        #endif
     }
 
     @ViewBuilder
