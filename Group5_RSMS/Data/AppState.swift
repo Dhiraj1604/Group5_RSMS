@@ -32,6 +32,17 @@ class AppState {
         selectedRole != nil
     }
 
+    // MARK: - Store Data
+    var stores: [Store] = []
+    var storeError: String? = nil
+    var isLoadingStores: Bool = false
+    var currentStoreID: UUID? = nil
+
+    // MARK: - Product Data
+    var products: [InventoryProduct] = []
+    var productError: String? = nil
+    var isLoadingProducts: Bool = false
+
     // MARK: - Auth Actions
     func login(email: String) {
         userEmail = email
@@ -136,6 +147,106 @@ class AppState {
         } catch {
             stores[index] = backup // rollback on failure
             storeError = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    func fetchProducts() async {
+        isLoadingProducts = true
+        productError = nil
+        do {
+            let fetched: [InventoryProduct] = try await SupabaseManager.shared.client
+                .from("products")
+                .select()
+                .order("created_at", ascending: false)
+                .execute()
+                .value
+            self.products = fetched
+        } catch {
+            print("❌ Failed to fetch products: \(error)")
+            self.productError = "Failed to load products: \(error.localizedDescription)"
+        }
+        isLoadingProducts = false
+    }
+
+    @MainActor
+    func submitRepair(for product: InventoryProduct, issueDescription: String, repairCost: Double) async -> Bool {
+        do {
+            // 1. Insert into repairs table
+            let payload = RepairInsertPayload(
+                product_id: product.id,
+                issueDescription: issueDescription,
+                repairCost: repairCost
+            )
+            
+            try await SupabaseManager.shared.client
+                .from("repair")
+                .insert(payload)
+                .execute()
+            
+            // 2. Update product status
+            try await SupabaseManager.shared.client
+                .from("products")
+                .update(["inRepair": true])
+                .eq("id", value: product.id)
+                .execute()
+                
+            // Update local state
+            if let index = products.firstIndex(where: { $0.id == product.id }) {
+                products[index] = InventoryProduct(
+                    id: product.id,
+                    sku: product.sku,
+                    name: product.name,
+                    description: product.description,
+                    base_Price: product.base_Price,
+                    category_id: product.category_id,
+                    image_Url: product.image_Url,
+                    created_at: product.created_at,
+                    inRepair: true
+                )
+            }
+            return true
+        } catch {
+            print("❌ Failed to submit repair: \(error)")
+            return false
+        }
+    }
+
+    @MainActor
+    func resolveRepair(for product: InventoryProduct) async {
+        do {
+            // 1. Update repairs table (mark as resolved)
+            // Assuming there's an active repair for this product we can resolve. Note: this might affect all active repairs for this product.
+            try await SupabaseManager.shared.client
+                .from("repair")
+                .update(["status": "Completed", "resolved_at": Date().ISO8601Format()])
+                .eq("product_id", value: product.id)
+                .eq("status", value: "Pending") // Only resolve pending ones
+                .execute()
+                
+            // 2. Update product status
+            try await SupabaseManager.shared.client
+                .from("products")
+                .update(["inRepair": false])
+                .eq("id", value: product.id)
+                .execute()
+
+            // Update local state
+            if let index = products.firstIndex(where: { $0.id == product.id }) {
+                products[index] = InventoryProduct(
+                    id: product.id,
+                    sku: product.sku,
+                    name: product.name,
+                    description: product.description,
+                    base_Price: product.base_Price,
+                    category_id: product.category_id,
+                    image_Url: product.image_Url,
+                    created_at: product.created_at,
+                    inRepair: false
+                )
+            }
+        } catch {
+            print("❌ Failed to resolve repair: \(error)")
         }
     }
 }
