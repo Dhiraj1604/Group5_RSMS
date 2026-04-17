@@ -15,7 +15,7 @@ struct CorporateAdminTabView: View {
         TabView(selection: $selectedTab) {
 
             NavigationView {
-                ProductListView()
+//                ProductListView()
             }
             .tabItem {
                 Label("Products", systemImage: "square.grid.2x2")
