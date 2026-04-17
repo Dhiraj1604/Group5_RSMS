@@ -28,6 +28,11 @@ class AppState {
     var selectedStore: Store? = nil
     var currentStoreID: UUID? = nil
 
+    // MARK: - Product Data
+    var products: [InventoryProduct] = []
+    var productError: String? = nil
+    var isLoadingProducts: Bool = false
+
     private let sync = SupabaseSyncManager.shared
 
     // MARK: - Navigation
@@ -39,7 +44,7 @@ class AppState {
     func login(email: String) {
         userEmail = email
         isLoggedIn = true
-        managerAuthId = UUID(uuidString: "3bb61198-7f75-4d11-9e72-28c5afdb53a7") // Mock auth user id for current session
+        managerAuthId = UUID(uuidString: "3bb61198-7f75-4d11-9e72-28c5afdb53a7")
     }
 
     func selectRole(_ role: UserRole) {
@@ -71,10 +76,8 @@ class AppState {
         do {
             let fetchedStores = try await sync.fetchStores()
             self.stores = fetchedStores
-            
-            // Set current store context for Scanner operations or BM locking
+
             if selectedRole == .boutiqueManager {
-                // Lock to the assigned store for Boutique Manager
                 self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id ?? UUID(uuidString: "b3fd8cb6-341b-453e-9ed4-8915aa25245c")
             } else if self.currentStoreID == nil, let first = fetchedStores.first {
                 self.currentStoreID = first.id
@@ -126,12 +129,12 @@ class AppState {
     func toggleStoreActive(_ store: Store) async {
         guard let index = stores.firstIndex(where: { $0.id == store.id }) else { return }
         let currentActive = stores[index].isActive ?? false
-        stores[index].isActive = !currentActive          // optimistic update
+        stores[index].isActive = !currentActive
         let updated = stores[index]
         do {
             try await sync.updateStore(updated)
         } catch {
-            stores[index].isActive = currentActive      // rollback on failure
+            stores[index].isActive = currentActive
             storeError = error.localizedDescription
         }
     }
@@ -139,12 +142,104 @@ class AppState {
     func updateStoreDetails(_ store: Store) async {
         guard let index = stores.firstIndex(where: { $0.id == store.id }) else { return }
         let backup = stores[index]
-        stores[index] = store // optimistic update
+        stores[index] = store
         do {
             try await sync.updateStore(store)
         } catch {
-            stores[index] = backup // rollback on failure
+            stores[index] = backup
             storeError = error.localizedDescription
+        }
+    }
+
+    // MARK: - Product Actions
+
+    func fetchProducts() async {
+        isLoadingProducts = true
+        productError = nil
+        do {
+            let fetched: [InventoryProduct] = try await SupabaseManager.shared.client
+                .from("products")
+                .select()
+                .order("created_at", ascending: false)
+                .execute()
+                .value
+            self.products = fetched
+        } catch {
+            print("❌ Failed to fetch products: \(error)")
+            self.productError = "Failed to load products: \(error.localizedDescription)"
+        }
+        isLoadingProducts = false
+    }
+
+    func submitRepair(for product: InventoryProduct, issueDescription: String, repairCost: Double) async -> Bool {
+        do {
+            let payload = RepairInsertPayload(
+                product_id: product.id,
+                issueDescription: issueDescription,
+                repairCost: repairCost
+            )
+
+            try await SupabaseManager.shared.client
+                .from("repair")
+                .insert(payload)
+                .execute()
+
+            try await SupabaseManager.shared.client
+                .from("products")
+                .update(["inRepair": true])
+                .eq("id", value: product.id)
+                .execute()
+
+            if let index = products.firstIndex(where: { $0.id == product.id }) {
+                products[index] = InventoryProduct(
+                    id: product.id,
+                    sku: product.sku,
+                    name: product.name,
+                    description: product.description,
+                    base_Price: product.base_Price,
+                    category_id: product.category_id,
+                    image_Url: product.image_Url,
+                    created_at: product.created_at,
+                    inRepair: true
+                )
+            }
+            return true
+        } catch {
+            print("❌ Failed to submit repair: \(error)")
+            return false
+        }
+    }
+
+    func resolveRepair(for product: InventoryProduct) async {
+        do {
+            try await SupabaseManager.shared.client
+                .from("repair")
+                .update(["status": "Completed", "resolved_at": Date().ISO8601Format()])
+                .eq("product_id", value: product.id)
+                .eq("status", value: "Pending")
+                .execute()
+
+            try await SupabaseManager.shared.client
+                .from("products")
+                .update(["inRepair": false])
+                .eq("id", value: product.id)
+                .execute()
+
+            if let index = products.firstIndex(where: { $0.id == product.id }) {
+                products[index] = InventoryProduct(
+                    id: product.id,
+                    sku: product.sku,
+                    name: product.name,
+                    description: product.description,
+                    base_Price: product.base_Price,
+                    category_id: product.category_id,
+                    image_Url: product.image_Url,
+                    created_at: product.created_at,
+                    inRepair: false
+                )
+            }
+        } catch {
+            print("❌ Failed to resolve repair: \(error)")
         }
     }
 }

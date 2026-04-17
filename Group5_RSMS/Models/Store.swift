@@ -19,9 +19,9 @@ struct Store: Identifiable, Codable, Hashable {
     var zipCode: String? = nil
     var state: String? = nil
     var managerName: String? = nil
-    var region: String? = nil
+    var region: String = "Asia"
     var taxRate: Double? = nil
-    var isActive: Bool? = true
+    var isActive: Bool = true
     var currencyCode: String? = nil
     var createdAt: Date? = Date()
     var assignedManagerId: UUID? = nil
