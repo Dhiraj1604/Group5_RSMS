@@ -22,11 +22,21 @@ struct AddStoreView: View {
     @State private var email = ""
     @State private var managerName = ""
     @State private var selectedRegion = "West"
+    @State private var selectedCurrency = "INR"          // ← NEW
     @State private var taxRate = "18.0"
     @State private var showValidationErrors = false
     @State private var showSuccessAlert = false
 
-    private let regions = ["North", "South", "East", "West", "Central"]
+    private let regions = ["Asia", "Europe", "North America", "South America", "Australia", "Africa"]
+
+    // ← NEW: 5 major world currencies
+    private let currencies: [(code: String, label: String)] = [
+        ("INR", "₹  INR — Indian Rupee"),
+        ("USD", "$  USD — US Dollar"),
+        ("EUR", "€  EUR — Euro"),
+        ("GBP", "£  GBP — British Pound"),
+        ("JPY", "¥  JPY — Japanese Yen")
+    ]
 
     private var isFormValid: Bool {
         !storeName.trimmingCharacters(in: .whitespaces).isEmpty &&
@@ -137,6 +147,8 @@ struct AddStoreView: View {
     // MARK: - Configuration
     private var configSection: some View {
         formSection(title: "Configuration") {
+
+            // Region picker (unchanged)
             VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
                 Text("Region")
                     .font(.caption)
@@ -165,6 +177,37 @@ struct AddStoreView: View {
                         .stroke(RSMSTheme.Colors.border, lineWidth: 1)
                 )
             }
+
+            // ← NEW: Currency picker
+            VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
+                Text("Currency")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    .textCase(.uppercase)
+
+                HStack(spacing: RSMSTheme.Spacing.sm) {
+                    Image(systemName: "banknote.fill")
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        .frame(width: 20)
+                    Picker("Currency", selection: $selectedCurrency) {
+                        ForEach(currencies, id: \.code) { currency in
+                            Text(currency.label).tag(currency.code)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(RSMSTheme.Colors.textPrimary)
+                    Spacer()
+                }
+                .padding(RSMSTheme.Spacing.md)
+                .background(RSMSTheme.Colors.backgroundElevated)
+                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm))
+                .overlay(
+                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
+                        .stroke(RSMSTheme.Colors.border, lineWidth: 1)
+                )
+            }
+
             formField(label: "Tax Rate (%)", placeholder: "18.0", text: $taxRate, icon: "percent", required: true)
                 .keyboardType(.decimalPad)
         }
@@ -267,7 +310,7 @@ struct AddStoreView: View {
             region: selectedRegion,
             taxRate: Double(taxRate) ?? 18.0,
             isActive: true,
-            currencyCode: "INR"
+            currencyCode: selectedCurrency
         )
         Task {
             await appState.addStore(newStore)
