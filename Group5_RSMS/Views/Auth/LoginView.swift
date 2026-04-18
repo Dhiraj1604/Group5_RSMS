@@ -6,14 +6,12 @@
 //
 
 import SwiftUI
-import AuthenticationServices
 #if canImport(Supabase)
 import Supabase
 #endif
 
 struct LoginView: View {
     @Environment(AppState.self) private var appState
-    @Environment(\.webAuthenticationSession) private var webAuthSession
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
@@ -194,15 +192,6 @@ struct LoginView: View {
             }
             .buttonStyle(GoldButtonStyle())
             
-            Button { attemptGoogleLogin() } label: {
-                HStack(spacing: RSMSTheme.Spacing.md) {
-                    Image(systemName: "globe")
-                        .font(.system(size: 20))
-                    Text("Continue with Google")
-                }
-            }
-            .buttonStyle(GoldButtonStyle())
-            
             Button {
                 withAnimation {
                     isSignUp.toggle()
@@ -252,9 +241,8 @@ struct LoginView: View {
                 }
                 #endif
                 
-                await MainActor.run {
-                    appState.login(email: trimmedEmail)
-                }
+                // Now directly await login instead of wrapping in MainActor.run because login is MainActor isolated.
+                try await appState.login(email: trimmedEmail)
             } catch {
                 await MainActor.run {
                     withAnimation { 
@@ -266,37 +254,7 @@ struct LoginView: View {
         }
     }
 
-    private func attemptGoogleLogin() {
-        Task {
-            do {
-                #if canImport(Supabase)
-                let url = try await SupabaseManager.shared.client.auth.getOAuthSignInURL(
-                    provider: .google,
-                    redirectTo: URL(string: "rsms-app://login-callback")
-                )
-                
-                let callbackURL = try await webAuthSession.authenticate(
-                    using: url,
-                    callbackURLScheme: "rsms-app",
-                    preferredBrowserSession: .shared
-                )
-                
-                let session = try await SupabaseManager.shared.client.auth.session(from: callbackURL)
-                
-                await MainActor.run {
-                    appState.login(email: session.user.email ?? "google_user")
-                }
-                #endif
-            } catch {
-                await MainActor.run {
-                    withAnimation {
-                        showError = true
-                        errorMessage = error.localizedDescription
-                    }
-                }
-            }
-        }
-    }
+    
 }
 
 #Preview {

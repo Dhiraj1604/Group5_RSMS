@@ -30,12 +30,19 @@ struct ContentView: View {
             } else if !appState.isLoggedIn {
                 LoginView()
                     .transition(.opacity.combined(with: .move(edge: .leading)))
-            } else if appState.selectedRole == nil {
-                RoleSelectionView()
+            } else if appState.requiresPasswordChange {
+                ForcePasswordChangeView()
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            } else if let role = appState.selectedRole {
+                dashboardForRole(role)
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
             } else {
-                dashboardForRole(appState.selectedRole!)
-                    .transition(.opacity.combined(with: .move(edge: .trailing)))
+                RSMSTheme.Colors.backgroundPrimary
+                    .ignoresSafeArea()
+                    .overlay {
+                        Text("Authorizing Role...")
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    }
             }
         }
         .animation(.easeInOut(duration: 0.4), value: appState.isLoggedIn)
@@ -50,8 +57,8 @@ struct ContentView: View {
         #if canImport(Supabase)
         do {
             let session = try await SupabaseManager.shared.client.auth.session
+            try await appState.login(email: session.user.email ?? "")
             await MainActor.run {
-                appState.login(email: session.user.email ?? "")
                 isCheckingSession = false
             }
         } catch {

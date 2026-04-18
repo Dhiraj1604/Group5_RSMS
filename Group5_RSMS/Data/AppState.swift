@@ -17,6 +17,7 @@ import Supabase
 class AppState {
     // MARK: - Auth State
     var isLoggedIn: Bool = false
+    var requiresPasswordChange: Bool = false
     var userEmail: String = ""
     var managerAuthId: UUID? = nil
     var selectedRole: UserRole? = nil
@@ -40,11 +41,57 @@ class AppState {
         selectedRole != nil
     }
 
+    enum AuthError: Error, LocalizedError {
+        case missingRole
+        
+        var errorDescription: String? {
+            switch self {
+            case .missingRole:
+                return "Your account does not have an assigned role. Please contact your system administrator."
+            }
+        }
+    }
+
     // MARK: - Auth Actions
-    func login(email: String) {
+    func login(email: String) async throws {
         userEmail = email
-        isLoggedIn = true
         managerAuthId = UUID(uuidString: "3bb61198-7f75-4d11-9e72-28c5afdb53a7")
+        
+        #if canImport(Supabase)
+        do {
+            struct Profile: Codable {
+                let role: String
+            }
+            let session = try await SupabaseManager.shared.client.auth.session
+            
+            // Extract the metadata flag from the session invisible object!
+            if let reqPass = session.user.userMetadata["requires_password_change"] {
+                if reqPass == .bool(true) {
+                    self.requiresPasswordChange = true
+                }
+            }
+            
+            let profile: Profile = try await SupabaseManager.shared.client
+                .from("profiles")
+                .select("role")
+                .eq("id", value: session.user.id)
+                .single()
+                .execute()
+                .value
+                
+            if let fetchedRole = UserRole(rawValue: profile.role) {
+                self.selectedRole = fetchedRole
+            } else {
+                print("Unknown role: \(profile.role)")
+                throw AuthError.missingRole
+            }
+        } catch {
+            print("Failed to fetch user role: \(error)")
+            throw AuthError.missingRole
+        }
+        #endif
+        
+        isLoggedIn = true
     }
 
     func selectRole(_ role: UserRole) {
