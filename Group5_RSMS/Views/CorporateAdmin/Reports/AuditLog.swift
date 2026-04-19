@@ -97,3 +97,23 @@ enum AuditOperationFilter: String, CaseIterable {
     case updated = "Updated"
     case deleted = "Deleted"
 }
+extension AuditLog {
+    static func createEntry(
+        action: String,
+        type: AuditEntityType,
+        entityName: String,
+        before: [String: String]? = nil,
+        after: [String: String]? = nil
+    ) -> AuditLog {
+        return AuditLog(
+            id: nil, // Supabase generates this
+            action: action,
+            eventType: type,
+            userName: "Current Admin", // Replace with actual Auth user name
+            entity: entityName,
+            beforeData: before,
+            afterData: after,
+            createdAt: nil // Supabase generates this
+        )
+    }
+}

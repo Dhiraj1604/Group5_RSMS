@@ -1,26 +1,20 @@
-
-//  Created by Dhiraj on 15/04/26.
-
+//
 //  SetPriceView.swift
 //  Group5_RSMS
 //
-//  Corporate Admin — Set / Update Official Retail Price. SPRINT 1 STORY 4.
-//
-//  Writes to Supabase:
-//    1. Updates `products.base_price`
-//    2. Inserts a row into `price_history` (audit trail required before POS goes live)
-//
-//  Every transaction records a unit_price at time of sale.
-//  Building this now ensures pricing data is clean from the very first test transaction.
+//  Created by Dhiraj on 15/04/26.
 //
 
 import SwiftUI
+import Supabase
+import PostgREST
+import Foundation
 
 struct SetPriceView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
-    let product: Product
+    let product: ProductNew
 
     @State private var priceInput: String = ""
     @State private var note: String = ""
@@ -220,7 +214,7 @@ struct SetPriceView: View {
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                Text("This change is recorded in price_history with your account, previous price, and timestamp. Every POS transaction records the unit_price at time of sale.")
+                Text("This change is recorded in price_history with your account, previous price, and timestamp.")
                     .font(.caption2)
                     .foregroundStyle(RSMSTheme.Colors.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -255,7 +249,7 @@ struct SetPriceView: View {
         .opacity(isValidPrice && !isLoading ? 1.0 : 0.5)
     }
 
-    // MARK: - Submit
+    // MARK: - Submit Logic
 
     private func submitPrice() {
         guard let price = parsedPrice, price > 0 else {
@@ -266,8 +260,6 @@ struct SetPriceView: View {
             return
         }
 
-        isLoading = true
-
         Task {
             await savePrice(newPrice: price)
         }
@@ -275,23 +267,27 @@ struct SetPriceView: View {
 
     @MainActor
     private func savePrice(newPrice: Double) async {
+        // Nested struct for DTO
+        struct PriceHistoryInsert: Encodable {
+            let product_id: UUID
+            let previous_price: Double?
+            let new_price: Double
+            let changed_by: String
+            let note: String?
+        }
+
+        isLoading = true
+        errorMessage = nil
+
         do {
-            // 1. Update base_price on the product
+            // 1. Update Product Table
             try await SupabaseManager.shared.client
-                .from("products")
+                .from("ProductNew")
                 .update(["base_price": newPrice])
                 .eq("id", value: product.id)
                 .execute()
 
-            // 2. Insert price_history audit record
-            struct PriceHistoryInsert: Encodable {
-                let product_id: UUID
-                let previous_price: Double?
-                let new_price: Double
-                let changed_by: String
-                let note: String?
-            }
-
+            // 2. Insert Audit History Row
             let historyRecord = PriceHistoryInsert(
                 product_id: product.id,
                 previous_price: product.basePrice > 0 ? product.basePrice : nil,
@@ -305,18 +301,26 @@ struct SetPriceView: View {
                 .insert(historyRecord)
                 .execute()
 
+            // 3. ✅ CRITICAL: Update AppState directly for immediate UI reaction
+            if let index = appState.products.firstIndex(where: { $0.id == product.id }) {
+                appState.products[index].basePrice = newPrice
+            }
+
+            // 4. Background sync for metadata
+            await appState.fetchProducts()
+            
             isLoading = false
             dismiss()
 
         } catch {
-            print("❌ Failed to set price: \(error)")
-            errorMessage = "Failed to save price: \(error.localizedDescription)"
+            print("❌ Save Failed: \(error)")
+            errorMessage = "Error: \(error.localizedDescription)"
             isLoading = false
         }
     }
 }
 
 #Preview {
-    SetPriceView(product: Product(sku: "LUX-001", name: "Signature Watch", basePrice: 0))
+    SetPriceView(product: ProductNew.sample)
         .environment(AppState())
 }
