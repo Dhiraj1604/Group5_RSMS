@@ -2,8 +2,8 @@
 //  AppState.swift
 //  Group5_RSMS
 //
-//  Sprint 1 — Central observable state for the entire application.
-//  Manages authentication, role selection, and store data.
+//  Merged AppState — combines Sprint 1 auth/store logic with full product management.
+//  Manages authentication, role selection, store data, and product inventory.
 //
 
 import SwiftUI
@@ -15,6 +15,7 @@ import Supabase
 @Observable
 @MainActor
 class AppState {
+
     // MARK: - Auth State
     var isLoggedIn: Bool = false
     var requiresPasswordChange: Bool = false
@@ -37,13 +38,34 @@ class AppState {
     private let sync = SupabaseSyncManager.shared
 
     // MARK: - Navigation
-    var hasSelectedRole: Bool {
-        selectedRole != nil
-    }
+    var hasSelectedRole: Bool { selectedRole != nil }
 
     enum AuthError: Error, LocalizedError {
         case missingRole
         
+        var errorDescription: String? {
+            switch self {
+            case .missingRole:
+                return "Your account does not have an assigned role. Please contact your system administrator."
+            }
+        }
+    }
+
+    // MARK: - Product State
+    var products: [ProductNew] = []
+    var isLoadingProducts: Bool = false
+    var productError: String? = nil
+
+    // MARK: - Supabase Client
+    private var client: SupabaseClient {
+        SupabaseManager.shared.client
+    }
+
+    // MARK: - Auth Errors
+
+    enum AuthError: Error, LocalizedError {
+        case missingRole
+
         var errorDescription: String? {
             switch self {
             case .missingRole:
@@ -98,9 +120,7 @@ class AppState {
         selectedRole = role
     }
 
-    func logout() {
-        isLoggedIn = false
-        userEmail = ""
+    func goBackToRoleSelection() {
         selectedRole = nil
         stores = []
         
@@ -253,6 +273,7 @@ class AppState {
             print("❌ Failed to submit repair: \(error)")
             return false
         }
+        isLoadingProducts = false
     }
 
     func resolveRepair(for product: InventoryProduct) async {
