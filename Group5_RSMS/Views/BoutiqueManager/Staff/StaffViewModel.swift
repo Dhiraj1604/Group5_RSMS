@@ -1,0 +1,72 @@
+//
+//  StaffViewModel.swift
+//  Group5_RSMS
+//
+//  Created by Apple on 19/04/26.
+//
+
+
+//
+//  StaffViewModel.swift
+//  Group5_RSMS
+//
+
+import Foundation
+import Combine
+
+@MainActor
+final class StaffViewModel: ObservableObject {
+
+    @Published var employees: [Employee] = []
+    @Published var employeeSales: [UUID: Double] = [:]   // employeeId → total sales
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String? = nil
+
+    private let sync = SupabaseSyncManager.shared
+
+    // MARK: - Fetch all employees for a boutique
+    func fetchEmployees(boutiqueId: UUID) async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            employees = try await sync.fetchEmployees(boutiqueId: boutiqueId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    // MARK: - Fetch sales total per employee
+    func fetchSalesPerEmployee(boutiqueId: UUID) async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            let sales = try await sync.fetchSalesPerEmployee(boutiqueId: boutiqueId)
+            var map: [UUID: Double] = [:]
+            for sale in sales {
+                map[sale.employeeId] = sale.totalSales
+            }
+            employeeSales = map
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    // MARK: - Helper
+    func totalSales(for employeeId: UUID) -> Double {
+        return employeeSales[employeeId] ?? 0.0
+    }
+    
+    func addEmployee(_ employee: Employee, boutiqueId: UUID) async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await sync.createEmployee(employee)
+            await fetchEmployees(boutiqueId: boutiqueId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+}

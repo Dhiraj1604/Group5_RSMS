@@ -115,4 +115,116 @@ final class SupabaseSyncManager {
             .eq("id", value: id.uuidString)
             .execute()
     }
+    
+    // Boutique Manager(Staff tab)
+    
+    // MARK: - Employees
+    func fetchEmployees(boutiqueId: UUID) async throws -> [Employee] {
+        let response = try await client
+            .from("employees")
+            .select()
+            .eq("boutique_id", value: boutiqueId.uuidString)
+            .eq("is_active", value: true)
+            .execute()
+        return try supabaseDecoder.decode([Employee].self, from: response.data)
+    }
+
+    func createEmployee(_ employee: Employee) async throws {
+        try await client.from("employees").insert(employee).execute()
+    }
+
+    func updateEmployee(_ employee: Employee) async throws {
+        try await client
+            .from("employees")
+            .update(employee)
+            .eq("id", value: employee.id.uuidString)
+            .execute()
+    }
+
+    func deactivateEmployee(id: UUID) async throws {
+        try await client
+            .from("employees")
+            .update(["is_active": false])
+            .eq("id", value: id.uuidString)
+            .execute()
+    }
+
+    // MARK: - Commission Rates
+    func fetchCommissionRates(boutiqueId: UUID) async throws -> [CommissionRate] {
+        let response = try await client
+            .from("commission_rates")
+            .select()
+            .eq("boutique_id", value: boutiqueId.uuidString)
+            .execute()
+        return try supabaseDecoder.decode([CommissionRate].self, from: response.data)
+    }
+
+    func setCommissionRate(_ rate: CommissionRate) async throws {
+        try await client.from("commission_rates").insert(rate).execute()
+    }
+
+    func updateCommissionRate(_ rate: CommissionRate) async throws {
+        try await client
+            .from("commission_rates")
+            .update(rate)
+            .eq("id", value: rate.id.uuidString)
+            .execute()
+    }
+
+    // MARK: - Commission Payouts
+    func fetchPayouts(for employeeId: UUID) async throws -> [CommissionPayout] {
+        let response = try await client
+            .from("commission_payouts")
+            .select()
+            .eq("employee_id", value: employeeId.uuidString)
+            .execute()
+        return try supabaseDecoder.decode([CommissionPayout].self, from: response.data)
+    }
+
+    func createPayout(_ payout: CommissionPayout) async throws {
+        try await client.from("commission_payouts").insert(payout).execute()
+    }
+
+    func approvePayout(id: UUID, approvedBy: UUID) async throws {
+        try await client
+            .from("commission_payouts")
+            .update([
+                "status": "approved",
+                "approved_by": approvedBy.uuidString,
+                "approved_at": ISO8601DateFormatter().string(from: Date())
+            ])
+            .eq("id", value: id.uuidString)
+            .execute()
+    }
+
+    // MARK: - Employee Sales Summary
+    func fetchSalesPerEmployee(boutiqueId: UUID) async throws -> [EmployeeSalesSummary] {
+//        let response = try await client
+//            .from("customer_orders")
+//            .select("employee_id, total_amount")
+//            .eq("boutique_id", value: boutiqueId.uuidString)
+//            .execute()
+//
+//        // Decode raw orders and manually sum per employee
+//        struct RawOrder: Codable {
+//            let employeeId: UUID
+//            let totalAmount: Double
+//
+//            enum CodingKeys: String, CodingKey {
+//                case employeeId  = "employee_id"
+//                case totalAmount = "total_amount"
+//            }
+//        }
+//
+//        let orders = try supabaseDecoder.decode([RawOrder].self, from: response.data)
+//
+//        // Group and sum by employeeId
+//        var salesMap: [UUID: Double] = [:]
+//        for order in orders {
+//            salesMap[order.employeeId, default: 0.0] += order.totalAmount
+//        }
+//
+//        return salesMap.map { EmployeeSalesSummary(employeeId: $0.key, totalSales: $0.value) }
+        return []
+    }
 }
