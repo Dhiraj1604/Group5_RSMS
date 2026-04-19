@@ -111,9 +111,7 @@ class AppState {
         #endif
     }
 
-    func goBackToRoleSelection() {
-        selectedRole = nil
-    }
+
 
     // MARK: - Store Actions (Supabase-backed)
 
