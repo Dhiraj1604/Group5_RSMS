@@ -55,7 +55,7 @@ struct ICAlertsTab: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button(role: .destructive) {
-                            appState.goBackToRoleSelection()
+                            appState.signOut()
                         } label: {
                             Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                         }
