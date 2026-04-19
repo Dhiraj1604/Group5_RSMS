@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+#if canImport(Supabase)
+import Supabase
+#endif
 
 struct AddStoreView: View {
     @Environment(AppState.self) private var appState
@@ -21,13 +24,23 @@ struct AddStoreView: View {
     @State private var phone = ""
     @State private var email = ""
     @State private var managerName = ""
+    @State private var managerEmail = ""
     @State private var selectedRegion = "West"
+    @State private var selectedCurrency = "INR"          // ← NEW
     @State private var taxRate = "18.0"
     @State private var showValidationErrors = false
     @State private var showSuccessAlert = false
-    @State private var isLoading = false
 
-    private let regions = ["North", "South", "East", "West", "Central"]
+    private let regions = ["Asia", "Europe", "North America", "South America", "Australia", "Africa"]
+
+    // ← NEW: 5 major world currencies
+    private let currencies: [(code: String, label: String)] = [
+        ("INR", "₹  INR — Indian Rupee"),
+        ("USD", "$  USD — US Dollar"),
+        ("EUR", "€  EUR — Euro"),
+        ("GBP", "£  GBP — British Pound"),
+        ("JPY", "¥  JPY — Japanese Yen")
+    ]
 
     private var isFormValid: Bool {
         !storeName.trimmingCharacters(in: .whitespaces).isEmpty &&
@@ -39,6 +52,7 @@ struct AddStoreView: View {
         !phone.trimmingCharacters(in: .whitespaces).isEmpty &&
         !email.trimmingCharacters(in: .whitespaces).isEmpty &&
         !managerName.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !managerEmail.trimmingCharacters(in: .whitespaces).isEmpty &&
         (Double(taxRate) != nil)
     }
 
@@ -76,14 +90,6 @@ struct AddStoreView: View {
                 Button("Done") { dismiss() }
             } message: {
                 Text("\(storeName) has been successfully registered. You can now assign staff and inventory to this location.")
-            }
-            .alert("Error", isPresented: Binding<Bool>(
-                get: { appState.storeError != nil },
-                set: { if !$0 { appState.storeError = nil } }
-            )) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(appState.storeError ?? "Unknown error occurred.")
             }
         }
     }
@@ -136,16 +142,21 @@ struct AddStoreView: View {
         formSection(title: "Contact") {
             formField(label: "Phone", placeholder: "+91 XX XXXX XXXX", text: $phone, icon: "phone.fill", required: true)
                 .keyboardType(.phonePad)
-            formField(label: "Email", placeholder: "store@rsms.com", text: $email, icon: "envelope.fill", required: true)
+            formField(label: "Store Email", placeholder: "store@rsms.com", text: $email, icon: "envelope.fill", required: true)
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
             formField(label: "Manager Name", placeholder: "Store manager name", text: $managerName, icon: "person.fill", required: true)
+            formField(label: "Manager Email", placeholder: "manager@example.com", text: $managerEmail, icon: "person.text.rectangle.fill", required: true)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
         }
     }
 
     // MARK: - Configuration
     private var configSection: some View {
         formSection(title: "Configuration") {
+
+            // Region picker (unchanged)
             VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
                 Text("Region")
                     .font(.caption)
@@ -174,6 +185,37 @@ struct AddStoreView: View {
                         .stroke(RSMSTheme.Colors.border, lineWidth: 1)
                 )
             }
+
+            // ← NEW: Currency picker
+            VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
+                Text("Currency")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    .textCase(.uppercase)
+
+                HStack(spacing: RSMSTheme.Spacing.sm) {
+                    Image(systemName: "banknote.fill")
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        .frame(width: 20)
+                    Picker("Currency", selection: $selectedCurrency) {
+                        ForEach(currencies, id: \.code) { currency in
+                            Text(currency.label).tag(currency.code)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(RSMSTheme.Colors.textPrimary)
+                    Spacer()
+                }
+                .padding(RSMSTheme.Spacing.md)
+                .background(RSMSTheme.Colors.backgroundElevated)
+                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm))
+                .overlay(
+                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
+                        .stroke(RSMSTheme.Colors.border, lineWidth: 1)
+                )
+            }
+
             formField(label: "Tax Rate (%)", placeholder: "18.0", text: $taxRate, icon: "percent", required: true)
                 .keyboardType(.decimalPad)
         }
@@ -189,19 +231,11 @@ struct AddStoreView: View {
             }
             Button { registerStore() } label: {
                 HStack(spacing: RSMSTheme.Spacing.sm) {
-                    if isLoading {
-                        ProgressView()
-                            .tint(RSMSTheme.Colors.backgroundPrimary)
-                            .padding(.trailing, 4)
-                    } else {
-                        Image(systemName: "checkmark.circle.fill")
-                    }
-                    Text(isLoading ? "Registering..." : "Register Boutique")
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("Register Boutique")
                 }
             }
             .buttonStyle(GoldButtonStyle())
-            .disabled(isLoading)
-            .opacity(isLoading ? 0.7 : 1.0)
         }
         .padding(.top, RSMSTheme.Spacing.md)
     }
@@ -269,30 +303,42 @@ struct AddStoreView: View {
     private func registerStore() {
         showValidationErrors = true
         guard isFormValid else { return }
-        
-        isLoading = true
 
         let newStore = Store(
             name: storeName.trimmingCharacters(in: .whitespaces),
-            code: storeCode.trimmingCharacters(in: .whitespaces).uppercased(),
-            address: address.trimmingCharacters(in: .whitespaces),
             city: city.trimmingCharacters(in: .whitespaces),
             country: country.trimmingCharacters(in: .whitespaces),
-            currencyCode: country.localizedCaseInsensitiveContains("India") ? "INR" : "USD",
-            state: state.trimmingCharacters(in: .whitespaces),
-            zipCode: zipCode.trimmingCharacters(in: .whitespaces),
+            code: storeCode.trimmingCharacters(in: .whitespaces).uppercased(),
             phone: phone.trimmingCharacters(in: .whitespaces),
             email: email.trimmingCharacters(in: .whitespaces),
+            address: address.trimmingCharacters(in: .whitespaces),
+            zipCode: zipCode.trimmingCharacters(in: .whitespaces),
+            state: state.trimmingCharacters(in: .whitespaces),
             managerName: managerName.trimmingCharacters(in: .whitespaces),
             region: selectedRegion,
-            taxRate: Double(taxRate) ?? 18.0
+            taxRate: Double(taxRate) ?? 18.0,
+            isActive: true,
+            currencyCode: selectedCurrency
         )
-        
         Task {
-            let success = await appState.addStore(newStore)
-            isLoading = false
-            if success {
+            await appState.addStore(newStore)
+            
+            // Invoke Edge Function securely to invite the manager!
+            do {
+                try await SupabaseManager.shared.inviteManager(
+                    email: managerEmail.trimmingCharacters(in: .whitespaces),
+                    boutiqueId: newStore.id
+                )
+                print("Manager successfully invited!")
                 showSuccessAlert = true
+            } catch {
+                if let httpError = error as? FunctionsError,
+                   case let .httpError(code, data) = httpError,
+                   let errorJson = String(data: data, encoding: .utf8) {
+                    appState.storeError = "Edge Function Error (HTTP \(code)):\n\(errorJson)"
+                } else {
+                    appState.storeError = "Failed to invite manager: \(error.localizedDescription)"
+                }
             }
         }
     }

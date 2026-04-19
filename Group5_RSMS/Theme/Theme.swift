@@ -21,6 +21,7 @@ enum RSMSTheme {
         static let accentGoldLight = Color(red: 0.910, green: 0.835, blue: 0.639)           // #E8D5A3
         static let accentGoldDark = Color(red: 0.659, green: 0.537, blue: 0.243)            // #A8893E
 
+        
         // Status
         static let success = Color(red: 0.30, green: 0.75, blue: 0.45)
         static let warning = Color(red: 0.95, green: 0.75, blue: 0.30)

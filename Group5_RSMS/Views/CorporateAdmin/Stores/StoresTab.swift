@@ -13,6 +13,7 @@ struct StoresTab: View {
     @State private var showAddStore = false
     @State private var searchText = ""
     @State private var filterActive: Bool? = nil
+    @State private var isLoading = false              // ← NEW
 
     private var filteredStores: [Store] {
         var result = appState.stores
@@ -36,19 +37,10 @@ struct StoresTab: View {
                 RSMSTheme.Colors.backgroundPrimary
                     .ignoresSafeArea()
 
-                if appState.stores.isEmpty {
-                    if appState.isLoadingStores {
-                        VStack(spacing: RSMSTheme.Spacing.md) {
-                            ProgressView()
-                                .scaleEffect(1.5)
-                                .tint(RSMSTheme.Colors.accentGold)
-                            Text("Loading Boutiques...")
-                                .font(.subheadline)
-                                .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                        }
-                    } else {
-                        emptyState
-                    }
+                if isLoading {                         // ← NEW
+                    loadingState
+                } else if appState.stores.isEmpty {
+                    emptyState
                 } else {
                     storesList
                 }
@@ -72,26 +64,32 @@ struct StoresTab: View {
             .sheet(isPresented: $showAddStore) {
                 AddStoreView()
             }
-            .task {
-                if appState.stores.isEmpty {
-                    await appState.fetchStores()
-                }
-            }
-            .refreshable {
-                await appState.fetchStores()
-            }
-            .alert("Error Loading Boutiques", isPresented: Binding<Bool>(
-                get: { appState.storeError != nil },
-                set: { if !$0 { appState.storeError = nil } }
-            )) {
-                Button("Retry", role: .cancel) {
-                    Task { await appState.fetchStores() }
-                }
-                Button("Dismiss", role: .none) { }
+            .alert("Error", isPresented: .constant(appState.storeError != nil)) {
+                Button("OK") { appState.storeError = nil }
             } message: {
-                Text(appState.storeError ?? "Unknown error occurred.")
+                Text(appState.storeError ?? "")
+            }
+            .task {
+                guard appState.stores.isEmpty else { return }  // ← skip if already loaded
+                isLoading = true
+                await appState.loadStores()
+                isLoading = false
             }
         }
+    }
+
+    // MARK: - Loading State                           // ← NEW
+    private var loadingState: some View {
+        VStack(spacing: RSMSTheme.Spacing.lg) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: RSMSTheme.Colors.accentGold))
+                .scaleEffect(1.4)
+            Text("Loading Stores...")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Empty State
@@ -187,7 +185,7 @@ struct StoresTab: View {
 
     // MARK: - Store Card
     private func storeCard(store: Store) -> some View {
-        HStack(spacing: RSMSTheme.Spacing.lg) {
+        HStack(alignment: .center, spacing: RSMSTheme.Spacing.lg) {
             ZStack {
                 RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
                     .fill(store.isActive
@@ -200,26 +198,13 @@ struct StoresTab: View {
                                      ? RSMSTheme.Colors.accentGold
                                      : RSMSTheme.Colors.textTertiary)
             }
+
             VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
-                HStack {
-                    Text(store.name)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                        .lineLimit(1)
-                    Spacer()
-                    Text(store.isActive ? "Active" : "Inactive")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(store.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
-                        .padding(.horizontal, RSMSTheme.Spacing.sm)
-                        .padding(.vertical, 3)
-                        .background(
-                            (store.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
-                                .opacity(0.15)
-                        )
-                        .clipShape(Capsule())
-                }
+                Text(store.name)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                    .lineLimit(1)
                 HStack(spacing: RSMSTheme.Spacing.lg) {
                     Label(store.code, systemImage: "qrcode")
                     Label(store.city, systemImage: "mappin")
@@ -227,6 +212,21 @@ struct StoresTab: View {
                 .font(.caption)
                 .foregroundStyle(RSMSTheme.Colors.textTertiary)
             }
+
+            Spacer()
+
+            Text(store.isActive ? "Active" : "Inactive")
+                .font(.caption2)
+                .fontWeight(.bold)
+                .foregroundStyle(store.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
+                .padding(.horizontal, RSMSTheme.Spacing.sm)
+                .padding(.vertical, 3)
+                .background(
+                    (store.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
+                        .opacity(0.15)
+                )
+                .clipShape(Capsule())
+
             Image(systemName: "chevron.right")
                 .font(.caption2)
                 .foregroundStyle(RSMSTheme.Colors.textTertiary)

@@ -1,11 +1,5 @@
-//
-//  Group5_RSMSApp.swift
-//  Group5_RSMS
-//
-//  Created by Dhiraj on 10/04/26.
-//
-
 import SwiftUI
+import Supabase
 
 @main
 struct Group5_RSMSApp: App {
@@ -16,6 +10,17 @@ struct Group5_RSMSApp: App {
             ContentView()
                 .environment(appState)
                 .preferredColorScheme(.dark)
+                .onOpenURL { url in
+                    Task {
+                        do {
+                            // This takes the link they clicked and logs them natively into the app!
+                            try await SupabaseManager.shared.client.auth.session(from: url)
+                        } catch {
+                            print("Deep link auth failed: \(error)")
+                        }
+                    }
+                }
         }
     }
 }
+

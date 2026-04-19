@@ -4,6 +4,9 @@
 //
 
 import Foundation
+#if canImport(Supabase)
+import Supabase
+#endif
 
 // MARK: - Model
 struct AuditLog: Identifiable, Codable {
@@ -33,6 +36,74 @@ struct AuditLog: Identifiable, Codable {
         case afterData = "after_data"
         case createdAt = "created_at"
     }
+
+    init(id: UUID? = nil, action: String, eventType: AuditEntityType, userName: String, entity: String, beforeData: [String: String]? = nil, afterData: [String: String]? = nil, createdAt: Date? = nil) {
+        self.id = id
+        self.action = action
+        self.eventType = eventType
+        self.userName = userName
+        self.entity = entity
+        self.beforeData = beforeData
+        self.afterData = afterData
+        self.createdAt = createdAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decodeIfPresent(UUID.self, forKey: .id)
+        self.action = try container.decode(String.self, forKey: .action)
+        
+        let typeString = try container.decodeIfPresent(String.self, forKey: .eventType)
+        self.eventType = AuditEntityType.allCases.first { $0.rawValue.lowercased() == typeString?.lowercased() } ?? .product
+        
+        self.userName = try container.decode(String.self, forKey: .userName)
+        self.entity = try container.decode(String.self, forKey: .entity)
+        
+        #if canImport(Supabase)
+        self.beforeData = AuditLog.extractStringMap(from: container, key: .beforeData)
+        self.afterData = AuditLog.extractStringMap(from: container, key: .afterData)
+        #else
+        self.beforeData = try container.decodeIfPresent([String: String].self, forKey: .beforeData)
+        self.afterData = try container.decodeIfPresent([String: String].self, forKey: .afterData)
+        #endif
+        
+        self.createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(id, forKey: .id)
+        try container.encode(action, forKey: .action)
+        try container.encode(eventType.rawValue, forKey: .eventType)
+        try container.encode(userName, forKey: .userName)
+        try container.encode(entity, forKey: .entity)
+        try container.encodeIfPresent(beforeData, forKey: .beforeData)
+        try container.encodeIfPresent(afterData, forKey: .afterData)
+        try container.encodeIfPresent(createdAt, forKey: .createdAt)
+    }
+
+    #if canImport(Supabase)
+    private static func extractStringMap(from container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) -> [String: String]? {
+        guard let jsonDict = try? container.decodeIfPresent([String: AnyJSON].self, forKey: key) else { return nil }
+        var map = [String: String]()
+        for (k, v) in jsonDict {
+            map[k] = stringify(v)
+        }
+        return map
+    }
+
+    private static func stringify(_ json: AnyJSON) -> String {
+        switch json {
+        case .string(let s): return s
+        case .integer(let i): return String(i)
+        case .double(let d): return String(d)
+        case .bool(let b): return b ? "true" : "false"
+        case .null: return "null"
+        case .array(let arr): return "[" + arr.map { stringify($0) }.joined(separator: ", ") + "]"
+        case .object(let obj): return "{" + obj.map { "\($0.key): \(stringify($0.value))" }.joined(separator: ", ") + "}"
+        }
+    }
+    #endif
 
     var formattedTimestamp: String {
         guard let createdAt = createdAt else { return "Unknown" }

@@ -1,4 +1,6 @@
 import SwiftUI
+import Supabase
+import PostgREST
 
 struct ProductsTab: View {
     @Environment(AppState.self) private var appState
@@ -111,9 +113,27 @@ struct ProductsTab: View {
     }
 
     private var emptyState: some View {
-        ContentUnavailableView("No Products", systemImage: "bag", description: Text("Start by adding a luxury item."))
-    }
-}
+            VStack(spacing: RSMSTheme.Spacing.xl) {
+                ZStack {
+                    Circle()
+                        .fill(RSMSTheme.Colors.accentGold.opacity(0.1))
+                        .frame(width: 120, height: 120)
+                    Image(systemName: "tag.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.5))
+                }
+                VStack(spacing: RSMSTheme.Spacing.sm) {
+                    Text("No Products Found")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                    Text("Products from your Supabase `products` table\nwill appear here.")
+                        .font(.subheadline)
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+        }
 
 // MARK: - Amazon-Style Shop Card
 struct ShopProductCard: View {

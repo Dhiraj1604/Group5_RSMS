@@ -8,13 +8,19 @@
 import SwiftUI
 
 enum UserRole: String, CaseIterable, Identifiable, Codable {
-    case corporateAdmin = "Corporate Admin"
-    case boutiqueManager = "Boutique Manager"
-    case inventoryController = "Inventory Controller"
+    case corporateAdmin = "admin"
+    case boutiqueManager = "manager"
+    case inventoryController = "inventory"
 
     var id: String { rawValue }
 
-    var displayName: String { rawValue }
+    var displayName: String { 
+        switch self {
+        case .corporateAdmin: return "Corporate Admin"
+        case .boutiqueManager: return "Boutique Manager"
+        case .inventoryController: return "Inventory Controller"
+        }
+    }
 
     var description: String {
         switch self {

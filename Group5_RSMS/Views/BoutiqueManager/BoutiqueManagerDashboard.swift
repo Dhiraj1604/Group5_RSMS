@@ -31,7 +31,7 @@ struct BoutiqueManagerDashboard: View {
                 }
                 .tag(2)
 
-            BMStaffTab()
+            BMStaffTab(boutiqueId: appState.currentStoreID ?? UUID())
                 .tabItem {
                     Label("Staff", systemImage: "person.3.fill")
                 }
