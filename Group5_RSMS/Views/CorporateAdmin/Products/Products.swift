@@ -73,6 +73,7 @@ struct ProductNew: Identifiable, Codable, Equatable, Hashable {
     var craftsmanshipNotes: String = ""
     var collectionName: String = ""
     var artisanStudio: String = ""
+    var inRepair: Bool = false
 
     // MARK: - CodingKeys
 
@@ -93,6 +94,7 @@ struct ProductNew: Identifiable, Codable, Equatable, Hashable {
         case craftsmanshipNotes = "craftsmanship_notes"
         case collectionName     = "collection_name"
         case artisanStudio      = "artisan_studio"
+        case inRepair = "in_repair"
     }
 
     // MARK: - Computed

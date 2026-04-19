@@ -38,7 +38,7 @@ struct ICStockTab: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button(role: .destructive) {
-                            appState.logout()
+                            appState.goBackToRoleSelection()
                         } label: {
                             Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                         }

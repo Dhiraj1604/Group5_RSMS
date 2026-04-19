@@ -30,39 +30,18 @@ class AppState {
     var selectedStore: Store? = nil
     var currentStoreID: UUID? = nil
 
-    // MARK: - Product Data
-    var products: [InventoryProduct] = []
-    var productError: String? = nil
-    var isLoadingProducts: Bool = false
-
-    private let sync = SupabaseSyncManager.shared
-
-    // MARK: - Navigation
-    var hasSelectedRole: Bool { selectedRole != nil }
-
-    enum AuthError: Error, LocalizedError {
-        case missingRole
-        
-        var errorDescription: String? {
-            switch self {
-            case .missingRole:
-                return "Your account does not have an assigned role. Please contact your system administrator."
-            }
-        }
-    }
-
     // MARK: - Product State
     var products: [ProductNew] = []
     var isLoadingProducts: Bool = false
     var productError: String? = nil
 
-    // MARK: - Supabase Client
-    private var client: SupabaseClient {
-        SupabaseManager.shared.client
-    }
+    // MARK: - Navigation
+    var hasSelectedRole: Bool { selectedRole != nil }
+
+    // MARK: - Private
+    private let sync = SupabaseSyncManager.shared
 
     // MARK: - Auth Errors
-
     enum AuthError: Error, LocalizedError {
         case missingRole
 
@@ -78,21 +57,20 @@ class AppState {
     func login(email: String) async throws {
         userEmail = email
         managerAuthId = UUID(uuidString: "3bb61198-7f75-4d11-9e72-28c5afdb53a7")
-        
+
         #if canImport(Supabase)
         do {
             struct Profile: Codable {
                 let role: String
             }
             let session = try await SupabaseManager.shared.client.auth.session
-            
-            // Extract the metadata flag from the session invisible object!
+
             if let reqPass = session.user.userMetadata["requires_password_change"] {
                 if reqPass == .bool(true) {
                     self.requiresPasswordChange = true
                 }
             }
-            
+
             let profile: Profile = try await SupabaseManager.shared.client
                 .from("profiles")
                 .select("role")
@@ -100,7 +78,7 @@ class AppState {
                 .single()
                 .execute()
                 .value
-                
+
             if let fetchedRole = UserRole(rawValue: profile.role) {
                 self.selectedRole = fetchedRole
             } else {
@@ -112,7 +90,7 @@ class AppState {
             throw AuthError.missingRole
         }
         #endif
-        
+
         isLoggedIn = true
     }
 
@@ -123,15 +101,13 @@ class AppState {
     func goBackToRoleSelection() {
         selectedRole = nil
         stores = []
-        
+
         #if canImport(Supabase)
         Task {
             try? await SupabaseManager.shared.client.auth.signOut()
         }
         #endif
     }
-
-
 
     // MARK: - Store Actions (Supabase-backed)
 
@@ -143,7 +119,8 @@ class AppState {
             self.stores = fetchedStores
 
             if selectedRole == .boutiqueManager {
-                self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id ?? UUID(uuidString: "b3fd8cb6-341b-453e-9ed4-8915aa25245c")
+                self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id
+                    ?? UUID(uuidString: "b3fd8cb6-341b-453e-9ed4-8915aa25245c")
             } else if self.currentStoreID == nil, let first = fetchedStores.first {
                 self.currentStoreID = first.id
             }
@@ -222,7 +199,7 @@ class AppState {
         isLoadingProducts = true
         productError = nil
         do {
-            let fetched: [InventoryProduct] = try await SupabaseManager.shared.client
+            let fetched: [ProductNew] = try await SupabaseManager.shared.client
                 .from("products")
                 .select()
                 .order("created_at", ascending: false)
@@ -236,7 +213,7 @@ class AppState {
         isLoadingProducts = false
     }
 
-    func submitRepair(for product: InventoryProduct, issueDescription: String, repairCost: Double) async -> Bool {
+    func submitRepair(for product: ProductNew, issueDescription: String, repairCost: Double) async -> Bool {
         do {
             let payload = RepairInsertPayload(
                 product_id: product.id,
@@ -255,28 +232,16 @@ class AppState {
                 .eq("id", value: product.id)
                 .execute()
 
-            if let index = products.firstIndex(where: { $0.id == product.id }) {
-                products[index] = InventoryProduct(
-                    id: product.id,
-                    sku: product.sku,
-                    name: product.name,
-                    description: product.description,
-                    base_Price: product.base_Price,
-                    category_id: product.category_id,
-                    image_Url: product.image_Url,
-                    created_at: product.created_at,
-                    inRepair: true
-                )
-            }
+            // Refresh so the UI reflects the repair flag
+            await fetchProducts()
             return true
         } catch {
             print("❌ Failed to submit repair: \(error)")
             return false
         }
-        isLoadingProducts = false
     }
 
-    func resolveRepair(for product: InventoryProduct) async {
+    func resolveRepair(for product: ProductNew) async {
         do {
             try await SupabaseManager.shared.client
                 .from("repair")
@@ -291,21 +256,66 @@ class AppState {
                 .eq("id", value: product.id)
                 .execute()
 
-            if let index = products.firstIndex(where: { $0.id == product.id }) {
-                products[index] = InventoryProduct(
-                    id: product.id,
-                    sku: product.sku,
-                    name: product.name,
-                    description: product.description,
-                    base_Price: product.base_Price,
-                    category_id: product.category_id,
-                    image_Url: product.image_Url,
-                    created_at: product.created_at,
-                    inRepair: false
-                )
-            }
+            // Refresh so the UI reflects resolved state
+            await fetchProducts()
         } catch {
             print("❌ Failed to resolve repair: \(error)")
+        }
+    }
+    
+    // Add these inside AppState, after fetchProducts()
+
+    func addProduct(_ product: ProductNew) async -> Bool {
+        do {
+            try await SupabaseManager.shared.client
+                .from("products")
+                .insert(product)
+                .execute()
+            products.insert(product, at: 0)
+            return true
+        } catch {
+            print("❌ Failed to add product: \(error)")
+            productError = "Failed to add product: \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    func updateProduct(_ product: ProductNew) async {
+        guard let index = products.firstIndex(where: { $0.id == product.id }) else { return }
+        let backup = products[index]
+        products[index] = product
+        do {
+            try await SupabaseManager.shared.client
+                .from("products")
+                .update(product)
+                .eq("id", value: product.id)
+                .execute()
+            productError = nil
+        } catch {
+            products[index] = backup
+            print("❌ Failed to update product: \(error)")
+            productError = "Failed to update product: \(error.localizedDescription)"
+        }
+    }
+
+    func toggleProductActive(_ product: ProductNew) async {
+        guard let index = products.firstIndex(where: { $0.id == product.id }) else { return }
+        var updated = products[index]
+        updated.isActive.toggle()
+        await updateProduct(updated)
+    }
+
+    func deleteProduct(_ product: ProductNew) async {
+        do {
+            try await SupabaseManager.shared.client
+                .from("products")
+                .delete()
+                .eq("id", value: product.id)
+                .execute()
+            products.removeAll { $0.id == product.id }
+        } catch {
+            print("❌ Failed to delete product: \(error)")
+            productError = "Failed to delete product: \(error.localizedDescription)"
         }
     }
 }

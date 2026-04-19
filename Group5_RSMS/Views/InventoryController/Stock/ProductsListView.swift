@@ -10,11 +10,11 @@ import SwiftUI
 struct ProductsListView: View {
     @Environment(AppState.self) private var appState
     @State private var searchText = ""
-    @State private var productToRepair: InventoryProduct?
-    @State private var productToResolve: InventoryProduct?
+    @State private var productToRepair: ProductNew?
+    @State private var productToResolve: ProductNew?
     @State private var showingResolveAlert = false
 
-    var filteredProducts: [InventoryProduct] {
+    var filteredProducts: [ProductNew] {
         if searchText.isEmpty {
             return appState.products
         }
@@ -100,9 +100,8 @@ struct ProductsListView: View {
         .scrollContentBackground(.hidden)
     }
 
-    private func productRow(_ product: InventoryProduct) -> some View {
+    private func productRow(_ product: ProductNew) -> some View {
         HStack(spacing: RSMSTheme.Spacing.lg) {
-            // Product icon — changes when in repair
             ZStack {
                 RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
                     .fill(product.inRepair
@@ -116,7 +115,6 @@ struct ProductsListView: View {
                                      : RSMSTheme.Colors.accentGold)
             }
 
-            // Product details
             VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
                 Text(product.name)
                     .font(.subheadline)
@@ -144,8 +142,7 @@ struct ProductsListView: View {
 
             Spacer()
 
-            // Price
-            Text("$\(product.base_Price, specifier: "%.2f")")
+            Text("₹\(product.basePrice, specifier: "%.2f")")
                 .font(.subheadline)
                 .fontWeight(.bold)
                 .foregroundStyle(product.inRepair
@@ -191,12 +188,10 @@ struct ProductsListView: View {
 
     private var skeletonRow: some View {
         HStack(spacing: RSMSTheme.Spacing.lg) {
-            // Placeholder icon
             RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
                 .fill(RSMSTheme.Colors.backgroundElevated)
                 .frame(width: 56, height: 56)
 
-            // Placeholder text lines
             VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(RSMSTheme.Colors.backgroundElevated)
@@ -208,7 +203,6 @@ struct ProductsListView: View {
 
             Spacer()
 
-            // Placeholder price
             VStack(alignment: .trailing, spacing: RSMSTheme.Spacing.sm) {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(RSMSTheme.Colors.backgroundElevated)
@@ -266,23 +260,22 @@ struct ProductsListView: View {
 struct RepairFormSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
-    
-    let product: InventoryProduct
-    
+
+    let product: ProductNew  // ← updated type
+
     @State private var issueDescription: String = ""
     @State private var repairCostString: String = ""
     @State private var isSubmitting: Bool = false
     @State private var errorMessage: String? = nil
     @State private var showErrorAlert: Bool = false
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-                
+
                 ScrollView {
                     VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xl) {
-                        // Product Info
                         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
                             Text("Product")
                                 .font(.caption)
@@ -295,46 +288,39 @@ struct RepairFormSheet: View {
                                 .foregroundStyle(RSMSTheme.Colors.textSecondary)
                         }
                         .padding(.bottom, RSMSTheme.Spacing.sm)
-                        
-                        // Inputs
+
                         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
                             Text("Issue Description")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
+                                .font(.subheadline).fontWeight(.medium)
                                 .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                            
+
                             TextField("Describe the damage/issue", text: $issueDescription, axis: .vertical)
                                 .lineLimit(3...6)
                                 .padding(RSMSTheme.Spacing.md)
                                 .background(RSMSTheme.Colors.backgroundElevated)
                                 .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                                        .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
-                                )
+                                .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                                    .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
                                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
                         }
-                        
+
                         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-                            Text("Estimated Repair Cost ($)")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
+                            Text("Estimated Repair Cost (₹)")
+                                .font(.subheadline).fontWeight(.medium)
                                 .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                            
+
                             TextField("0.00", text: $repairCostString)
                                 .keyboardType(.decimalPad)
                                 .padding(RSMSTheme.Spacing.md)
                                 .background(RSMSTheme.Colors.backgroundElevated)
                                 .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                                        .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
-                                )
+                                .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                                    .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
                                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
                         }
-                        
+
                         Spacer(minLength: RSMSTheme.Spacing.xxl)
-                        
+
                         Button {
                             submit()
                         } label: {
@@ -362,10 +348,8 @@ struct RepairFormSheet: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
                 }
             }
             .alert("Submit Failed", isPresented: $showErrorAlert) {
@@ -375,12 +359,12 @@ struct RepairFormSheet: View {
             }
         }
     }
-    
+
     private func submit() {
         guard let cost = Double(repairCostString), !issueDescription.isEmpty else { return }
         isSubmitting = true
         errorMessage = nil
-        
+
         Task {
             let success = await appState.submitRepair(
                 for: product,

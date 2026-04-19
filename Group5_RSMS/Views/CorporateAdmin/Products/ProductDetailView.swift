@@ -1,7 +1,5 @@
 import SwiftUI
 import Supabase
-import PostgREST
-
 
 struct ProductDetailView: View {
     @Environment(AppState.self) private var appState
@@ -9,33 +7,28 @@ struct ProductDetailView: View {
 
     let product: ProductNew
     var onPriceUpdated: (() -> Void)? = nil
-    
-    // 🛠️ CONFIGURATION: Ensure these match your Supabase setup
+
+    // 🛠️ CONFIGURATION
     private let supabaseURL = "https://bdgwzkpteyxhlgprlmye.supabase.co"
     private let bucketName = "product-images"
-    @State private var priceHistory: [PriceHistoryEntry] = []
-    @State private var isLoadingHistory = false
-    @State private var showSetPrice = false
-    @State private var currentProduct: Product
-    @State private var updateError: String? = nil
 
-    private var currentProduct: ProductNew {
-        appState.products.first(where: { $0.id == product.id }) ?? product
-    }
-
+    // MARK: - State
     @State private var showSetPrice: Bool = false
     @State private var showEditSheet: Bool = false
     @State private var showDeleteConfirm: Bool = false
+    @State private var updateError: String? = nil
+
+    // Always read the live version from AppState so UI reflects updates
+    private var currentProduct: ProductNew {
+        appState.products.first(where: { $0.id == product.id }) ?? product
+    }
 
     var body: some View {
         ZStack {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: RSMSTheme.Spacing.xl) {
-                    
-                    // 1. ADDED HERO IMAGE HERE
                     productHeroImage
-                    
                     productInfoCard
                     activeStatusSection
                     priceSection
@@ -51,7 +44,6 @@ struct ProductDetailView: View {
         }
         .navigationTitle(currentProduct.name)
         .navigationBarTitleDisplayMode(.inline)
-        // ... (rest of your toolbar and sheet logic stays exactly the same)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
@@ -81,24 +73,19 @@ struct ProductDetailView: View {
         }
     }
 
-    // MARK: - New Hero Image Component
+    // MARK: - Hero Image
     private var productHeroImage: some View {
         ZStack {
             RSMSTheme.Colors.backgroundDeep
-            
+
             if let path = currentProduct.imageUrl,
                let detailURL = URL(string: "\(supabaseURL)/storage/v1/object/public/\(bucketName)/\(path)") {
-                
                 AsyncImage(url: detailURL) { phase in
                     switch phase {
                     case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
+                        image.resizable().scaledToFill()
                     case .failure:
-                        Image(systemName: currentProduct.category.icon)
-                            .font(.system(size: 60))
-                            .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.2))
+                        categoryPlaceholder
                     case .empty:
                         ProgressView().tint(RSMSTheme.Colors.accentGold)
                     @unknown default:
@@ -106,50 +93,52 @@ struct ProductDetailView: View {
                     }
                 }
             } else {
-                Image(systemName: currentProduct.category.icon)
-                    .font(.system(size: 60))
-                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.2))
+                categoryPlaceholder
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 350) // High-end hero height
+        .frame(height: 350)
         .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
-        .overlay(
-            RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
-                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
-        )
+        .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+            .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
         .clipped()
+    }
+
+    private var categoryPlaceholder: some View {
+        Image(systemName: currentProduct.category.icon)
+            .font(.system(size: 60))
+            .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.2))
     }
 
     // MARK: - Product Info Card
     private var productInfoCard: some View {
-            HStack(spacing: RSMSTheme.Spacing.lg) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                        .fill(RSMSTheme.Colors.accentGold.opacity(0.12))
-                        .frame(width: 60, height: 60)
-                    Image(systemName: currentProduct.category.icon)
-                        .font(.system(size: 26))
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
-                }
-                VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
-                    Text(currentProduct.name)
-                        .font(.title3).fontWeight(.bold).foregroundStyle(RSMSTheme.Colors.textPrimary)
-                    Text(currentProduct.sku)
-                        .font(.subheadline).foregroundStyle(RSMSTheme.Colors.accentGold)
-                    Text(currentProduct.category.rawValue)
-                        .font(.caption).foregroundStyle(RSMSTheme.Colors.textSecondary)
-                }
-                Spacer()
+        HStack(spacing: RSMSTheme.Spacing.lg) {
+            ZStack {
+                RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                    .fill(RSMSTheme.Colors.accentGold.opacity(0.12))
+                    .frame(width: 60, height: 60)
+                Image(systemName: currentProduct.category.icon)
+                    .font(.system(size: 26))
+                    .foregroundStyle(RSMSTheme.Colors.accentGold)
             }
-            .padding(RSMSTheme.Spacing.lg)
-            .background(RSMSTheme.Colors.backgroundDeep)
-            .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
-            .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
+            VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
+                Text(currentProduct.name)
+                    .font(.title3).fontWeight(.bold).foregroundStyle(RSMSTheme.Colors.textPrimary)
+                Text(currentProduct.sku)
+                    .font(.subheadline).foregroundStyle(RSMSTheme.Colors.accentGold)
+                Text(currentProduct.category.rawValue)
+                    .font(.caption).foregroundStyle(RSMSTheme.Colors.textSecondary)
+            }
+            Spacer()
         }
+        .padding(RSMSTheme.Spacing.lg)
+        .background(RSMSTheme.Colors.backgroundDeep)
+        .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
+        .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+            .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
+    }
 
-    // MARK: - Global Status Section
-
+    // MARK: - Active Status Section
     private var activeStatusSection: some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
             Label("Global Visibility", systemImage: "globe")
@@ -159,8 +148,7 @@ struct ProductDetailView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Active Status")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+                        .font(.subheadline).fontWeight(.semibold)
                         .foregroundStyle(RSMSTheme.Colors.textPrimary)
                     Text(currentProduct.isActive ? "Available across all boutiques" : "Hidden from staff and customers")
                         .font(.caption)
@@ -185,7 +173,7 @@ struct ProductDetailView: View {
             )
         }
     }
-    
+
     // MARK: - Price Section
     private var priceSection: some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
@@ -259,7 +247,7 @@ struct ProductDetailView: View {
         }
     }
 
-    // MARK: - Craftsmanship
+    // MARK: - Craftsmanship Card
     private var craftsmanshipCard: some View {
         detailSection(title: "Materials & Craftsmanship") {
             if !currentProduct.material.isEmpty {
@@ -286,7 +274,7 @@ struct ProductDetailView: View {
         }
     }
 
-    // MARK: - Heritage
+    // MARK: - Heritage Card
     private var heritageCard: some View {
         detailSection(title: "Heritage & Provenance") {
             if !currentProduct.collectionName.isEmpty {
@@ -332,9 +320,7 @@ struct ProductDetailView: View {
                                 isPresented: $showDeleteConfirm, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) {
                     Task {
-                        // Perform deletion
                         await appState.deleteProduct(currentProduct)
-                        // Redirect back to Product List
                         dismiss()
                     }
                 }
@@ -375,38 +361,28 @@ struct ProductDetailView: View {
         .padding(.vertical, RSMSTheme.Spacing.md)
     }
 
+    // MARK: - Active Status Update
+    // Uses AppState so the computed currentProduct auto-refreshes via @Observable
     @MainActor
     private func updateActiveStatus(newState: Bool) async {
-        // Optimistic UI update
-        var updatedProduct = currentProduct
-        updatedProduct.isActive = newState
-        currentProduct = updatedProduct
-        
         do {
-            let response = try await SupabaseManager.shared.client
+            try await SupabaseManager.shared.client
                 .from("products")
                 .update(["is_active": newState])
                 .eq("id", value: currentProduct.id)
                 .execute()
-            
-            // Check if we actually updated anything
-            // In the Supabase Swift client, response.data contains the updated rows if returning: .representation is used.
-            // For a basic update, we assume it worked if no error was thrown.
-            
-            print("✅ Status updated successfully in database")
-            
-            // We'll delay the parent refresh slightly to let Supabase replicate if needed
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+
+            print("✅ Active status updated")
+
+            // Refresh AppState so currentProduct computed var picks up new value
+            await appState.fetchProducts()
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 onPriceUpdated?()
             }
         } catch {
             print("❌ Failed to update active status: \(error)")
-            self.updateError = error.localizedDescription
-            
-            // Revert on error
-            var revertedProduct = currentProduct
-            revertedProduct.isActive = !newState
-            currentProduct = revertedProduct
+            updateError = error.localizedDescription
         }
     }
 }
