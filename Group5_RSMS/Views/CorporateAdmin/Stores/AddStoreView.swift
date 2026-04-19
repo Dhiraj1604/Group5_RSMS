@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+#if canImport(Supabase)
+import Supabase
+#endif
 
 struct AddStoreView: View {
     @Environment(AppState.self) private var appState
@@ -21,6 +24,7 @@ struct AddStoreView: View {
     @State private var phone = ""
     @State private var email = ""
     @State private var managerName = ""
+    @State private var managerEmail = ""
     @State private var selectedRegion = "West"
     @State private var selectedCurrency = "INR"          // ← NEW
     @State private var taxRate = "18.0"
@@ -48,6 +52,7 @@ struct AddStoreView: View {
         !phone.trimmingCharacters(in: .whitespaces).isEmpty &&
         !email.trimmingCharacters(in: .whitespaces).isEmpty &&
         !managerName.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !managerEmail.trimmingCharacters(in: .whitespaces).isEmpty &&
         (Double(taxRate) != nil)
     }
 
@@ -137,10 +142,13 @@ struct AddStoreView: View {
         formSection(title: "Contact") {
             formField(label: "Phone", placeholder: "+91 XX XXXX XXXX", text: $phone, icon: "phone.fill", required: true)
                 .keyboardType(.phonePad)
-            formField(label: "Email", placeholder: "store@rsms.com", text: $email, icon: "envelope.fill", required: true)
+            formField(label: "Store Email", placeholder: "store@rsms.com", text: $email, icon: "envelope.fill", required: true)
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
             formField(label: "Manager Name", placeholder: "Store manager name", text: $managerName, icon: "person.fill", required: true)
+            formField(label: "Manager Email", placeholder: "manager@example.com", text: $managerEmail, icon: "person.text.rectangle.fill", required: true)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
         }
     }
 
@@ -314,7 +322,24 @@ struct AddStoreView: View {
         )
         Task {
             await appState.addStore(newStore)
-            showSuccessAlert = true
+            
+            // Invoke Edge Function securely to invite the manager!
+            do {
+                try await SupabaseManager.shared.inviteManager(
+                    email: managerEmail.trimmingCharacters(in: .whitespaces),
+                    boutiqueId: newStore.id
+                )
+                print("Manager successfully invited!")
+                showSuccessAlert = true
+            } catch {
+                if let httpError = error as? FunctionsError,
+                   case let .httpError(code, data) = httpError,
+                   let errorJson = String(data: data, encoding: .utf8) {
+                    appState.storeError = "Edge Function Error (HTTP \(code)):\n\(errorJson)"
+                } else {
+                    appState.storeError = "Failed to invite manager: \(error.localizedDescription)"
+                }
+            }
         }
     }
 }

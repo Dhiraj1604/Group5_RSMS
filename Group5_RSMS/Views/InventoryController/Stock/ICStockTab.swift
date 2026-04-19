@@ -37,11 +37,6 @@ struct ICStockTab: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button {
-                            appState.goBackToRoleSelection()
-                        } label: {
-                            Label("Switch Role", systemImage: "arrow.left.arrow.right")
-                        }
                         Button(role: .destructive) {
                             appState.logout()
                         } label: {
