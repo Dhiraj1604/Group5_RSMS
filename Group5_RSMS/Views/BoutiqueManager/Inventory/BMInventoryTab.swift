@@ -107,7 +107,7 @@ struct BMInventoryTab: View {
         VStack(spacing: 0) {
             // Store context header
             storeHeader
-                .padding(.horizontal, RSMSTheme.Spacing.lg)
+                .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                 .padding(.top, RSMSTheme.Spacing.sm)
                 .padding(.bottom, RSMSTheme.Spacing.md)
 
@@ -120,7 +120,7 @@ struct BMInventoryTab: View {
                 Text("Incoming Requests").tag(1)
             }
             .pickerStyle(.segmented)
-            .padding(.horizontal, RSMSTheme.Spacing.lg)
+            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
             .padding(.top, RSMSTheme.Spacing.md)
             .padding(.bottom, RSMSTheme.Spacing.sm)
 
@@ -212,7 +212,7 @@ struct BMInventoryTab: View {
                         )
                 }
             }
-            .padding(.horizontal, RSMSTheme.Spacing.lg)
+            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
             .padding(.top, RSMSTheme.Spacing.lg)
             .padding(.bottom, 40)
         }

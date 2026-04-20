@@ -31,7 +31,7 @@ struct StaffListView: View {
                     Button {
                         showAddEmployee = true
                     } label: {
-                        Label("Add Employee", systemImage: "plus")
+                        Label("Add Employee", systemImage: "plus.circle.fill")
                             .font(.headline)
                             .foregroundColor(.black)
                             .padding(.horizontal, 20)
@@ -67,7 +67,7 @@ struct StaffListView: View {
                 Button {
                     showAddEmployee = true
                 } label: {
-                    Image(systemName: "plus")
+                    Image(systemName: "plus.circle.fill")
                         .foregroundColor(RSMSTheme.Colors.accentGold)
                 }
             }

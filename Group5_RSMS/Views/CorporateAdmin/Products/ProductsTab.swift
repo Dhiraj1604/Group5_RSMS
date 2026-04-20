@@ -57,13 +57,13 @@ struct ProductsTab: View {
                             }
                             .padding(.top, RSMSTheme.Spacing.sm)
                         }
-                        .padding(.horizontal, RSMSTheme.Spacing.lg)
+                        .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                         .padding(.bottom, 100)
                     }
                 }
             }
-            .navigationTitle("RSMS Luxe")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Products")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showAddProduct = true } label: {

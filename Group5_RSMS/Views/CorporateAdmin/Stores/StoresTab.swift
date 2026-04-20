@@ -117,7 +117,7 @@ struct StoresTab: View {
                 showAddStore = true
             } label: {
                 HStack(spacing: RSMSTheme.Spacing.sm) {
-                    Image(systemName: "plus")
+                    Image(systemName: "plus.circle.fill")
                     Text("Register First Boutique")
                 }
             }
@@ -146,7 +146,7 @@ struct StoresTab: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, RSMSTheme.Spacing.lg)
+            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
             .padding(.top, RSMSTheme.Spacing.md)
             .padding(.bottom, RSMSTheme.Spacing.xxl)
         }

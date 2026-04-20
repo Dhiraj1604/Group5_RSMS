@@ -18,13 +18,12 @@ struct DashboardTab: View {
 
                 ScrollView {
                     VStack(spacing: RSMSTheme.Spacing.xl) {
-                        greetingSection
                         kpiSection
                         quickStatsSection
                         quickActionsSection
                         Spacer().frame(height: RSMSTheme.Spacing.xxl)
                     }
-                    .padding(.horizontal, RSMSTheme.Spacing.lg)
+                    .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                     .padding(.top, RSMSTheme.Spacing.md)
                 }
             }
@@ -50,36 +49,6 @@ struct DashboardTab: View {
         }
     }
 
-    // MARK: - Greeting
-    private var greetingSection: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
-                Text(greetingText)
-                    .font(.subheadline)
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
-
-                Text("Corporate Admin")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
-            }
-            Spacer()
-            Text(Date(), format: .dateTime.weekday(.wide).month().day())
-                .font(.caption)
-                .foregroundStyle(RSMSTheme.Colors.textTertiary)
-        }
-        .padding(.top, RSMSTheme.Spacing.sm)
-    }
-
-    private var greetingText: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        switch hour {
-        case 0..<12: return "Good Morning"
-        case 12..<17: return "Good Afternoon"
-        default: return "Good Evening"
-        }
-    }
-
     // MARK: - KPIs
     private var kpiSection: some View {
         VStack(spacing: RSMSTheme.Spacing.md) {
@@ -89,7 +58,7 @@ struct DashboardTab: View {
             }
             HStack(spacing: RSMSTheme.Spacing.md) {
                 kpiCard(title: "Active Stores", value: "\(appState.stores.filter { $0.isActive == true }.count)", icon: "building.2.fill", color: RSMSTheme.Colors.accentGoldLight)
-                kpiCard(title: "Inventory", value: "–", icon: "shippingbox.fill", color: RSMSTheme.Colors.accentGoldDark)
+                kpiCard(title: "Inventory", value: appState.totalInventoryCount > 0 ? "\(appState.totalInventoryCount)" : "–", icon: "shippingbox.fill", color: RSMSTheme.Colors.accentGoldDark)
             }
         }
     }
@@ -125,8 +94,8 @@ struct DashboardTab: View {
             VStack(spacing: RSMSTheme.Spacing.sm) {
                 statRow(label: "Total Stores Registered", value: "\(appState.stores.count)")
                 statRow(label: "Active Locations", value: "\(appState.stores.filter { $0.isActive == true }.count)")
-                statRow(label: "Avg Order Value", value: "–")
-                statRow(label: "Avg Basket Size", value: "–")
+                statRow(label: "Total Products", value: "\(appState.products.count)")
+                statRow(label: "Inventory Units", value: "\(appState.totalInventoryCount)")
             }
             .cardStyle()
         }

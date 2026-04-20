@@ -34,6 +34,7 @@ class AppState {
     var products: [ProductNew] = []
     var isLoadingProducts: Bool = false
     var productError: String? = nil
+    var totalInventoryCount: Int = 0
 
     // MARK: - Navigation
     var hasSelectedRole: Bool { selectedRole != nil }
@@ -402,6 +403,24 @@ class AppState {
         } catch {
             print("❌ Failed to delete product: \(error)")
             productError = "Failed to delete product: \(error.localizedDescription)"
+        }
+    }
+
+    func fetchTotalInventoryCount() async {
+        do {
+            struct InventoryRecord: Decodable {
+                let stock_quantity: Int
+            }
+            let records: [InventoryRecord] = try await SupabaseManager.shared.client
+                .from("inventory")
+                .select("stock_quantity")
+                .execute()
+                .value
+            
+            let total = records.reduce(0) { $0 + $1.stock_quantity }
+            self.totalInventoryCount = total
+        } catch {
+            print("❌ Failed to fetch total inventory count: \(error)")
         }
     }
 }

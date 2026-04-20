@@ -21,12 +21,11 @@ struct ICStockTab: View {
 
                 ScrollView {
                     VStack(spacing: RSMSTheme.Spacing.xl) {
-                        greetingSection
                         stockKPISection
                         stockDetailsSection
                         Spacer().frame(height: RSMSTheme.Spacing.xxl)
                     }
-                    .padding(.horizontal, RSMSTheme.Spacing.lg)
+                    .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                     .padding(.top, RSMSTheme.Spacing.md)
                 }
             }
@@ -49,37 +48,6 @@ struct ICStockTab: View {
                     }
                 }
             }
-        }
-    }
-
-    // MARK: - Greeting
-
-    private var greetingSection: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
-                Text(greetingText)
-                    .font(.subheadline)
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
-
-                Text("Inventory Controller")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
-            }
-            Spacer()
-            Text(Date(), format: .dateTime.weekday(.wide).month().day())
-                .font(.caption)
-                .foregroundStyle(RSMSTheme.Colors.textTertiary)
-        }
-        .padding(.top, RSMSTheme.Spacing.sm)
-    }
-
-    private var greetingText: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        switch hour {
-        case 0..<12: return "Good Morning"
-        case 12..<17: return "Good Afternoon"
-        default: return "Good Evening"
         }
     }
 
@@ -160,10 +128,9 @@ struct ICStockTab: View {
 
             VStack(spacing: RSMSTheme.Spacing.sm) {
                 stockRow(label: "Total SKUs Tracked", value: "\(appState.products.count)")
-                stockRow(label: "Items Below Reorder Level", value: "23")
-                stockRow(label: "Pending Shipments In", value: "5")
-                stockRow(label: "Pending Shipments Out", value: "3")
-                stockRow(label: "Last Audit Date", value: "Apr 10, 2026")
+                stockRow(label: "Total Inventory Units", value: "\(appState.totalInventoryCount)")
+                stockRow(label: "Items Below Reorder Level", value: "23") // Pending threshold implementation
+                stockRow(label: "Last Audit Date", value: Date().formatted(.dateTime.month().day().year()))
             }
             .cardStyle()
         }

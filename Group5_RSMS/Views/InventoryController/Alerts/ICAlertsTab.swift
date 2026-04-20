@@ -23,13 +23,13 @@ struct ICAlertsTab: View {
                 VStack(spacing: 0) {
                     // KPI Header
                     kpiSection
-                        .padding(.horizontal, RSMSTheme.Spacing.lg)
+                        .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                         .padding(.top, RSMSTheme.Spacing.sm)
                         .padding(.bottom, RSMSTheme.Spacing.md)
 
                     // Search Bar
                     searchBar
-                        .padding(.horizontal, RSMSTheme.Spacing.lg)
+                        .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                         .padding(.bottom, RSMSTheme.Spacing.md)
 
                     Divider()
@@ -190,7 +190,7 @@ struct ICAlertsTab: View {
                     )
                 }
             }
-            .padding(.horizontal, RSMSTheme.Spacing.lg)
+            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
             .padding(.top, RSMSTheme.Spacing.lg)
             .padding(.bottom, 40)
         }

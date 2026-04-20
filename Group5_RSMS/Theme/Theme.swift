@@ -65,6 +65,7 @@ enum RSMSTheme {
         static let xl: CGFloat = 24
         static let xxl: CGFloat = 32
         static let xxxl: CGFloat = 48
+        static let horizontalMargin: CGFloat = 20
     }
 
     // MARK: - Corner Radius

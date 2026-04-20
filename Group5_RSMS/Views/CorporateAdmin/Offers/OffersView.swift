@@ -22,7 +22,7 @@ struct OffersView: View {
     @State private var sortOption: SortOption = .newest
     @State private var filterCategory: String = "All Categories"
     @State private var filterStoreId: UUID? = nil
-    @State private var showPausedOnly = true
+    @State private var showPausedOnly = false
 
     enum OfferTab: String, CaseIterable, Identifiable {
         case active    = "Active"
@@ -124,7 +124,7 @@ struct OffersView: View {
                         Text("\(listedOffers.count) \(selectedTab.rawValue) Offer\(listedOffers.count == 1 ? "" : "s")")
                             .font(.custom("Helvetica", size: 14).weight(.medium))
                             .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                            .padding(.horizontal, RSMSTheme.Spacing.lg)
+                            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                         
                         if listedOffers.isEmpty {
                             emptyRow
@@ -135,7 +135,7 @@ struct OffersView: View {
                                         service.softDeleteOffer(offer)
                                     }) {
                                         OfferRow(offer: offer)
-                                            .padding(.horizontal, RSMSTheme.Spacing.lg)
+                                            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                                             .onTapGesture {
                                                 offerForDetail = offer
                                             }
@@ -159,8 +159,8 @@ struct OffersView: View {
                 Button {
                     showCreate = true
                 } label: {
-                    Image(systemName: "plus")
-                        .fontWeight(.semibold)
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
                         .foregroundStyle(RSMSTheme.Colors.accentGold)
                 }
             }
@@ -235,7 +235,7 @@ struct OffersView: View {
                 isSelected: selectedTab == .expired
             ) { selectedTab = .expired }
         }
-        .padding(.horizontal, RSMSTheme.Spacing.lg)
+        .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
     }
 
     // MARK: - Sort & Filter Row
@@ -322,7 +322,7 @@ struct OffersView: View {
                     .overlay(Capsule().stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
                 }
             }
-            .padding(.horizontal, RSMSTheme.Spacing.lg)
+            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
             .padding(.bottom, RSMSTheme.Spacing.xs)
         }
     }

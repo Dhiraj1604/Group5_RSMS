@@ -15,31 +15,36 @@ struct CorporateAdminDashboard: View {
         TabView(selection: $selectedTab) {
             DashboardTab()
                 .tabItem {
-                    Label("Dashboard", systemImage: "chart.bar.fill")
+                    Image(systemName: "chart.bar.fill")
+                    Text("Dashboard")
                 }
                 .tag(0)
 
             StoresTab()
                 .tabItem {
-                    Label("Stores", systemImage: "building.2.fill")
+                    Image(systemName: "building.2.fill")
+                    Text("Stores")
                 }
                 .tag(1)
 
             ProductsTab()
                 .tabItem {
-                    Label("Products", systemImage: "tag.fill")
+                    Image(systemName: "tag.fill")
+                    Text("Products")
                 }
                 .tag(2)
 
             OffersTab()
                 .tabItem {
-                    Label("Offers", systemImage: "gift.fill")
+                    Image(systemName: "gift.fill")
+                    Text("Offers")
                 }
                 .tag(3)
 
             ReportsTab()
                 .tabItem {
-                    Label("Reports", systemImage: "doc.text.fill")
+                    Image(systemName: "doc.text.fill")
+                    Text("Reports")
                 }
                 .tag(4)
         }
@@ -47,7 +52,8 @@ struct CorporateAdminDashboard: View {
         .task {
             async let storesLoad: () = appState.loadStores()
             async let productsLoad: () = appState.fetchProducts()
-            _ = await (storesLoad, productsLoad)
+            async let inventoryLoad: () = appState.fetchTotalInventoryCount()
+            _ = await (storesLoad, productsLoad, inventoryLoad)
         }
     }
 }

@@ -15,37 +15,44 @@ struct InventoryControllerDashboard: View {
         TabView(selection: $selectedTab) {
             ICStockTab()
                 .tabItem {
-                    Label("Stock", systemImage: "shippingbox.fill")
+                    Image(systemName: "shippingbox.fill")
+                    Text("Stock")
                 }
                 .tag(0)
 
             ICScanTab()
                 .tabItem {
-                    Label("Scan", systemImage: "barcode.viewfinder")
+                    Image(systemName: "barcode.viewfinder")
+                    Text("Scan")
                 }
                 .tag(1)
 
             ICShipmentsTab()
                 .tabItem {
-                    Label("Shipments", systemImage: "shippingbox.fill")
+                    Image(systemName: "shippingbox.fill")
+                    Text("Shipments") // Shipments icon was the same as Stock, we might want to differentiate, but keeping it
                 }
                 .tag(2)
 
             ICAlertsTab()
                 .tabItem {
-                    Label("Alerts", systemImage: "bell.badge.fill")
+                    Image(systemName: "bell.badge.fill")
+                    Text("Alerts")
                 }
                 .tag(3)
 
             ICReportsTab()
                 .tabItem {
-                    Label("Reports", systemImage: "doc.text.fill")
+                    Image(systemName: "doc.text.fill")
+                    Text("Reports")
                 }
                 .tag(4)
         }
         .tint(RSMSTheme.Colors.accentGold)
         .task {
-            await appState.fetchProducts()
+            async let productsLoad: () = appState.fetchProducts()
+            async let inventoryLoad: () = appState.fetchTotalInventoryCount()
+            _ = await (productsLoad, inventoryLoad)
         }
     }
 }

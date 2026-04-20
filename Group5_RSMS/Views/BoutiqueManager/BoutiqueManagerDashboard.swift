@@ -15,31 +15,36 @@ struct BoutiqueManagerDashboard: View {
         TabView(selection: $selectedTab) {
             BMDashboardTab()
                 .tabItem {
-                    Label("Dashboard", systemImage: "chart.bar.fill")
+                    Image(systemName: "chart.bar.fill")
+                    Text("Dashboard")
                 }
                 .tag(0)
 
             BMInventoryTab()
                 .tabItem {
-                    Label("Inventory", systemImage: "shippingbox.fill")
+                    Image(systemName: "shippingbox.fill")
+                    Text("Inventory")
                 }
                 .tag(1)
 
             BMSalesTab()
                 .tabItem {
-                    Label("Sales", systemImage: "cart.fill")
+                    Image(systemName: "cart.fill")
+                    Text("Sales")
                 }
                 .tag(2)
 
             BMStaffTab(boutiqueId: appState.currentStoreID ?? UUID())
                 .tabItem {
-                    Label("Staff", systemImage: "person.3.fill")
+                    Image(systemName: "person.3.fill")
+                    Text("Staff")
                 }
                 .tag(3)
 
             BMReportsTab()
                 .tabItem {
-                    Label("Reports", systemImage: "doc.text.fill")
+                    Image(systemName: "doc.text.fill")
+                    Text("Reports")
                 }
                 .tag(4)
         }
@@ -47,7 +52,8 @@ struct BoutiqueManagerDashboard: View {
         .task {
             async let storesLoad: () = appState.loadStores()
             async let productsLoad: () = appState.fetchProducts()
-            _ = await (storesLoad, productsLoad)
+            async let inventoryLoad: () = appState.fetchTotalInventoryCount()
+            _ = await (storesLoad, productsLoad, inventoryLoad)
         }
     }
 }
