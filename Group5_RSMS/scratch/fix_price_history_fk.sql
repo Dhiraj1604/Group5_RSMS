@@ -1,4 +1,4 @@
--- Fix: price_history.product_id currently references ProductNew(id) instead of products(id)
+-- Fix: price_history.product_id should reference products(id)
 -- Run this in Supabase SQL Editor → https://supabase.com/dashboard/project/bdgwzkpteyxhlgprlmye/sql/new
 
 -- Step 1: Drop the broken foreign key

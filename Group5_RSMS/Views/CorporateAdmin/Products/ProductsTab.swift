@@ -19,7 +19,7 @@ struct ProductsTab: View {
         GridItem(.flexible(), spacing: 16)
     ]
     
-    private var filteredProducts: [ProductNew] {
+    private var filteredProducts: [Product] {
         var list = appState.products
         if let cat = selectedCategory { list = list.filter { $0.category == cat } }
         if let active = filterActive { list = list.filter { $0.isActive == active } }
@@ -81,7 +81,7 @@ struct ProductsTab: View {
             }
             .refreshable { await appState.fetchProducts() }
             .sheet(isPresented: $showAddProduct) { AddProductView() }
-            .navigationDestination(for: ProductNew.self) { product in
+            .navigationDestination(for: Product.self) { product in
                 ProductDetailView(product: product)
             }
         }
@@ -142,7 +142,7 @@ struct ProductsTab: View {
     
     // MARK: - Amazon-Style Shop Card
     struct ShopProductCard: View {
-        let product: ProductNew
+        let product: Product
         let baseURL: String
         let bucket: String
         

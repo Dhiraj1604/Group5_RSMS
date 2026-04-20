@@ -31,7 +31,7 @@ class AppState {
     var currentStoreID: UUID? = nil
 
     // MARK: - Product State
-    var products: [ProductNew] = []
+    var products: [Product] = []
     var isLoadingProducts: Bool = false
     var productError: String? = nil
     var totalInventoryCount: Int = 0
@@ -237,7 +237,7 @@ class AppState {
         isLoadingProducts = true
         productError = nil
         do {
-            let fetched: [ProductNew] = try await SupabaseManager.shared.client
+            let fetched: [Product] = try await SupabaseManager.shared.client
                 .from("products")
                 .select()
                 .order("created_at", ascending: false)
@@ -251,7 +251,7 @@ class AppState {
         isLoadingProducts = false
     }
 
-    func submitRepair(for product: ProductNew, issueDescription: String, repairCost: Double) async -> Bool {
+    func submitRepair(for product: Product, issueDescription: String, repairCost: Double) async -> Bool {
         do {
             let payload = RepairInsertPayload(
                 product_id: product.id,
@@ -279,7 +279,7 @@ class AppState {
         }
     }
 
-    func resolveRepair(for product: ProductNew) async {
+    func resolveRepair(for product: Product) async {
         do {
             try await SupabaseManager.shared.client
                 .from("repair")
@@ -303,7 +303,7 @@ class AppState {
     
     // Add these inside AppState, after fetchProducts()
 
-    func addProduct(_ product: ProductNew) async -> Bool {
+    func addProduct(_ product: Product) async -> Bool {
         do {
             try await SupabaseManager.shared.client
                 .from("products")
@@ -327,7 +327,7 @@ class AppState {
         }
     }
 
-    func updateProduct(_ product: ProductNew) async {
+    func updateProduct(_ product: Product) async {
         guard let index = products.firstIndex(where: { $0.id == product.id }) else { return }
         let backup = products[index]
         products[index] = product
@@ -355,7 +355,7 @@ class AppState {
         }
     }
 
-    func toggleProductActive(_ product: ProductNew) async {
+    func toggleProductActive(_ product: Product) async {
         guard let index = products.firstIndex(where: { $0.id == product.id }) else { return }
         let wasActive = products[index].isActive
         var updated = products[index]
@@ -383,7 +383,7 @@ class AppState {
         }
     }
 
-    func deleteProduct(_ product: ProductNew) async {
+    func deleteProduct(_ product: Product) async {
         do {
             try await SupabaseManager.shared.client
                 .from("products")

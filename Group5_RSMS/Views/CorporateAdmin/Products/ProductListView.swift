@@ -13,7 +13,7 @@ struct ProductListView: View {
     ]
     
     // Filter logic based on search and category chips
-    private var filteredProducts: [ProductNew] {
+    private var filteredProducts: [Product] {
         appState.products.filter { product in
             let matchesSearch = searchText.isEmpty || product.name.lowercased().contains(searchText.lowercased())
             let matchesCat = selectedCategory == "All" || product.category.rawValue == selectedCategory
@@ -110,7 +110,7 @@ struct ProductListView: View {
 
     // MARK: - RSMS Shop Card
     struct ProductShopCard: View {
-        let product: ProductNew
+        let product: Product
         
         // 🛠️ CONFIGURATION: Replace these with your project details
         private let supabaseProjectID = "https://bdgwzkpteyxhlgprlmye.supabase.co"
