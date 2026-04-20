@@ -98,9 +98,12 @@ class AppState {
         selectedRole = role
     }
 
-    func goBackToRoleSelection() {
+    func signOut() {
+        isLoggedIn = false
         selectedRole = nil
         stores = []
+        userEmail = ""
+        requiresPasswordChange = false
 
         #if canImport(Supabase)
         Task {
