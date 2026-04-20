@@ -120,11 +120,11 @@ struct ProductListView: View {
         private var publicImageUrl: URL? {
             guard let path = product.imageUrl else { return nil }
             
-            // If the path is already a full URL, use it; otherwise, build the Supabase Public URL
+            // If the path is already a full URL, use it directly
             if path.hasPrefix("http") {
                 return URL(string: path)
             } else {
-                let urlString = "https://\(supabaseProjectID).supabase.co/storage/v1/object/public/\(bucketName)/\(path)"
+                let urlString = "\(supabaseProjectID)/storage/v1/object/public/\(bucketName)/\(path)"
                 return URL(string: urlString)
             }
         }

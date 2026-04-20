@@ -369,10 +369,10 @@ struct AddProductView: View {
         let filename = "\(UUID().uuidString).jpg"
         let path = "products/\(filename)"
         
-        // 3. Upload raw data (using the non-deprecated syntax)
+        // 3. Upload raw data with upsert to handle re-uploads during editing
         try await SupabaseManager.shared.client.storage
             .from("product-images")
-            .upload(path, data: imageData, options: FileOptions(contentType: "image/jpeg"))
+            .upload(path, data: imageData, options: FileOptions(contentType: "image/jpeg", upsert: true))
         
         // 4. Get the Public URL
         // ADD 'try' HERE. It doesn't need 'await' because it's a local string construction.

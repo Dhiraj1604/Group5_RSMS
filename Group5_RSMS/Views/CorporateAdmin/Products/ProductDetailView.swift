@@ -79,11 +79,17 @@ struct ProductDetailView: View {
             RSMSTheme.Colors.backgroundDeep
 
             if let path = currentProduct.imageUrl,
-               let detailURL = URL(string: "\(supabaseURL)/storage/v1/object/public/\(bucketName)/\(path)") {
+               let detailURL = path.hasPrefix("http")
+                   ? URL(string: path)
+                   : URL(string: "\(supabaseURL)/storage/v1/object/public/\(bucketName)/\(path)") {
                 AsyncImage(url: detailURL) { phase in
                     switch phase {
                     case .success(let image):
-                        image.resizable().scaledToFill()
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 300)
                     case .failure:
                         categoryPlaceholder
                     case .empty:
@@ -97,11 +103,12 @@ struct ProductDetailView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 350)
+        .frame(height: 300)
+        .padding(RSMSTheme.Spacing.sm)
+        .background(RSMSTheme.Colors.backgroundDeep)
         .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
         .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
             .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
-        .clipped()
     }
 
     private var categoryPlaceholder: some View {
@@ -186,9 +193,11 @@ struct ProductDetailView: View {
                         Text("CURRENT PRICE")
                             .font(.caption).fontWeight(.bold)
                             .foregroundStyle(RSMSTheme.Colors.textSecondary).textCase(.uppercase)
-                        Text(currentProduct.formattedPrice)
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                        Text("₹\(String(format: "%.0f", currentProduct.basePrice))")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundStyle(RSMSTheme.Colors.accentGold)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
                     }
                     Spacer()
                     Button { showSetPrice = true } label: {
