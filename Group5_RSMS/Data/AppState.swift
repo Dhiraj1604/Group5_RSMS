@@ -40,6 +40,7 @@ class AppState {
 
     // MARK: - Private
     private let sync = SupabaseSyncManager.shared
+    private let auditLog = ActivityLogService.shared
 
     // MARK: - Auth Errors
     enum AuthError: Error, LocalizedError {
@@ -150,6 +151,14 @@ class AppState {
         do {
             try await sync.createStore(store)
             stores.append(store)
+            auditLog.log(
+                userEmail: userEmail,
+                action: .created,
+                entity: .store,
+                entityName: store.name,
+                entityId: store.id.uuidString,
+                details: "Store created in \(store.city), \(store.country)"
+            )
         } catch {
             storeError = error.localizedDescription
         }
@@ -159,6 +168,14 @@ class AppState {
         do {
             try await sync.deleteStore(id: store.id)
             stores.removeAll { $0.id == store.id }
+            auditLog.log(
+                userEmail: userEmail,
+                action: .deleted,
+                entity: .store,
+                entityName: store.name,
+                entityId: store.id.uuidString,
+                details: "Store deleted"
+            )
         } catch {
             storeError = error.localizedDescription
         }
@@ -178,6 +195,14 @@ class AppState {
         let updated = stores[index]
         do {
             try await sync.updateStore(updated)
+            auditLog.log(
+                userEmail: userEmail,
+                action: !currentActive ? .activated : .deactivated,
+                entity: .store,
+                entityName: store.name,
+                entityId: store.id.uuidString,
+                details: "Store \(!currentActive ? "activated" : "deactivated")"
+            )
         } catch {
             stores[index].isActive = currentActive
             storeError = error.localizedDescription
@@ -190,6 +215,14 @@ class AppState {
         stores[index] = store
         do {
             try await sync.updateStore(store)
+            auditLog.log(
+                userEmail: userEmail,
+                action: .updated,
+                entity: .store,
+                entityName: store.name,
+                entityId: store.id.uuidString,
+                details: "Store details updated"
+            )
         } catch {
             stores[index] = backup
             storeError = error.localizedDescription
@@ -199,6 +232,7 @@ class AppState {
     // MARK: - Product Actions
 
     func fetchProducts() async {
+        guard !isLoadingProducts else { return }
         isLoadingProducts = true
         productError = nil
         do {
@@ -275,6 +309,15 @@ class AppState {
                 .insert(product)
                 .execute()
             products.insert(product, at: 0)
+            auditLog.log(
+                userEmail: userEmail,
+                action: .created,
+                entity: .product,
+                entityName: product.name,
+                entityId: product.id.uuidString,
+                details: "Product created (SKU: \(product.sku))",
+                after: product
+            )
             return true
         } catch {
             print("❌ Failed to add product: \(error)")
@@ -294,6 +337,16 @@ class AppState {
                 .eq("id", value: product.id)
                 .execute()
             productError = nil
+            auditLog.log(
+                userEmail: userEmail,
+                action: .updated,
+                entity: .product,
+                entityName: product.name,
+                entityId: product.id.uuidString,
+                details: "Product updated (SKU: \(product.sku))",
+                before: backup,
+                after: product
+            )
         } catch {
             products[index] = backup
             print("❌ Failed to update product: \(error)")
@@ -303,9 +356,30 @@ class AppState {
 
     func toggleProductActive(_ product: ProductNew) async {
         guard let index = products.firstIndex(where: { $0.id == product.id }) else { return }
+        let wasActive = products[index].isActive
         var updated = products[index]
         updated.isActive.toggle()
-        await updateProduct(updated)
+        products[index] = updated
+        do {
+            try await SupabaseManager.shared.client
+                .from("products")
+                .update(updated)
+                .eq("id", value: updated.id)
+                .execute()
+            productError = nil
+            auditLog.log(
+                userEmail: userEmail,
+                action: wasActive ? .deactivated : .activated,
+                entity: .product,
+                entityName: updated.name,
+                entityId: updated.id.uuidString,
+                details: "Product \(wasActive ? "deactivated" : "activated")"
+            )
+        } catch {
+            products[index].isActive = wasActive
+            print("❌ Failed to toggle product: \(error)")
+            productError = "Failed to update product: \(error.localizedDescription)"
+        }
     }
 
     func deleteProduct(_ product: ProductNew) async {
@@ -316,6 +390,15 @@ class AppState {
                 .eq("id", value: product.id)
                 .execute()
             products.removeAll { $0.id == product.id }
+            auditLog.log(
+                userEmail: userEmail,
+                action: .deleted,
+                entity: .product,
+                entityName: product.name,
+                entityId: product.id.uuidString,
+                details: "Product deleted (SKU: \(product.sku))",
+                before: product
+            )
         } catch {
             print("❌ Failed to delete product: \(error)")
             productError = "Failed to delete product: \(error.localizedDescription)"

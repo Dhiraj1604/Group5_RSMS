@@ -44,6 +44,9 @@ struct InventoryControllerDashboard: View {
                 .tag(4)
         }
         .tint(RSMSTheme.Colors.accentGold)
+        .task {
+            await appState.fetchProducts()
+        }
     }
 }
 

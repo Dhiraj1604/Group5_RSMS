@@ -374,6 +374,16 @@ struct ProductDetailView: View {
 
             print("✅ Active status updated")
 
+            // Audit log
+            ActivityLogService.shared.log(
+                userEmail: appState.userEmail,
+                action: newState ? .activated : .deactivated,
+                entity: .product,
+                entityName: currentProduct.name,
+                entityId: currentProduct.id.uuidString,
+                details: "Product \(newState ? "activated" : "deactivated")"
+            )
+
             // Refresh AppState so currentProduct computed var picks up new value
             await appState.fetchProducts()
 

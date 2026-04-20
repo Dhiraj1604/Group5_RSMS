@@ -44,6 +44,11 @@ struct BoutiqueManagerDashboard: View {
                 .tag(4)
         }
         .tint(RSMSTheme.Colors.accentGold)
+        .task {
+            async let storesLoad: () = appState.loadStores()
+            async let productsLoad: () = appState.fetchProducts()
+            _ = await (storesLoad, productsLoad)
+        }
     }
 }
 
