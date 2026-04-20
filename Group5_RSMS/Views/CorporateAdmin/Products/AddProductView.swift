@@ -110,6 +110,7 @@ struct AddProductView: View {
                         existingImageUrl = nil
                     }
                 }
+                Button("Cancel", role: .cancel) { }
             }
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker(image: $selectedUIImage, sourceType: imageSource)

@@ -58,7 +58,6 @@ class AppState {
     // MARK: - Auth Actions
     func login(email: String) async throws {
         userEmail = email
-        managerAuthId = UUID(uuidString: "3bb61198-7f75-4d11-9e72-28c5afdb53a7")
 
         #if canImport(Supabase)
         do {
@@ -66,6 +65,7 @@ class AppState {
                 let role: String
             }
             let session = try await SupabaseManager.shared.client.auth.session
+            self.managerAuthId = session.user.id
 
             if let reqPass = session.user.userMetadata["requires_password_change"] {
                 if reqPass == .bool(true) {
@@ -266,7 +266,7 @@ class AppState {
 
             try await SupabaseManager.shared.client
                 .from("products")
-                .update(["inRepair": true])
+                .update(["in_repair": true])
                 .eq("id", value: product.id)
                 .execute()
 
@@ -290,7 +290,7 @@ class AppState {
 
             try await SupabaseManager.shared.client
                 .from("products")
-                .update(["inRepair": false])
+                .update(["in_repair": false])
                 .eq("id", value: product.id)
                 .execute()
 

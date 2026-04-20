@@ -93,6 +93,49 @@ struct Product: Identifiable, Codable, Equatable, Hashable {
         self.inRepair = inRepair
     }
 
+    // MARK: - Decodable
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        // Required Identity
+        self.id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        self.sku = try container.decodeIfPresent(String.self, forKey: .sku) ?? "UNKNOWN-SKU"
+        self.name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Unnamed Product"
+        self.imageUrl = try container.decodeIfPresent(String.self, forKey: .imageUrl)
+
+        // Core Status & Metadata
+        self.category = try container.decodeIfPresent(ProductCategory.self, forKey: .category) ?? .other
+        self.isActive = try container.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
+        self.isGloballyListed = try container.decodeIfPresent(Bool.self, forKey: .isGloballyListed) ?? true
+
+        // Dates (Handling potential format issues)
+        if let createdAtString = try container.decodeIfPresent(String.self, forKey: .createdAt),
+           let date = ISO8601DateFormatter().date(from: createdAtString) {
+            self.createdAt = date
+        } else {
+            self.createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        }
+
+        if let updatedAtString = try container.decodeIfPresent(String.self, forKey: .updatedAt),
+           let date = ISO8601DateFormatter().date(from: updatedAtString) {
+            self.updatedAt = date
+        } else {
+            self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
+        }
+
+        // Pricing
+        self.basePrice = try container.decodeIfPresent(Double.self, forKey: .basePrice) ?? 0
+
+        // Craftsmanship & Heritage (Providing defaults if missing from legacy records)
+        self.material = try container.decodeIfPresent(String.self, forKey: .material) ?? "Not Specified"
+        self.originCountry = try container.decodeIfPresent(String.self, forKey: .originCountry) ?? "N/A"
+        self.craftsmanshipLevel = try container.decodeIfPresent(CraftsmanshipLevel.self, forKey: .craftsmanshipLevel) ?? .handcrafted
+        self.craftsmanshipNotes = try container.decodeIfPresent(String.self, forKey: .craftsmanshipNotes) ?? ""
+        self.collectionName = try container.decodeIfPresent(String.self, forKey: .collectionName) ?? "General Catalogue"
+        self.artisanStudio = try container.decodeIfPresent(String.self, forKey: .artisanStudio) ?? ""
+        self.inRepair = try container.decodeIfPresent(Bool.self, forKey: .inRepair) ?? false
+    }
+
     // MARK: - Computed
     var formattedPrice: String {
         let f = NumberFormatter()

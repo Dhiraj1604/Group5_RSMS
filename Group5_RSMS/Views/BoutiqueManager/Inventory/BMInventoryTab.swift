@@ -62,10 +62,20 @@ struct BMInventoryTab: View {
                 }
             }
             .task {
-                // Fetch stores on first appearance if needed
-                if appState.stores.isEmpty && !hasFetchedStores {
-                    hasFetchedStores = true
+                // Wait for stores to load first if needed
+                if appState.stores.isEmpty {
                     await appState.loadStores()
+                }
+                
+                // Now currentStoreID should be set
+                if let storeId = appState.currentStoreID {
+                    if viewModel.alerts.isEmpty {
+                        await viewModel.loadAlerts(forStore: storeId)
+                        withAnimation(.easeOut(duration: 0.5)) { animateIn = true }
+                    }
+                    if viewModel.incomingRequests.isEmpty {
+                        await viewModel.loadIncomingRequests(forStore: storeId)
+                    }
                 }
             }
             .sheet(item: $selectedAlert) { alert in
@@ -139,17 +149,6 @@ struct BMInventoryTab: View {
                         currentStoreName: currentStoreName,
                         viewModel: viewModel
                     )
-                }
-            }
-        }
-        .task {
-            if let storeId = appState.currentStoreID {
-                if viewModel.alerts.isEmpty {
-                    await viewModel.loadAlerts(forStore: storeId)
-                    withAnimation(.easeOut(duration: 0.5)) { animateIn = true }
-                }
-                if viewModel.incomingRequests.isEmpty {
-                    await viewModel.loadIncomingRequests(forStore: storeId)
                 }
             }
         }
