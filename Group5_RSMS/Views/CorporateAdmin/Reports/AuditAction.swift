@@ -81,7 +81,7 @@ final class ActivityLogService {
     // MARK: - Generic log entry point
 
     /// Called by AppState after every mutating operation.
-    /// `before` / `after` are Encodable snapshots encoded to [String: String].
+    /// `before` / `after` are Encodable snapshots — only changed fields are persisted.
     func log<B: Encodable, A: Encodable>(
         userEmail: String,
         action: AuditAction,
@@ -92,8 +92,19 @@ final class ActivityLogService {
         before: B? = nil as String?,
         after: A? = nil as String?
     ) {
-        let beforeDict = encode(before)
-        let afterDict  = encode(after)
+        let beforeDict: [String: String]?
+        let afterDict: [String: String]?
+
+        // When both snapshots exist → diff them so we only store changed fields
+        if before != nil && after != nil {
+            let diff = diffEncode(before: before, after: after)
+            beforeDict = diff.beforeDiff
+            afterDict  = diff.afterDiff
+        } else {
+            // Create (after only) or Delete (before only) — store full snapshot
+            beforeDict = encode(before)
+            afterDict  = encode(after)
+        }
 
         let payload = AuditLogInsert(
             action:      action.label(for: entity.eventType.dropLast().description),
@@ -156,6 +167,52 @@ final class ActivityLogService {
             result[k] = "\(v)"
         }
         return result.isEmpty ? nil : result
+    }
+
+    // MARK: - Diff helper
+
+    /// Compares two Encodable values and returns only the changed fields.
+    /// `beforeDiff` contains old values of changed keys, `afterDiff` contains new values.
+    /// Keys that are identical in both are excluded.
+    /// Keys that exist only in before (removed) or only in after (added) are included.
+    func diffEncode<B: Encodable, A: Encodable>(
+        before: B?,
+        after: A?
+    ) -> (beforeDiff: [String: String]?, afterDiff: [String: String]?) {
+        let beforeDict = encode(before) ?? [:]
+        let afterDict  = encode(after) ?? [:]
+
+        // Skip noise keys that aren't meaningful to users
+        let noiseKeys: Set<String> = ["id", "created_at", "updated_at"]
+
+        var changedBefore: [String: String] = [:]
+        var changedAfter: [String: String] = [:]
+
+        let allKeys = Set(beforeDict.keys).union(afterDict.keys).subtracting(noiseKeys)
+
+        for key in allKeys {
+            let oldVal = beforeDict[key]
+            let newVal = afterDict[key]
+
+            if oldVal != newVal {
+                // Field changed
+                if let old = oldVal {
+                    changedBefore[key] = old
+                } else {
+                    changedBefore[key] = "(none)"
+                }
+                if let new = newVal {
+                    changedAfter[key] = new
+                } else {
+                    changedAfter[key] = "(removed)"
+                }
+            }
+        }
+
+        return (
+            beforeDiff: changedBefore.isEmpty ? nil : changedBefore,
+            afterDiff:  changedAfter.isEmpty  ? nil : changedAfter
+        )
     }
 }
 

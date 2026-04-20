@@ -146,34 +146,50 @@ struct ProductsTab: View {
         let baseURL: String
         let bucket: String
         
+        private var imageURL: URL? {
+            guard let path = product.imageUrl else { return nil }
+            if path.hasPrefix("http") {
+                return URL(string: path)
+            } else {
+                return URL(string: "\(baseURL)/storage/v1/object/public/\(bucket)/\(path)")
+            }
+        }
+        
         var body: some View {
-            VStack(alignment: .leading, spacing: 8) {
-                // 1. Image View
+            VStack(alignment: .leading, spacing: 0) {
+                // 1. Image — fixed height, contained in bounds
                 ZStack(alignment: .topTrailing) {
                     RSMSTheme.Colors.backgroundDeep
                     
-                    if let path = product.imageUrl,
-                       let url = URL(string: "\(baseURL)/storage/v1/object/public/\(bucket)/\(path)") {
+                    if let url = imageURL {
                         AsyncImage(url: url) { phase in
                             switch phase {
                             case .success(let image):
-                                image.resizable().scaledToFill()
+                                image
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                             case .failure:
-                                Image(systemName: product.category.icon).font(.largeTitle).opacity(0.2)
+                                imagePlaceholder
                             case .empty:
                                 ProgressView().tint(RSMSTheme.Colors.accentGold)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                             @unknown default:
                                 EmptyView()
                             }
                         }
+                        .id(url)
+                    } else {
+                        imagePlaceholder
                     }
                     
-                    // Inactive Overlay
+                    // Inactive badge
                     if !product.isActive {
                         Text("OUT OF STOCK")
                             .font(.system(size: 8, weight: .bold))
-                            .padding(4)
-                            .background(.black.opacity(0.7))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(.black.opacity(0.75))
                             .foregroundStyle(.white)
                             .cornerRadius(4)
                             .padding(8)
@@ -184,8 +200,8 @@ struct ProductsTab: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .clipped()
                 
-                // 2. Details
-                VStack(alignment: .leading, spacing: 2) {
+                // 2. Product Details
+                VStack(alignment: .leading, spacing: 4) {
                     Text("RSMS LUXE")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(RSMSTheme.Colors.accentGold)
@@ -204,8 +220,22 @@ struct ProductsTab: View {
                     .foregroundStyle(RSMSTheme.Colors.textPrimary)
                     .padding(.top, 2)
                 }
-                .padding(.horizontal, 4)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 10)
             }
+            .background(RSMSTheme.Colors.backgroundDeep)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+            )
+        }
+        
+        private var imagePlaceholder: some View {
+            Image(systemName: product.category.icon)
+                .font(.largeTitle)
+                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.2))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }
