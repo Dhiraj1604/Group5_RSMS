@@ -279,15 +279,22 @@ struct SetPriceView: View {
         isLoading = true
         errorMessage = nil
 
+        // 1. Update the products table — this is the critical operation
         do {
-            // 1. Update Product Table
             try await SupabaseManager.shared.client
-                .from("ProductNew")
+                .from("products")
                 .update(["base_price": newPrice])
                 .eq("id", value: product.id)
                 .execute()
+        } catch {
+            print("❌ Price update failed: \(error)")
+            errorMessage = "Error: \(error.localizedDescription)"
+            isLoading = false
+            return
+        }
 
-            // 2. Insert Audit History Row
+        // 2. Insert Audit History Row (best-effort; don't block the user if this fails)
+        do {
             let historyRecord = PriceHistoryInsert(
                 product_id: product.id,
                 previous_price: product.basePrice > 0 ? product.basePrice : nil,
@@ -300,23 +307,33 @@ struct SetPriceView: View {
                 .from("price_history")
                 .insert(historyRecord)
                 .execute()
-
-            // 3. ✅ CRITICAL: Update AppState directly for immediate UI reaction
-            if let index = appState.products.firstIndex(where: { $0.id == product.id }) {
-                appState.products[index].basePrice = newPrice
-            }
-
-            // 4. Background sync for metadata
-            await appState.fetchProducts()
-            
-            isLoading = false
-            dismiss()
-
         } catch {
-            print("❌ Save Failed: \(error)")
-            errorMessage = "Error: \(error.localizedDescription)"
-            isLoading = false
+            // Audit trail failed but price IS updated — log and continue
+            print("⚠️ Price updated but audit history insert failed: \(error)")
         }
+
+        // 3. Update AppState directly for immediate UI reaction
+        if let index = appState.products.firstIndex(where: { $0.id == product.id }) {
+            appState.products[index].basePrice = newPrice
+        }
+
+        // 4. Log to audit trail
+        ActivityLogService.shared.log(
+            userEmail: appState.userEmail,
+            action: .updated,
+            entity: .product,
+            entityName: product.name,
+            entityId: product.id.uuidString,
+            details: "Price updated",
+            before: ["base_price": String(format: "%.2f", product.basePrice)],
+            after: ["base_price": String(format: "%.2f", newPrice)]
+        )
+
+        // 5. Background sync to pick up updated_at and any server-side changes
+        await appState.fetchProducts()
+
+        isLoading = false
+        dismiss()
     }
 }
 

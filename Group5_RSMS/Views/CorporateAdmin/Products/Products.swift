@@ -113,8 +113,22 @@ struct ProductNew: Identifiable, Codable, Equatable, Hashable {
         return "Active"
     }
 
-    // Equatable & Hashable — identity-based
-    static func == (lhs: ProductNew, rhs: ProductNew) -> Bool { lhs.id == rhs.id }
+    // Equatable — compare all user-facing fields so SwiftUI re-renders on any change
+    static func == (lhs: ProductNew, rhs: ProductNew) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.sku == rhs.sku &&
+        lhs.name == rhs.name &&
+        lhs.basePrice == rhs.basePrice &&
+        lhs.isActive == rhs.isActive &&
+        lhs.isGloballyListed == rhs.isGloballyListed &&
+        lhs.imageUrl == rhs.imageUrl &&
+        lhs.category == rhs.category &&
+        lhs.material == rhs.material &&
+        lhs.originCountry == rhs.originCountry &&
+        lhs.craftsmanshipLevel == rhs.craftsmanshipLevel &&
+        lhs.inRepair == rhs.inRepair
+    }
+    // Hashable — identity-based is fine here since it's only used for navigation/sets
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 
     // MARK: - Sample Data

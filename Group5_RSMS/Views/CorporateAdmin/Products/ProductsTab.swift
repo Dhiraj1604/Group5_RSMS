@@ -74,6 +74,11 @@ struct ProductsTab: View {
                 }
             }
             .searchable(text: $searchText, prompt: "Search products...")
+            .task {
+                if appState.products.isEmpty {
+                    await appState.fetchProducts()
+                }
+            }
             .refreshable { await appState.fetchProducts() }
             .sheet(isPresented: $showAddProduct) { AddProductView() }
             .navigationDestination(for: ProductNew.self) { product in
