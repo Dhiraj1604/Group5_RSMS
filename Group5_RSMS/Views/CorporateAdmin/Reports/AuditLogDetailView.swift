@@ -6,7 +6,6 @@ import SwiftUI
 struct AuditLogDetailView: View {
     let log: AuditLog
 
-    // Fields to hide from the UI (noise)
     private let noiseKeys: Set<String> = ["id", "created_at", "updated_at"]
 
     /// Computes the list of changes by diffing before and after data
@@ -20,7 +19,6 @@ struct AuditLogDetailView: View {
         for key in allKeys.sorted() {
             let oldVal = before[key]
             let newVal = after[key]
-            // Only include if something actually changed
             if oldVal != newVal {
                 result.append((field: key, oldValue: oldVal, newValue: newVal))
             }
@@ -33,25 +31,18 @@ struct AuditLogDetailView: View {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 24) {
-
-                    // MARK: Hero Header
+                VStack(alignment: .leading, spacing: 20) {
                     heroHeader
-
-                    // MARK: Activity Info
                     sectionLabel("Activity Info")
                     activityInfoCard
 
-                    // MARK: Changes
                     if !changes.isEmpty {
                         sectionLabel("What Changed")
                         changesCard
                     } else if log.beforeData == nil && log.afterData != nil {
-                        // Created — show summary
                         sectionLabel("Created With")
                         simpleDataCard(data: log.afterData ?? [:], accent: RSMSTheme.Colors.success)
                     } else if log.beforeData != nil && log.afterData == nil {
-                        // Deleted — show what was removed
                         sectionLabel("Deleted Record")
                         simpleDataCard(data: log.beforeData ?? [:], accent: RSMSTheme.Colors.error)
                     }
@@ -102,7 +93,6 @@ struct AuditLogDetailView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(RSMSTheme.Colors.accentGold.opacity(0.12), lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
     }
 
     // MARK: - Section Label
@@ -131,9 +121,8 @@ struct AuditLogDetailView: View {
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(RSMSTheme.Colors.accentGold.opacity(0.12), lineWidth: 0.5)
+                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
     }
 
     private func infoRow(label: String, value: String, isLast: Bool) -> some View {
@@ -152,81 +141,31 @@ struct AuditLogDetailView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 13)
             if !isLast {
-                Divider()
-                    .background(Color.white.opacity(0.05))
-                    .padding(.leading, 16)
+                Divider().background(Color.white.opacity(0.05)).padding(.leading, 16)
             }
         }
     }
 
-    // MARK: - Changes Card (Diff View — only changed fields)
+    // MARK: - Changes Card
     private var changesCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(changes.enumerated()), id: \.offset) { index, change in
-                VStack(spacing: 0) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        // Field name
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(alignment: .center, spacing: 12) {
                         Text(humanReadable(change.field))
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(RSMSTheme.Colors.accentGold)
-                            .textCase(.uppercase)
+                            .frame(width: 90, alignment: .leading)
 
-                        // Change row
-                        HStack(spacing: 8) {
-                            // Old value
-                            if let old = change.oldValue {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "minus.circle.fill")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(RSMSTheme.Colors.error)
-                                    Text(displayValue(old, for: change.field))
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundColor(RSMSTheme.Colors.error.opacity(0.9))
-                                        .lineLimit(2)
-                                }
-                            }
+                        changeSummaryView(change)
 
-                            // Arrow
-                            if change.oldValue != nil && change.newValue != nil
-                                && change.newValue != "(removed)" {
-                                Image(systemName: "arrow.right")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-                            }
-
-                            // New value
-                            if let new = change.newValue {
-                                if new == "(removed)" {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .font(.system(size: 10))
-                                            .foregroundColor(RSMSTheme.Colors.error)
-                                        Text("Removed")
-                                            .font(.system(size: 13, weight: .medium))
-                                            .foregroundColor(RSMSTheme.Colors.error.opacity(0.9))
-                                            .italic()
-                                    }
-                                } else {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "plus.circle.fill")
-                                            .font(.system(size: 10))
-                                            .foregroundColor(RSMSTheme.Colors.success)
-                                        Text(displayValue(new, for: change.field))
-                                            .font(.system(size: 13, weight: .medium))
-                                            .foregroundColor(RSMSTheme.Colors.success.opacity(0.9))
-                                            .lineLimit(2)
-                                    }
-                                }
-                            }
-                        }
+                        Spacer()
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
 
                     if index < changes.count - 1 {
-                        Divider()
-                            .background(Color.white.opacity(0.05))
-                            .padding(.leading, 16)
+                        Divider().background(Color.white.opacity(0.06)).padding(.leading, 16)
                     }
                 }
             }
@@ -235,12 +174,65 @@ struct AuditLogDetailView: View {
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(RSMSTheme.Colors.accentGold.opacity(0.12), lineWidth: 0.5)
+                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
     }
 
-    // MARK: - Simple Data Card (for create/delete — shows all fields)
+    /// Renders a single-line summary for each change.
+    /// Image fields → "Image added" / "Image removed" / "Image updated"
+    /// Other fields with removal → "Removed"
+    /// Normal changes → "old → new"
+    @ViewBuilder
+    private func changeSummaryView(_ change: (field: String, oldValue: String?, newValue: String?)) -> some View {
+        let isImageField = change.field == "image_url"
+        let oldIsUrl = change.oldValue?.hasPrefix("http") == true
+        let newIsUrl = change.newValue?.hasPrefix("http") == true
+        let wasRemoved = change.newValue == "(removed)" || (change.newValue == nil && change.oldValue != nil)
+        let wasAdded = (change.oldValue == nil || change.oldValue == "(none)") && change.newValue != nil && !wasRemoved
+
+        if isImageField || (oldIsUrl && wasRemoved) || (newIsUrl && wasAdded) {
+            // Image field — single simple label
+            if wasRemoved {
+                Text("Image removed")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(RSMSTheme.Colors.error)
+            } else if wasAdded || change.oldValue == "(none)" {
+                Text("Image added")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(RSMSTheme.Colors.success)
+            } else {
+                Text("Image updated")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(RSMSTheme.Colors.accentGoldLight)
+            }
+        } else if wasRemoved {
+            // Non-image field removed
+            Text("\(displayValue(change.oldValue ?? "", for: change.field)) removed")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(RSMSTheme.Colors.error)
+        } else if wasAdded {
+            // Field added
+            Text(displayValue(change.newValue ?? "", for: change.field))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(RSMSTheme.Colors.success)
+        } else {
+            // Normal change — old → new
+            HStack(spacing: 6) {
+                Text(displayValue(change.oldValue ?? "", for: change.field))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .strikethrough(true, color: RSMSTheme.Colors.textTertiary)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(RSMSTheme.Colors.textTertiary)
+                Text(displayValue(change.newValue ?? "", for: change.field))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(RSMSTheme.Colors.success)
+            }
+        }
+    }
+
+    // MARK: - Simple Data Card (create/delete)
     private func simpleDataCard(data: [String: String], accent: Color) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             let filtered = data.filter { !noiseKeys.contains($0.key) }.sorted(by: { $0.key < $1.key })
@@ -248,7 +240,7 @@ struct AuditLogDetailView: View {
                 VStack(spacing: 0) {
                     HStack(alignment: .top, spacing: 12) {
                         Text(humanReadable(item.key))
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(RSMSTheme.Colors.textSecondary)
                             .frame(width: 100, alignment: .leading)
                         Spacer()
@@ -273,46 +265,45 @@ struct AuditLogDetailView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(accent.opacity(0.2), lineWidth: 0.75)
         )
-        .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 4)
     }
 
     // MARK: - Display Helpers
 
-    /// Converts snake_case keys to human-readable labels
     private func humanReadable(_ key: String) -> String {
         let mapping: [String: String] = [
             "base_price": "Price",
             "image_url": "Image",
-            "is_active": "Active Status",
-            "is_globally_listed": "Global Listing",
-            "origin_country": "Origin Country",
-            "craftsmanship_level": "Craftsmanship",
-            "craftsmanship_notes": "Craft. Notes",
+            "is_active": "Status",
+            "is_globally_listed": "Listing",
+            "origin_country": "Country",
+            "craftsmanship_level": "Craft Level",
+            "craftsmanship_notes": "Craft Notes",
             "collection_name": "Collection",
-            "artisan_studio": "Artisan Studio",
+            "artisan_studio": "Studio",
             "in_repair": "In Repair",
+            "stock_quantity": "Stock",
+            "from_store": "From Store",
+            "to_store": "To Store",
+            "source_stock_before": "Source Before",
+            "source_stock_after": "Source After",
+            "dest_stock_before": "Dest Before",
+            "dest_stock_after": "Dest After",
+            "quantity_transferred": "Qty Moved",
         ]
         return mapping[key] ?? key.replacingOccurrences(of: "_", with: " ").capitalized
     }
 
-    /// Formats values for readability (booleans, prices, URLs)
     private func displayValue(_ value: String, for key: String) -> String {
-        // Booleans
         if key == "is_active" || key == "is_globally_listed" || key == "in_repair" {
             return value == "1" || value.lowercased() == "true" ? "Yes" : "No"
         }
-        // Prices
         if key == "base_price" || key == "price" {
-            if let num = Double(value) {
-                return "₹\(String(format: "%.0f", num))"
-            }
+            if let num = Double(value) { return "₹\(String(format: "%.0f", num))" }
         }
-        // URLs — show shortened
-        if value.hasPrefix("http") {
-            return "🖼 Image uploaded"
-        }
-        // Empty / none markers
         if value == "(none)" { return "—" }
+        if value == "(removed)" { return "Removed" }
+        // Don't show raw URLs — handled by changeSummaryView for image fields
+        if value.hasPrefix("http") { return "Image" }
         return value
     }
 }

@@ -122,6 +122,42 @@ struct DashboardTab: View {
                 .font(.headline)
                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
 
+            // Stock Analysis
+            NavigationLink {
+                StockAnalysisStorePickerView()
+            } label: {
+                HStack(spacing: RSMSTheme.Spacing.md) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
+                            .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
+                            .frame(width: 40, height: 40)
+
+                        Image(systemName: "chart.bar.xaxis")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    }
+
+                    VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
+                        Text("Stock Analysis")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(RSMSTheme.Colors.textPrimary)
+
+                        Text("View stock levels across all stores")
+                            .font(.caption)
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                }
+                .cardStyle()
+            }
+
+            // Tax Settings
             NavigationLink {
                 TaxSettingsView()
             } label: {
