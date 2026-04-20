@@ -8,14 +8,14 @@
 import Foundation
 
 /// A stateless engine for executing product pricing and tax calculations.
-public struct PricingService {
+struct PricingService {
     
     /// Calculates the full receipt breakdown for a given product and tax rule.
     /// - Parameters:
     ///   - product: The product containing the base price.
     ///   - taxRule: The tax rule containing rate and inclusiveness settings.
     /// - Returns: A calculated `PricingBreakdown`.
-    public static func calculate(product: Product, taxRule: TaxRule) -> PricingBreakdown {
+    static func calculate(product: Product, taxRule: TaxRule) -> PricingBreakdown {
         let base = product.basePrice
         let rate = taxRule.rate
         

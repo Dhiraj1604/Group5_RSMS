@@ -10,11 +10,11 @@ import SwiftUI
 struct ProductsListView: View {
     @Environment(AppState.self) private var appState
     @State private var searchText = ""
-    @State private var productToRepair: ProductNew?
-    @State private var productToResolve: ProductNew?
+    @State private var productToRepair: Product?
+    @State private var productToResolve: Product?
     @State private var showingResolveAlert = false
 
-    var filteredProducts: [ProductNew] {
+    var filteredProducts: [Product] {
         if searchText.isEmpty {
             return appState.products
         }
@@ -100,7 +100,7 @@ struct ProductsListView: View {
         .scrollContentBackground(.hidden)
     }
 
-    private func productRow(_ product: ProductNew) -> some View {
+    private func productRow(_ product: Product) -> some View {
         HStack(spacing: RSMSTheme.Spacing.lg) {
             ZStack {
                 RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
@@ -261,7 +261,7 @@ struct RepairFormSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
 
-    let product: ProductNew  // ← updated type
+    let product: Product
 
     @State private var issueDescription: String = ""
     @State private var repairCostString: String = ""

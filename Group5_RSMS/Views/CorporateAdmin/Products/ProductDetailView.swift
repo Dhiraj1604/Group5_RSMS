@@ -5,7 +5,7 @@ struct ProductDetailView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
-    let product: ProductNew
+    let product: Product
     var onPriceUpdated: (() -> Void)? = nil
 
     // 🛠️ CONFIGURATION
@@ -19,7 +19,7 @@ struct ProductDetailView: View {
     @State private var updateError: String? = nil
 
     // Always read the live version from AppState so UI reflects updates
-    private var currentProduct: ProductNew {
+    private var currentProduct: Product {
         appState.products.first(where: { $0.id == product.id }) ?? product
     }
 
@@ -408,7 +408,7 @@ struct ProductDetailView: View {
 
 #Preview {
     NavigationStack {
-        ProductDetailView(product: ProductNew.sample)
+        ProductDetailView(product: Product.sample)
     }
     .environment(AppState())
 }

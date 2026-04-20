@@ -14,7 +14,7 @@ struct SetPriceView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
-    let product: ProductNew
+    let product: Product
 
     @State private var priceInput: String = ""
     @State private var note: String = ""
@@ -338,6 +338,6 @@ struct SetPriceView: View {
 }
 
 #Preview {
-    SetPriceView(product: ProductNew.sample)
+    SetPriceView(product: Product.sample)
         .environment(AppState())
 }

@@ -17,7 +17,7 @@ struct AddProductView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
-    var existingProduct: ProductNew? = nil
+    var existingProduct: Product? = nil
 
     // Core
     @State private var sku: String = ""
@@ -405,7 +405,7 @@ struct AddProductView: View {
                 isUploadingImage = false
             }
 
-            let productToSave = ProductNew(
+            let productToSave = Product(
                 id: existingProduct?.id ?? UUID(),
                 sku: sku.trimmed.uppercased(),
                 name: name.trimmed,
