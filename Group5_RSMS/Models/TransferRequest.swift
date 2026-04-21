@@ -78,26 +78,48 @@ extension TransferRequest: Decodable {
         let statusString = try container.decode(String.self, forKey: .status)
         self.status = TransferRequestStatus(rawValue: statusString) ?? .pending
         
-        // Supabase returns dates as strings, use ISO8601 formatting or standard Decode strategy
-        // It's safer to map to Date if we have a DateDecoder, otherwise decode as String and map.
-        // For simplicity, we decode as Date directly (assuming the client dateDecodingStrategy is ISO8601).
-        if let dateString = try? container.decode(String.self, forKey: .createdAt),
-           let date = ISO8601DateFormatter().date(from: dateString) {
+        // Robust Date Decoding
+        let dateString = try container.decode(String.self, forKey: .createdAt)
+        let formatter = ISO8601DateFormatter()
+        
+        // Try fractional seconds first
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: dateString) {
             self.createdAt = date
         } else {
-            self.createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+            // Fallback to standard ISO8601
+            formatter.formatOptions = [.withInternetDateTime]
+            self.createdAt = formatter.date(from: dateString) ?? Date()
         }
         
-        let product = try container.decode(EmbeddedProduct.self, forKey: .products)
+        // Resilient Product Decoding (Handle Single Object or Single-Item Array)
+        let product: EmbeddedProduct
+        if let array = try? container.decode([EmbeddedProduct].self, forKey: .products), let first = array.first {
+            product = first
+        } else {
+            product = try container.decode(EmbeddedProduct.self, forKey: .products)
+        }
         self.productName = product.name
         self.productSku = product.sku
         self.productImageUrl = product.image_url
         
-        let reqStore = try container.decode(EmbeddedStore.self, forKey: .requesting_store)
+        // Resilient Requesting Store Decoding
+        let reqStore: EmbeddedStore
+        if let array = try? container.decode([EmbeddedStore].self, forKey: .requesting_store), let first = array.first {
+            reqStore = first
+        } else {
+            reqStore = try container.decode(EmbeddedStore.self, forKey: .requesting_store)
+        }
         self.requestingStoreName = reqStore.name
         self.requestingStoreCity = reqStore.city
         
-        let fullStore = try container.decode(EmbeddedStore.self, forKey: .fulfilling_store)
+        // Resilient Fulfilling Store Decoding
+        let fullStore: EmbeddedStore
+        if let array = try? container.decode([EmbeddedStore].self, forKey: .fulfilling_store), let first = array.first {
+            fullStore = first
+        } else {
+            fullStore = try container.decode(EmbeddedStore.self, forKey: .fulfilling_store)
+        }
         self.fulfillingStoreName = fullStore.name
         self.fulfillingStoreCity = fullStore.city
     }

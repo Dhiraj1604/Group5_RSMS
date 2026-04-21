@@ -70,14 +70,26 @@ extension LowStockAlert: Decodable {
         self.storeId = try container.decode(UUID.self, forKey: .storeId)
         self.stockQuantity = try container.decode(Int.self, forKey: .stockQuantity)
 
-        let product = try container.decode(EmbeddedProduct.self, forKey: .products)
+        // Resilient Product Decoding
+        let product: EmbeddedProduct
+        if let array = try? container.decode([EmbeddedProduct].self, forKey: .products), let first = array.first {
+            product = first
+        } else {
+            product = try container.decode(EmbeddedProduct.self, forKey: .products)
+        }
         self.productName = product.name
         self.productSku = product.sku
         self.productDescription = product.description
         self.productImageUrl = product.image_url
         self.productBasePrice = product.base_price
 
-        let store = try container.decode(EmbeddedStore.self, forKey: .stores)
+        // Resilient Store Decoding
+        let store: EmbeddedStore
+        if let array = try? container.decode([EmbeddedStore].self, forKey: .stores), let first = array.first {
+            store = first
+        } else {
+            store = try container.decode(EmbeddedStore.self, forKey: .stores)
+        }
         self.storeName = store.name
         self.storeCity = store.city
     }

@@ -12,6 +12,8 @@ import SwiftUI
 struct ICStockTab: View {
     @Environment(AppState.self) private var appState
     @State private var showProductsList = false
+    @State private var lowStockCount: Int = 0
+    @State private var isLoadingLowStock: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -71,21 +73,24 @@ struct ICStockTab: View {
 
                 stockKPICard(
                     title: "Low Stock",
-                    value: "23",
+                    value: isLoadingLowStock ? "…" : "\(lowStockCount)",
                     icon: "exclamationmark.triangle.fill",
                     color: RSMSTheme.Colors.warning
                 )
             }
             HStack(spacing: RSMSTheme.Spacing.md) {
-                stockKPICard(
-                    title: "Pending In",
-                    value: "5",
-                    icon: "arrow.down.circle.fill",
-                    color: RSMSTheme.Colors.success
-                )
+                NavigationLink(destination: ProductsListView(showOnlyInRepair: true)) {
+                    stockKPICard(
+                        title: "In Repair",
+                        value: appState.isLoadingProducts ? "…" : "\(appState.products.filter { $0.inRepair }.count)",
+                        icon: "wrench.and.screwdriver.fill",
+                        color: .orange
+                    )
+                }
+                .buttonStyle(.plain)
                 stockKPICard(
                     title: "Categories",
-                    value: "18",
+                    value: appState.isLoadingProducts ? "…" : "\(Set(appState.products.map { $0.category }).count)",
                     icon: "tag.fill",
                     color: RSMSTheme.Colors.accentGoldLight
                 )
@@ -93,7 +98,20 @@ struct ICStockTab: View {
         }
         .task {
             await appState.fetchProducts()
+            await appState.fetchTotalInventoryCount()
+            await fetchLowStock()
         }
+    }
+
+    private func fetchLowStock() async {
+        isLoadingLowStock = true
+        do {
+            let alerts = try await LowStockService.shared.fetchAllLowStockAlerts()
+            lowStockCount = alerts.count
+        } catch {
+            print("Failed to fetch low stock alerts: \(error)")
+        }
+        isLoadingLowStock = false
     }
 
 
@@ -129,7 +147,7 @@ struct ICStockTab: View {
             VStack(spacing: RSMSTheme.Spacing.sm) {
                 stockRow(label: "Total SKUs Tracked", value: "\(appState.products.count)")
                 stockRow(label: "Total Inventory Units", value: "\(appState.totalInventoryCount)")
-                stockRow(label: "Items Below Reorder Level", value: "23") // Pending threshold implementation
+                stockRow(label: "Items Below Reorder Level", value: isLoadingLowStock ? "…" : "\(lowStockCount)")
                 stockRow(label: "Last Audit Date", value: Date().formatted(.dateTime.month().day().year()))
             }
             .cardStyle()

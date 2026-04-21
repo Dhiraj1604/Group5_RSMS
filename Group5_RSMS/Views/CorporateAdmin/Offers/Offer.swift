@@ -144,17 +144,45 @@ final class OfferService: ObservableObject {
 
     private var jsonDecoder: JSONDecoder {
         let decoder = JSONDecoder()
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
+        
+        let formatters: [ISO8601DateFormatter] = [
+            {
+                let f = ISO8601DateFormatter()
+                f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                return f
+            }(),
+            {
+                let f = ISO8601DateFormatter()
+                f.formatOptions = [.withInternetDateTime]
+                return f
+            }(),
+            {
+                // Handles "2026-04-20T07:39:03.946+00:00" style
+                let f = ISO8601DateFormatter()
+                f.formatOptions = [.withFullDate, .withFullTime, .withFractionalSeconds, .withColonSeparatorInTimeZone]
+                return f
+            }()
+        ]
+        
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let dateStr = try container.decode(String.self)
-
-            if let date = formatter.date(from: dateStr) { return date }
-            formatter.formatOptions = [.withInternetDateTime]
-            if let date = formatter.date(from: dateStr) { return date }
-
+            
+            for formatter in formatters {
+                if let date = formatter.date(from: dateStr) {
+                    return date
+                }
+            }
+            
+            // Last resort — DateFormatter with explicit format
+            let df = DateFormatter()
+            df.locale = Locale(identifier: "en_US_POSIX")
+            df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSXXXXX"
+            if let date = df.date(from: dateStr) { return date }
+            
+            df.dateFormat = "yyyy-MM-dd'T'HH:mm:ssXXXXX"
+            if let date = df.date(from: dateStr) { return date }
+            
             throw DecodingError.dataCorruptedError(
                 in: container,
                 debugDescription: "Invalid date format: \(dateStr)"
@@ -212,6 +240,7 @@ final class OfferService: ObservableObject {
         }.resume()
     }
 
+    
     func fetchOffers() {
         guard let request = makeRequest(path: "offers?select=*&order=created_at.desc", method: "GET") else { return }
 
@@ -237,8 +266,12 @@ final class OfferService: ObservableObject {
                 do {
                     self?.offers = try self?.jsonDecoder.decode([Offer].self, from: data) ?? []
                 } catch {
+                    // ✅ ADD THESE LINES HERE — inside the closure where data exists
+                    if let raw = String(data: data, encoding: .utf8) {
+                        print("❌ Raw response: \(raw)")
+                    }
+                    print("❌ Detailed error: \(error)")
                     self?.errorMessage = "Decoding error: \(error.localizedDescription)"
-                    print("Detailed decoding error: \(error)")
                 }
             }
         }.resume()

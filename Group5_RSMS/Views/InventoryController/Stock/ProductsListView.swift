@@ -14,11 +14,18 @@ struct ProductsListView: View {
     @State private var productToResolve: Product?
     @State private var showingResolveAlert = false
 
+    var showOnlyInRepair: Bool = false
+
     var filteredProducts: [Product] {
-        if searchText.isEmpty {
-            return appState.products
+        var baseList = appState.products
+        if showOnlyInRepair {
+            baseList = baseList.filter { $0.inRepair }
         }
-        return appState.products.filter {
+        
+        if searchText.isEmpty {
+            return baseList
+        }
+        return baseList.filter {
             $0.name.localizedCaseInsensitiveContains(searchText) ||
             $0.sku.localizedCaseInsensitiveContains(searchText)
         }
@@ -41,7 +48,7 @@ struct ProductsListView: View {
                 }
             }
         }
-        .navigationTitle("All Products")
+        .navigationTitle(showOnlyInRepair ? "In Repair" : "All Products")
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
@@ -241,7 +248,7 @@ struct ProductsListView: View {
             Image(systemName: "shippingbox")
                 .font(.system(size: 48))
                 .foregroundStyle(RSMSTheme.Colors.textTertiary)
-            Text("No products found")
+            Text(showOnlyInRepair ? "No products currently in repair" : "No products found")
                 .font(.headline)
                 .foregroundStyle(RSMSTheme.Colors.textSecondary)
         }
