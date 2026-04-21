@@ -60,12 +60,14 @@ class AppState {
     // MARK: - Auth Actions
     func login(email: String) async throws {
         userEmail = email
+        self.requiresPasswordChange = false
 
         #if canImport(Supabase)
         do {
             struct Profile: Codable {
                 let role: String
                 let store_id: UUID?
+                let requires_password_setup: Bool?
             }
             let session = try await SupabaseManager.shared.client.auth.session
             self.managerAuthId = session.user.id
@@ -78,12 +80,16 @@ class AppState {
 
             let profile: Profile = try await SupabaseManager.shared.client
                 .from("profiles")
-                .select("role, store_id")
+                .select("role, store_id, requires_password_setup")
                 .eq("id", value: session.user.id)
                 .single()
                 .execute()
                 .value
 
+            if let reqPass = profile.requires_password_setup, reqPass == true {
+                 self.requiresPasswordChange = true
+            }
+            
             if let fetchedRole = UserRole(rawValue: profile.role) {
                 self.selectedRole = fetchedRole
                 self.assignedStoreId = profile.store_id
