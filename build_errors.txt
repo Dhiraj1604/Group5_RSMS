@@ -1,0 +1,64 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project Group5_RSMS.xcodeproj -scheme Group5_RSMS -destination "platform=iOS Simulator,name=iPhone 16" build
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  Supabase: https://github.com/supabase/supabase-swift.git @ 2.43.1
+  swift-crypto: https://github.com/apple/swift-crypto.git @ 4.3.1
+  swift-http-types: https://github.com/apple/swift-http-types.git @ 1.5.1
+  swift-clocks: https://github.com/pointfreeco/swift-clocks @ 1.0.6
+  swift-asn1: https://github.com/apple/swift-asn1.git @ 1.6.0
+  swift-concurrency-extras: https://github.com/pointfreeco/swift-concurrency-extras @ 1.3.2
+  xctest-dynamic-overlay: https://github.com/pointfreeco/xctest-dynamic-overlay @ 1.9.0
+
+2026-04-21 10:12:43.841 xcodebuild[7617:76061] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-04-21 10:13:44.275 xcodebuild[7617:76061] Writing error result bundle to /var/folders/fl/1clc48755xj6n0l4n02xz0ch0000gn/T/ResultBundle_2026-21-04_10-13-0044.xcresult
+xcodebuild: error: Unable to find a device matching the provided destination specifier:
+		{ platform:iOS Simulator, OS:latest, name:iPhone 16 }
+
+	The requested device could not be found because no available devices matched the request.
+
+	Available destinations for the "Group5_RSMS" scheme:
+		{ platform:macOS, arch:arm64, id:00008132-000A49EA0205801C, name:My Mac }
+		{ platform:macOS, arch:x86_64, id:00008132-000A49EA0205801C, name:My Mac }
+		{ platform:iOS, id:dvtdevice-DVTiPhonePlaceholder-iphoneos:placeholder, name:Any iOS Device }
+		{ platform:iOS Simulator, id:dvtdevice-DVTiOSDeviceSimulatorPlaceholder-iphonesimulator:placeholder, name:Any iOS Simulator Device }
+		{ platform:macOS, name:Any Mac }
+		{ platform:iOS Simulator, arch:arm64, id:2A6574E9-51F1-4E23-81A2-E3C6D3872060, OS:18.6, name:iPad (A16) }
+		{ platform:iOS Simulator, arch:x86_64, id:2A6574E9-51F1-4E23-81A2-E3C6D3872060, OS:18.6, name:iPad (A16) }
+		{ platform:iOS Simulator, arch:arm64, id:5825ED63-1C02-4723-B2CE-C693B88BB91E, OS:26.4, name:iPad (A16) }
+		{ platform:iOS Simulator, arch:arm64, id:D3AF905B-4505-4F30-8EBF-EACDFCC484E0, OS:18.6, name:iPad Air 11-inch (M3) }
+		{ platform:iOS Simulator, arch:x86_64, id:D3AF905B-4505-4F30-8EBF-EACDFCC484E0, OS:18.6, name:iPad Air 11-inch (M3) }
+		{ platform:iOS Simulator, arch:arm64, id:DEA03AB8-FE68-47AB-BB9B-0F27ED12FFA2, OS:26.4, name:iPad Air 11-inch (M4) }
+		{ platform:iOS Simulator, arch:arm64, id:D86FB916-71B5-4849-9CE5-29A578A40376, OS:18.6, name:iPad Air 13-inch (M3) }
+		{ platform:iOS Simulator, arch:x86_64, id:D86FB916-71B5-4849-9CE5-29A578A40376, OS:18.6, name:iPad Air 13-inch (M3) }
+		{ platform:iOS Simulator, arch:arm64, id:92F23D68-0A69-408E-B17D-2B1711100D8A, OS:26.4, name:iPad Air 13-inch (M4) }
+		{ platform:iOS Simulator, arch:arm64, id:F4763390-1A03-4F8D-8462-B1A57CE5FA73, OS:18.6, name:iPad Pro 11-inch (M4) }
+		{ platform:iOS Simulator, arch:x86_64, id:F4763390-1A03-4F8D-8462-B1A57CE5FA73, OS:18.6, name:iPad Pro 11-inch (M4) }
+		{ platform:iOS Simulator, arch:arm64, id:A3A56985-637A-4993-BA91-B324623E4589, OS:26.4, name:iPad Pro 11-inch (M5) }
+		{ platform:iOS Simulator, arch:arm64, id:71F0C5AD-25F6-42DE-A41F-3C51D77DD192, OS:18.6, name:iPad Pro 13-inch (M4) }
+		{ platform:iOS Simulator, arch:x86_64, id:71F0C5AD-25F6-42DE-A41F-3C51D77DD192, OS:18.6, name:iPad Pro 13-inch (M4) }
+		{ platform:iOS Simulator, arch:arm64, id:E52CD2E2-F742-4322-8DDA-D590F9ECADF1, OS:26.4, name:iPad Pro 13-inch (M5) }
+		{ platform:iOS Simulator, arch:arm64, id:95DEEB0D-E51D-4878-BC2F-5B8F2854285B, OS:18.6, name:iPad mini (A17 Pro) }
+		{ platform:iOS Simulator, arch:x86_64, id:95DEEB0D-E51D-4878-BC2F-5B8F2854285B, OS:18.6, name:iPad mini (A17 Pro) }
+		{ platform:iOS Simulator, arch:arm64, id:8166D943-054B-45CD-8B4C-2FCCA40169A3, OS:26.4, name:iPad mini (A17 Pro) }
+		{ platform:iOS Simulator, arch:arm64, id:F49A67F6-4251-42CA-BDB5-5B6694AA435C, OS:18.6, name:iPhone 16 }
+		{ platform:iOS Simulator, arch:x86_64, id:F49A67F6-4251-42CA-BDB5-5B6694AA435C, OS:18.6, name:iPhone 16 }
+		{ platform:iOS Simulator, arch:arm64, id:1D12B0E0-26ED-49F9-B47F-DE321F2D87EA, OS:18.6, name:iPhone 16 Plus }
+		{ platform:iOS Simulator, arch:x86_64, id:1D12B0E0-26ED-49F9-B47F-DE321F2D87EA, OS:18.6, name:iPhone 16 Plus }
+		{ platform:iOS Simulator, arch:arm64, id:6AFF22B1-F6E6-4742-B04A-A2688A8F1175, OS:18.6, name:iPhone 16 Pro }
+		{ platform:iOS Simulator, arch:x86_64, id:6AFF22B1-F6E6-4742-B04A-A2688A8F1175, OS:18.6, name:iPhone 16 Pro }
+		{ platform:iOS Simulator, arch:arm64, id:BD898805-9362-4014-9A1B-AB30B24AF984, OS:18.6, name:iPhone 16 Pro Max }
+		{ platform:iOS Simulator, arch:x86_64, id:BD898805-9362-4014-9A1B-AB30B24AF984, OS:18.6, name:iPhone 16 Pro Max }
+		{ platform:iOS Simulator, arch:arm64, id:CB98E28B-2CC2-40DD-A94B-F8FEFB6422A9, OS:18.6, name:iPhone 16e }
+		{ platform:iOS Simulator, arch:x86_64, id:CB98E28B-2CC2-40DD-A94B-F8FEFB6422A9, OS:18.6, name:iPhone 16e }
+		{ platform:iOS Simulator, arch:arm64, id:335FE594-15AA-470C-846D-609FAE8C0779, OS:26.4, name:iPhone 17 }
+		{ platform:iOS Simulator, arch:arm64, id:E82E7E5D-06DC-4E9C-BCCC-388015C3BDF5, OS:26.4, name:iPhone 17 Pro }
+		{ platform:iOS Simulator, arch:arm64, id:6BEEB2A5-2065-4F44-90D2-A0C4FD4A6B28, OS:26.4, name:iPhone 17 Pro Max }
+		{ platform:iOS Simulator, arch:arm64, id:F8E88A87-1C2F-405B-9711-C7781C68EC13, OS:26.4, name:iPhone 17e }
+		{ platform:iOS Simulator, arch:arm64, id:B0CEB0B8-3395-47DE-B6B0-778F4E383364, OS:26.4, name:iPhone Air }
+
+	Ineligible destinations for the "Group5_RSMS" scheme:
+		{ platform:visionOS, id:dvtdevice-DVTiOSDevicePlaceholder-xros:placeholder, name:Any visionOS Device, error:visionOS 26.4 is not installed. Please download and install the platform from Xcode > Settings > Components. }
