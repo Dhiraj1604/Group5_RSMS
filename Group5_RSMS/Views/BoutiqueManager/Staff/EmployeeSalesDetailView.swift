@@ -8,13 +8,26 @@ import SwiftUI
 struct EmployeeSalesDetailView: View {
     let employee: Employee
     let boutiqueId: UUID
+    @ObservedObject var staffVM: StaffViewModel
 
     @StateObject private var commissionVM = CommissionViewModel()
     @State private var showSetCommission = false
     @State private var showCreatePayout = false
+    @State private var showDeleteConfirmation = false
+    @State private var optimisticIsActive: Bool? = nil
+    @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
 
     var currentRate: CommissionRate? {
         commissionVM.currentRate(for: employee.id)
+    }
+
+    private var currentEmployee: Employee {
+        staffVM.employees.first(where: { $0.id == employee.id }) ?? employee
+    }
+
+    private var displayIsActive: Bool {
+        optimisticIsActive ?? (currentEmployee.isActive ?? true)
     }
 
     var body: some View {
@@ -25,28 +38,50 @@ struct EmployeeSalesDetailView: View {
                 VStack(spacing: 20) {
 
                     // MARK: - Employee Header
+                    // MARK: - Employee Header
                     VStack(spacing: 8) {
                         ZStack {
                             Circle()
                                 .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
                                 .frame(width: 80, height: 80)
-                            Text(employee.name.prefix(1).uppercased())
+                            Text(currentEmployee.name.prefix(1).uppercased())
                                 .font(.system(size: 36, weight: .bold))
                                 .foregroundColor(RSMSTheme.Colors.accentGold)
                         }
-                        Text(employee.name)
+                        
+                        Text(currentEmployee.name)
                             .font(.title2)
                             .foregroundColor(RSMSTheme.Colors.textPrimary)
-                        Text(employee.role)
+
+                        Text(currentEmployee.role)
                             .font(.body)
                             .foregroundColor(RSMSTheme.Colors.textSecondary)
+
+                        // Status Toggle
+                        Toggle(isOn: Binding<Bool>(
+                            get: { displayIsActive },
+                            set: { newValue in
+                                optimisticIsActive = newValue
+                                Task {
+                                    // Pass currentEmployee so the next toggle correctly negates the NEW status
+                                    await staffVM.toggleEmployeeStatus(currentEmployee, boutiqueId: boutiqueId)
+                                }
+                            }
+                        )) {
+                            Text(displayIsActive ? "Active Account" : "Inactive Account")
+                                .font(.subheadline)
+                                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        }
+                        .tint(RSMSTheme.Colors.success)
+                        .padding(.horizontal, 60)
+                        .padding(.top, 8)
                     }
                     .padding(.top)
 
                     // MARK: - Info Cards
                     HStack(spacing: 12) {
-                        InfoCard(title: "Phone", value: employee.phone ?? "N/A", icon: "phone.fill")
-                        InfoCard(title: "Email", value: employee.email ?? "N/A", icon: "envelope.fill")
+                        InfoCard(title: "Phone", value: currentEmployee.phone ?? "N/A", icon: "phone.fill")
+                        InfoCard(title: "Email", value: currentEmployee.email ?? "N/A", icon: "envelope.fill")
                     }
                     .padding(.horizontal)
 
@@ -66,6 +101,20 @@ struct EmployeeSalesDetailView: View {
                                     .foregroundColor(RSMSTheme.Colors.accentGold)
                             }
                             Spacer()
+                            
+                            if let rate = currentRate {
+                                Button {
+                                    Task {
+                                        await commissionVM.deleteCommissionRate(id: rate.id, boutiqueId: boutiqueId)
+                                    }
+                                } label: {
+                                    Image(systemName: "trash.circle.fill")
+                                        .font(.title2)
+                                        .foregroundColor(RSMSTheme.Colors.error)
+                                        .padding(.trailing, 8)
+                                }
+                            }
+                            
                             Button {
                                 showSetCommission = true
                             } label: {
@@ -108,7 +157,11 @@ struct EmployeeSalesDetailView: View {
                                 .padding()
                         } else {
                             ForEach(commissionVM.payouts) { payout in
-                                PayoutRow(payout: payout, commissionVM: commissionVM)
+                                PayoutRow(
+                                    payout: payout,
+                                    managerId: appState.managerAuthId ?? UUID(),   // ← pass it here
+                                    commissionVM: commissionVM
+                                )
                             }
                         }
                     }
@@ -116,14 +169,53 @@ struct EmployeeSalesDetailView: View {
                     .background(RSMSTheme.Colors.backgroundDeep)
                     .cornerRadius(12)
                     .padding(.horizontal)
+
+                    // MARK: - Delete Employee Buton
+                    Button(role: .destructive) {
+                        Task {
+                            await staffVM.deleteEmployee(employee, boutiqueId: boutiqueId)
+                            dismiss()
+                        }
+                    } label: {
+                        Text("Delete Employee")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(RSMSTheme.Colors.error.opacity(0.8))
+                            .cornerRadius(12)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 16)
                 }
                 .padding(.bottom, 30)
+            }
+            .confirmationDialog("Delete Employee", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    dismiss()
+                    Task {
+                        await staffVM.deleteEmployee(employee, boutiqueId: boutiqueId)
+                    }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Are you sure you want to completely delete \(currentEmployee.name)? This action permanently removes their profile and payout history and cannot be undone.")
             }
         }
         .navigationTitle(employee.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(role: .destructive) {
+                    showDeleteConfirmation = true
+                } label: {
+                    Image(systemName: "trash")
+                        .foregroundColor(RSMSTheme.Colors.error)
+                }
+            }
+        }
         .task {
             await commissionVM.fetchCommissionRates(boutiqueId: boutiqueId)
             await commissionVM.fetchPayouts(employeeId: employee.id)
@@ -162,7 +254,9 @@ struct InfoCard: View {
                 Text(value)
                     .font(.body)
                     .foregroundColor(RSMSTheme.Colors.textPrimary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)  // ← shrinks text to fit instead of cutting
+                
             }
         }
         .padding()
@@ -175,6 +269,7 @@ struct InfoCard: View {
 // MARK: - Payout Row
 struct PayoutRow: View {
     let payout: CommissionPayout
+    let managerId: UUID
     @ObservedObject var commissionVM: CommissionViewModel
 
     var statusColor: Color {
@@ -201,9 +296,20 @@ struct PayoutRow: View {
             if payout.status == .pending {
                 Button {
                     Task {
+                        await commissionVM.deletePayout(id: payout.id, employeeId: payout.employeeId)
+                    }
+                } label: {
+                    Image(systemName: "trash.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(RSMSTheme.Colors.error)
+                        .padding(.horizontal, 4)
+                }
+
+                Button {
+                    Task {
                         await commissionVM.approvePayout(
                             id: payout.id,
-                            approvedBy: UUID(),
+                            approvedBy: managerId,
                             employeeId: payout.employeeId
                         )
                     }

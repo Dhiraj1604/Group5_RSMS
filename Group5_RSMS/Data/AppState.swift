@@ -124,9 +124,11 @@ class AppState {
             self.stores = fetchedStores
 
             if selectedRole == .boutiqueManager {
-                self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id
-                    ?? UUID(uuidString: "b3fd8cb6-341b-453e-9ed4-8915aa25245c")
-            } else if self.currentStoreID == nil, let first = fetchedStores.first {
+                        // Find the store linked to team5rsms@gmail.com
+                        self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id
+                            // ✅ Fallback to Dior New York Fifth Avenue ID from your screenshot
+                            ?? UUID(uuidString: "8232958a-d93e-44d5-bfc4-68b7604f7736")
+                    } else if self.currentStoreID == nil, let first = fetchedStores.first {
                 self.currentStoreID = first.id
             }
         } catch let DecodingError.keyNotFound(key, context) {
