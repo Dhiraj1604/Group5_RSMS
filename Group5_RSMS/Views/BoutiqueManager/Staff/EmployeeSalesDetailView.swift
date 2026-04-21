@@ -15,6 +15,10 @@ struct EmployeeSalesDetailView: View {
     @State private var showCreatePayout = false
     @State private var showDeleteConfirmation = false
     @State private var optimisticIsActive: Bool? = nil
+    
+    @State private var employeeOrders: [EmployeeOrder] = []
+    @State private var isLoadingOrders = true
+
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
@@ -29,6 +33,19 @@ struct EmployeeSalesDetailView: View {
     private var displayIsActive: Bool {
         optimisticIsActive ?? (currentEmployee.isActive ?? true)
     }
+
+    // Computed Sales Metrics
+    private var totalSalesParams: Double { employeeOrders.reduce(0) { $0 + $1.totalAmount } }
+    private var currentMonthSales: Double {
+        let currentMonth = Calendar.current.component(.month, from: Date())
+        let currentYear = Calendar.current.component(.year, from: Date())
+        return employeeOrders.filter { 
+            Calendar.current.component(.month, from: $0.createdAt) == currentMonth &&
+            Calendar.current.component(.year, from: $0.createdAt) == currentYear
+        }.reduce(0) { $0 + $1.totalAmount }
+    }
+    private var totalOrders: Int { employeeOrders.count }
+    private var avgOrderValue: Double { totalOrders > 0 ? (totalSalesParams / Double(totalOrders)) : 0.0 }
 
     var body: some View {
         ZStack {
@@ -83,6 +100,35 @@ struct EmployeeSalesDetailView: View {
                         InfoCard(title: "Phone", value: currentEmployee.phone ?? "N/A", icon: "phone.fill")
                         InfoCard(title: "Email", value: currentEmployee.email ?? "N/A", icon: "envelope.fill")
                     }
+                    .padding(.horizontal)
+
+                    // MARK: - Sales Performance Card
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Sales Performance")
+                            .font(.headline)
+                            .foregroundColor(RSMSTheme.Colors.textPrimary)
+
+                        if isLoadingOrders {
+                            ProgressView()
+                                .tint(RSMSTheme.Colors.accentGold)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding()
+                        } else {
+                            VStack(spacing: 10) {
+                                HStack(spacing: 10) {
+                                    PerformanceMetricBlock(title: "Total Sales", value: "₹\(String(format: "%.0f", totalSalesParams))")
+                                    PerformanceMetricBlock(title: "This Month", value: "₹\(String(format: "%.0f", currentMonthSales))")
+                                }
+                                HStack(spacing: 10) {
+                                    PerformanceMetricBlock(title: "Total Orders", value: "\(totalOrders)")
+                                    PerformanceMetricBlock(title: "Avg Order Value", value: "₹\(String(format: "%.0f", avgOrderValue))")
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(RSMSTheme.Colors.backgroundDeep)
+                    .cornerRadius(12)
                     .padding(.horizontal)
 
                     // MARK: - Commission Rate Card
@@ -170,37 +216,10 @@ struct EmployeeSalesDetailView: View {
                     .cornerRadius(12)
                     .padding(.horizontal)
 
-                    // MARK: - Delete Employee Buton
-                    Button(role: .destructive) {
-                        Task {
-                            await staffVM.deleteEmployee(employee, boutiqueId: boutiqueId)
-                            dismiss()
-                        }
-                    } label: {
-                        Text("Delete Employee")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(RSMSTheme.Colors.error.opacity(0.8))
-                            .cornerRadius(12)
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 16)
                 }
                 .padding(.bottom, 30)
             }
-            .confirmationDialog("Delete Employee", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
-                Button("Delete", role: .destructive) {
-                    dismiss()
-                    Task {
-                        await staffVM.deleteEmployee(employee, boutiqueId: boutiqueId)
-                    }
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("Are you sure you want to completely delete \(currentEmployee.name)? This action permanently removes their profile and payout history and cannot be undone.")
-            }
+
         }
         .navigationTitle(employee.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -208,17 +227,38 @@ struct EmployeeSalesDetailView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(role: .destructive) {
+                Button {
                     showDeleteConfirmation = true
                 } label: {
                     Image(systemName: "trash")
                         .foregroundColor(RSMSTheme.Colors.error)
                 }
+                .confirmationDialog("Delete Employee", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+                    Button("Delete", role: .destructive) {
+                        dismiss()
+                        Task {
+                            await staffVM.deleteEmployee(employee, boutiqueId: boutiqueId)
+                        }
+                    }
+                    Button("Cancel", role: .cancel) { }
+                } message: {
+                    Text("Are you sure you want to delete \(currentEmployee.name)? This will permanently remove their profile and all associated data.")
+                }
             }
         }
         .task {
-            await commissionVM.fetchCommissionRates(boutiqueId: boutiqueId)
-            await commissionVM.fetchPayouts(employeeId: employee.id)
+            isLoadingOrders = true
+            
+            async let fetchRates: () = await commissionVM.fetchCommissionRates(boutiqueId: boutiqueId)
+            async let fetchPayouts: () = await commissionVM.fetchPayouts(employeeId: employee.id)
+            async let fetchOrders: () = {
+                if let fetched = try? await SupabaseSyncManager.shared.fetchEmployeeOrders(employeeId: employee.id) {
+                    self.employeeOrders = fetched
+                }
+                isLoadingOrders = false
+            }()
+            
+            _ = await (fetchRates, fetchPayouts, fetchOrders)
         }
         .sheet(isPresented: $showSetCommission) {
             SetCommissionView(
@@ -263,6 +303,31 @@ struct InfoCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RSMSTheme.Colors.backgroundDeep)
         .cornerRadius(12)
+    }
+}
+
+// MARK: - Performance Metric Block
+struct PerformanceMetricBlock: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                .lineLimit(1)
+                
+            Text(value)
+                .font(.headline)
+                .foregroundColor(RSMSTheme.Colors.accentGold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(RSMSTheme.Colors.backgroundPrimary)
+        .cornerRadius(8)
     }
 }
 

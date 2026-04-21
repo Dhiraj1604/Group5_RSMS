@@ -291,6 +291,16 @@ final class SupabaseSyncManager {
     }
 
     // MARK: - Employee Sales Summary
+    func fetchEmployeeOrders(employeeId: UUID) async throws -> [EmployeeOrder] {
+        let response = try await client
+            .from("customer_orders")
+            .select("id, employee_id, boutique_id, total_amount, created_at")
+            .eq("employee_id", value: employeeId.uuidString)
+            .execute()
+            
+        return try supabaseDecoder.decode([EmployeeOrder].self, from: response.data)
+    }
+
     func fetchSalesPerEmployee(boutiqueId: UUID) async throws -> [EmployeeSalesSummary] {
 //        let response = try await client
 //            .from("customer_orders")
