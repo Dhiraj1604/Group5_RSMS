@@ -40,11 +40,15 @@ final class ICAlertsViewModel: ObservableObject {
 
     // MARK: - Load
 
-    func loadAlerts() async {
+    func loadAlerts(storeId: UUID? = nil) async {
         isLoading = true
         errorMessage = nil
         do {
-            self.alerts = try await LowStockService.shared.fetchAllLowStockAlerts()
+            if let storeId = storeId {
+                self.alerts = try await LowStockService.shared.fetchLowStockAlerts(forStore: storeId)
+            } else {
+                self.alerts = try await LowStockService.shared.fetchAllLowStockAlerts()
+            }
         } catch {
             self.errorMessage = "Failed to load alerts: \(error.localizedDescription)"
             print("❌ [ICAlertsVM] \(error)")

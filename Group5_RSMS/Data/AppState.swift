@@ -422,16 +422,21 @@ class AppState {
         }
     }
 
-    func fetchTotalInventoryCount() async {
+    func fetchTotalInventoryCount(storeId: UUID? = nil) async {
         do {
             struct InventoryRecord: Decodable {
                 let stock_quantity: Int
             }
-            let records: [InventoryRecord] = try await SupabaseManager.shared.client
+            
+            var query = SupabaseManager.shared.client
                 .from("inventory")
                 .select("stock_quantity")
-                .execute()
-                .value
+            
+            if let storeId = storeId {
+                query = query.eq("store_id", value: storeId)
+            }
+            
+            let records: [InventoryRecord] = try await query.execute().value
             
             let total = records.reduce(0) { $0 + $1.stock_quantity }
             self.totalInventoryCount = total
