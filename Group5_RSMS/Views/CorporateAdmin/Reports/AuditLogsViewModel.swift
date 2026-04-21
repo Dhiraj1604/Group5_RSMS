@@ -27,6 +27,7 @@ class AuditLogsViewModel: ObservableObject {
         case .promotions: result = result.filter { $0.eventType == .promotion }
         case .users:      result = result.filter { $0.eventType == .user }
         case .tax:        result = result.filter { $0.eventType == .tax }
+        case .inventoryTransfer: result = result.filter { $0.eventType == .inventoryTransfer }
         }
 
         // 2 — Operation filter (actionType)
