@@ -22,6 +22,8 @@ class AppState {
     var userEmail: String = ""
     var managerAuthId: UUID? = nil
     var selectedRole: UserRole? = nil
+    /// The store ID assigned to the user profile in Supabase.
+    var assignedStoreId: UUID? = nil
 
     // MARK: - Store State
     var stores: [Store] = []
@@ -63,6 +65,7 @@ class AppState {
         do {
             struct Profile: Codable {
                 let role: String
+                let store_id: UUID?
             }
             let session = try await SupabaseManager.shared.client.auth.session
             self.managerAuthId = session.user.id
@@ -75,7 +78,7 @@ class AppState {
 
             let profile: Profile = try await SupabaseManager.shared.client
                 .from("profiles")
-                .select("role")
+                .select("role, store_id")
                 .eq("id", value: session.user.id)
                 .single()
                 .execute()
@@ -83,6 +86,7 @@ class AppState {
 
             if let fetchedRole = UserRole(rawValue: profile.role) {
                 self.selectedRole = fetchedRole
+                self.assignedStoreId = profile.store_id
             } else {
                 print("Unknown role: \(profile.role)")
                 throw AuthError.missingRole
@@ -129,6 +133,16 @@ class AppState {
                             // ✅ Fallback to Dior New York Fifth Avenue ID from your screenshot
                             ?? UUID(uuidString: "8232958a-d93e-44d5-bfc4-68b7604f7736")
                     } else if self.currentStoreID == nil, let first = fetchedStores.first {
+            // Priority context logic:
+//             if let assigned = assignedStoreId {
+//                 // 1. Prioritize store explicitly assigned in profile
+//                 self.currentStoreID = assigned
+//             } else if selectedRole == .boutiqueManager {
+//                 // 2. Fallback to manager field (legacy mapping)
+//                 self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id
+//                     ?? UUID(uuidString: "b3fd8cb6-341b-453e-9ed4-8915aa25245c")
+//             } else if self.currentStoreID == nil, let first = fetchedStores.first {
+                // 3. Fallback to first available store (for Admins or unassigned users)
                 self.currentStoreID = first.id
             }
         } catch let DecodingError.keyNotFound(key, context) {

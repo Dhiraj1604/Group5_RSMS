@@ -320,4 +320,35 @@ final class SupabaseSyncManager {
 //        return salesMap.map { EmployeeSalesSummary(employeeId: $0.key, totalSales: $0.value) }
         return []
     }
+
+    // MARK: - Store Tasks
+    func fetchTasks(boutiqueId: UUID) async throws -> [StoreTask] {
+        let response = try await client
+            .from("store_tasks")
+            .select()
+            .eq("boutique_id", value: boutiqueId.uuidString)
+            .order("created_at", ascending: false)
+            .execute()
+        return try supabaseDecoder.decode([StoreTask].self, from: response.data)
+    }
+
+    func createTask(_ task: StoreTask) async throws {
+        try await client.from("store_tasks").insert(task).execute()
+    }
+
+    func updateTask(_ task: StoreTask) async throws {
+        try await client
+            .from("store_tasks")
+            .update(task)
+            .eq("id", value: task.id.uuidString)
+            .execute()
+    }
+
+    func deleteTask(id: UUID) async throws {
+        try await client
+            .from("store_tasks")
+            .delete()
+            .eq("id", value: id.uuidString)
+            .execute()
+    }
 }
