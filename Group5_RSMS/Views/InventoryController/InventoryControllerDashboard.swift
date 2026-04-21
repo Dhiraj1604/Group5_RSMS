@@ -50,9 +50,10 @@ struct InventoryControllerDashboard: View {
         }
         .tint(RSMSTheme.Colors.accentGold)
         .task {
+            async let storesLoad: () = appState.loadStores()
             async let productsLoad: () = appState.fetchProducts()
             async let inventoryLoad: () = appState.fetchTotalInventoryCount()
-            _ = await (productsLoad, inventoryLoad)
+            _ = await (storesLoad, productsLoad, inventoryLoad)
         }
     }
 }
