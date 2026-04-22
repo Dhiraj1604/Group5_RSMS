@@ -34,10 +34,10 @@ struct InventoryControllerDashboard: View {
                 }
                 .tag(2)
 
-            ICAlertsTab()
+            StockCheckView()
                 .tabItem {
-                    Image(systemName: "bell.badge.fill")
-                    Text("Alerts")
+                    Image(systemName: "checklist.checked")
+                    Text("Audit")
                 }
                 .tag(3)
 
