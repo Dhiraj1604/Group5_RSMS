@@ -16,6 +16,7 @@ enum ShipmentTab: String, CaseIterable, Identifiable {
 }
 
 struct ICShipmentsTab: View {
+    @Environment(AppState.self) private var appState
     @State private var orders: [CustomerOrder] = []
     @State private var isLoading = false
     @State private var fetchError: String? = nil
@@ -115,7 +116,7 @@ struct ICShipmentsTab: View {
         fetchError = nil
         do {
             let status = selectedTab == .pending ? "placed" : "shipped"
-            self.orders = try await shipmentService.fetchShipments(status: status)
+            self.orders = try await shipmentService.fetchShipments(status: status, storeId: appState.currentStoreID)
         } catch {
             self.fetchError = error.localizedDescription
         }

@@ -11,11 +11,17 @@ class CustomerShipmentService {
     
     /// Fetches customer orders. For Pending, we fetch 'placed' (or you can expand this to exclude 'shipped').
     /// The select parameter joins customer_order_items so we have product details.
-    func fetchShipments(status: String) async throws -> [CustomerOrder] {
-        let response: [CustomerOrder] = try await client
+    func fetchShipments(status: String, storeId: UUID?) async throws -> [CustomerOrder] {
+        var query = client
             .from("customer_orders")
             .select("*, customer_order_items(*, products(*))")
             .eq("status", value: status)
+            
+        if let storeId = storeId {
+            query = query.eq("store_id", value: storeId)
+        }
+            
+        let response: [CustomerOrder] = try await query
             .order("created_at", ascending: false)
             .execute()
             .value
