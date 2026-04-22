@@ -77,6 +77,19 @@ struct BMDashboardTab: View {
                     await tasksVM.fetchTasksAndStaff(boutiqueId: boutiqueId)
                 }
             }
+            .sheet(isPresented: $showingAddTask) {
+                if let boutiqueId = appState.currentStoreID {
+                    AddTaskSheet(
+                        boutiqueId: boutiqueId,
+                        staff: tasksVM.staff,
+                        onSave: { newTask in
+                            Task {
+                                await tasksVM.addTask(newTask)
+                            }
+                        }
+                    )
+                }
+            }
         }
     }
     
