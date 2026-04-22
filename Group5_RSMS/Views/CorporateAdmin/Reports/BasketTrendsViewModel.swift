@@ -67,9 +67,8 @@ class BasketTrendsViewModel: ObservableObject {
         activeTrendData.map(\.transactionCount).reduce(0, +)
     }
 
-    var categories: [String] {
-        ["Jewelry", "Bags", "Watches", "Clothing", "Accessories"]
-    }
+    // Static product categories for basket trends
+    var categories: [String] { ["Jewelry", "Shoes", "Jackets", "Bags", "Accessories"] }
 
     // MARK: - Fetch
 
@@ -114,6 +113,8 @@ class BasketTrendsViewModel: ObservableObject {
                 return ParsedTxn(date: date, itemCount: row.item_count, totalAmount: row.total_amount)
             }
 
+
+
             self.weeklyData = aggregateWeekly(parsed)
             self.monthlyData = aggregateMonthly(parsed)
 
@@ -151,7 +152,7 @@ class BasketTrendsViewModel: ObservableObject {
                 return .flat
             }()
 
-            let label = "W/O \(dateFormatter.string(from: weekStart))"
+            let label = "Week of \(dateFormatter.string(from: weekStart))"
 
             points.append(TrendPoint(
                 label: label,

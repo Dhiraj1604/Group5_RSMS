@@ -13,15 +13,17 @@ struct ReportsTab: View {
             ZStack {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
+                // Adaptive grid of report cards for both iPhone & iPad
+                let columns = [
+                    GridItem(.adaptive(minimum: 150), spacing: 16)
+                ]
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 14) {
-
+                    LazyVGrid(columns: columns, spacing: 16) {
                         // MARK: Revenue Trends
                         NavigationLink(destination: RevenueTrendsView()) {
                             reportCard(
                                 icon: "chart.bar.xaxis.ascending",
-                                title: "Revenue Trends",
-                                subtitle: "Track daily, weekly & monthly revenue with period comparison"
+                                title: "Revenue Trends"
                             )
                         }
                         .buttonStyle(.plain)
@@ -30,8 +32,7 @@ struct ReportsTab: View {
                         NavigationLink(destination: BasketTrendsView()) {
                             reportCard(
                                 icon: "chart.line.uptrend.xyaxis",
-                                title: "Basket Size Trends",
-                                subtitle: "Avg items per transaction by week & month"
+                                title: "Basket Size Trends"
                             )
                         }
                         .buttonStyle(.plain)
@@ -40,8 +41,7 @@ struct ReportsTab: View {
                         NavigationLink(destination: AuditLogsView()) {
                             reportCard(
                                 icon: "shield.lefthalf.filled",
-                                title: "Audit Logs",
-                                subtitle: "Track all admin actions and changes"
+                                title: "Audit Logs"
                             )
                         }
                         .buttonStyle(.plain)
@@ -59,37 +59,31 @@ struct ReportsTab: View {
     }
 
     // MARK: - Reusable Card
-    private func reportCard(icon: String, title: String, subtitle: String) -> some View {
-        HStack(spacing: 14) {
+    private func reportCard(icon: String, title: String) -> some View {
+        VStack(spacing: 16) {
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 16)
                     .fill(RSMSTheme.Colors.accentGold.opacity(0.12))
-                    .frame(width: 48, height: 48)
+                    .frame(width: 64, height: 64)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 16)
                             .stroke(RSMSTheme.Colors.accentGold.opacity(0.2), lineWidth: 0.5)
                     )
                 Image(systemName: icon)
-                    .font(.system(size: 20, weight: .medium))
+                    .font(.system(size: 28, weight: .semibold))
                     .foregroundStyle(RSMSTheme.Colors.goldGradient)
             }
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                Text(subtitle)
-                    .font(.system(size: 12))
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-            }
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(RSMSTheme.Colors.accentGold.opacity(0.6))
+            Text(title)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.white)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
         }
         .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .aspectRatio(1, contentMode: .fill) // Enforces perfectly equal height and width squares
         .background(RSMSTheme.Colors.backgroundDeep)
         .cornerRadius(16)
         .overlay(

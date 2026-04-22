@@ -17,23 +17,26 @@ struct BasketTrendsView: View {
         ZStack {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
-            if viewModel.isLoading && viewModel.activeTrendData.isEmpty {
-                loadingView
-            } else if viewModel.activeTrendData.isEmpty {
-                emptyState
-            } else {
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: RSMSTheme.Spacing.lg) {
-                        summaryCards
-                        periodPicker
-                        chartSection
-                        filterSection
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: RSMSTheme.Spacing.lg) {
+                    // Filters always on top
+                    filterSection
+                    // Summary cards, period picker
+                    summaryCards
+                    periodPicker
+                    chartSection
+                    // Content area based on state
+                    if viewModel.isLoading && viewModel.activeTrendData.isEmpty {
+                        loadingView
+                    } else if viewModel.activeTrendData.isEmpty {
+                        emptyState
+                    } else {
                         trendTable
                     }
-                    .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-                    .padding(.top, RSMSTheme.Spacing.md)
-                    .padding(.bottom, 100)
                 }
+                .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+                .padding(.top, RSMSTheme.Spacing.md)
+                .padding(.bottom, 100)
             }
         }
         .navigationTitle("Basket Trends")

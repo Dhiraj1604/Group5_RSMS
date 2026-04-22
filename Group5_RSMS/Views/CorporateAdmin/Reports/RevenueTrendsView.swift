@@ -33,12 +33,14 @@ struct RevenueTrendsView: View {
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: RSMSTheme.Spacing.lg) {
-                        summaryCards
+                        // Filters on top
                         dateRangeBar
-                        periodPicker
-                        chartSection
                         storeDropdown
                         comparisonToggle
+                        // Then summary and period picker
+                        summaryCards
+                        periodPicker
+                        chartSection
                         revenueTable
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
