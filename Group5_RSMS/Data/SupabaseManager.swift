@@ -49,11 +49,12 @@ public final class SupabaseManager {
     
     // MARK: - Edge Functions
     
-    public func createManagerAccount(email: String, storeId: UUID) async throws {
+    public func provisionAccount(email: String, storeId: UUID, role: String) async throws {
         #if canImport(Supabase)
         let body: [String: AnyJSON] = [
             "email": .string(email),
-            "store_id": .string(storeId.uuidString)
+            "store_id": .string(storeId.uuidString),
+            "role": .string(role)
         ]
         
         try await client.functions.invoke("verify-manager-otp-admin", options: FunctionInvokeOptions(body: body))

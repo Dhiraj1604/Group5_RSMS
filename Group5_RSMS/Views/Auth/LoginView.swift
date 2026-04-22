@@ -87,9 +87,21 @@ struct LoginView: View {
         }
     }
 
-    // MARK: - Form
     private var loginForm: some View {
         VStack(spacing: RSMSTheme.Spacing.lg) {
+            
+            // Login Method Selector
+            VStack(spacing: RSMSTheme.Spacing.sm) {
+                Picker("Login Method", selection: $isOTPLogin) {
+                    Text("Password Login").tag(false)
+                    Text("First Time User").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, RSMSTheme.Spacing.xs)
+                
+            }
+            .padding(.bottom, RSMSTheme.Spacing.sm)
+
             // Email Field
             VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
                 Text("Email")
@@ -196,24 +208,11 @@ struct LoginView: View {
                     ProgressView()
                         .tint(.white)
                 } else {
-                    Text(isOTPLogin ? "Send OTP" : (isSignUp ? "Sign Up" : "Sign In"))
+                    Text(isOTPLogin ? "Send Verification Code" : (isSignUp ? "Sign Up" : "Sign In"))
                 }
             }
             .buttonStyle(GoldButtonStyle())
             .disabled(isLoading)
-            
-            Button {
-                withAnimation {
-                    isOTPLogin.toggle()
-                    isSignUp = false
-                    showError = false
-                    errorMessage = ""
-                }
-            } label: {
-                Text(isOTPLogin ? "Use Password to Sign In" : "Manager? Sign in with OTP")
-                    .font(.subheadline)
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
-            }
             
             if !isOTPLogin {
                 Button {
@@ -258,7 +257,7 @@ struct LoginView: View {
                         await MainActor.run {
                             withAnimation {
                                 showError = true
-                                errorMessage = "no role is assign"
+                                errorMessage = "No role found for this email. Please contact your Corporate Admin."
                             }
                             isLoading = false
                         }

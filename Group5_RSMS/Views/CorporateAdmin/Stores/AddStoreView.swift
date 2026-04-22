@@ -25,6 +25,8 @@ struct AddStoreView: View {
     @State private var email = ""
     @State private var managerName = ""
     @State private var managerEmail = ""
+    @State private var inventoryName = ""
+    @State private var inventoryEmail = ""
     @State private var selectedRegion = "West"
     @State private var selectedCurrency = "INR"          // ← NEW
     @State private var taxRate = "18.0"
@@ -55,6 +57,8 @@ struct AddStoreView: View {
         !email.trimmingCharacters(in: .whitespaces).isEmpty &&
         !managerName.trimmingCharacters(in: .whitespaces).isEmpty &&
         !managerEmail.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !inventoryName.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !inventoryEmail.trimmingCharacters(in: .whitespaces).isEmpty &&
         (Double(taxRate) != nil)
     }
 
@@ -149,6 +153,10 @@ struct AddStoreView: View {
                 .textInputAutocapitalization(.never)
             formField(label: "Manager Name", placeholder: "Store manager name", text: $managerName, icon: "person.fill", required: true)
             formField(label: "Manager Email", placeholder: "manager@example.com", text: $managerEmail, icon: "person.text.rectangle.fill", required: true)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+            formField(label: "Inventory Controller Name", placeholder: "Inventory controller name", text: $inventoryName, icon: "person.2.fill", required: true)
+            formField(label: "Inventory Email", placeholder: "inventory@example.com", text: $inventoryEmail, icon: "person.text.rectangle", required: true)
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
         }
@@ -340,9 +348,17 @@ struct AddStoreView: View {
             
             do {
                 // 2. Provision the manager silently via Edge Function
-                try await SupabaseManager.shared.createManagerAccount(
+                try await SupabaseManager.shared.provisionAccount(
                     email: managerEmail.trimmingCharacters(in: .whitespaces),
-                    storeId: newStore.id
+                    storeId: newStore.id,
+                    role: "manager"
+                )
+                
+                // 3. Provision the inventory controller silently
+                try await SupabaseManager.shared.provisionAccount(
+                    email: inventoryEmail.trimmingCharacters(in: .whitespaces),
+                    storeId: newStore.id,
+                    role: "inventory"
                 )
                 
                 await MainActor.run {
@@ -352,7 +368,7 @@ struct AddStoreView: View {
             } catch {
                 await MainActor.run {
                     self.isRegistering = false
-                    appState.storeError = "Store created, but failed to provision manager: \(error.localizedDescription)"
+                    appState.storeError = "Store created, but failed to provision staff: \(error.localizedDescription)"
                 }
             }
         }
