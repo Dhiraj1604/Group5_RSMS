@@ -69,7 +69,7 @@ struct ManagerOTPView: View {
                 .font(.system(size: 32, weight: .bold, design: .default))
                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
 
-            Text("We've sent a 6-digit code to \(email).")
+            Text("We've sent an 8-digit code to \(email).")
                 .font(.subheadline)
                 .foregroundStyle(RSMSTheme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -91,7 +91,7 @@ struct ManagerOTPView: View {
                         .foregroundStyle(RSMSTheme.Colors.accentGold)
                         .frame(width: 20)
 
-                    TextField("", text: $otp, prompt: Text("XXXXXX").foregroundStyle(RSMSTheme.Colors.textTertiary))
+                    TextField("", text: $otp, prompt: Text("XXXXXXXX").foregroundStyle(RSMSTheme.Colors.textTertiary))
                         .foregroundStyle(RSMSTheme.Colors.textPrimary)
                         .keyboardType(.numberPad)
                 }

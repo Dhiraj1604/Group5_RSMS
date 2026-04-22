@@ -79,7 +79,7 @@ struct OTPVerificationView: View {
                 .font(.system(size: 28, weight: .bold, design: .default))
                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
 
-            Text("Enter the 6-digit OTP sent to \(managerEmail).\nThe manager must provide this verbally.")
+            Text("Enter the 8-digit OTP sent to \(managerEmail).\nThe manager must provide this verbally.")
                 .font(.subheadline)
                 .foregroundStyle(RSMSTheme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -101,7 +101,7 @@ struct OTPVerificationView: View {
                         .foregroundStyle(RSMSTheme.Colors.accentGold)
                         .frame(width: 20)
 
-                    TextField("", text: $otp, prompt: Text("XXXXXX").foregroundStyle(RSMSTheme.Colors.textTertiary))
+                    TextField("", text: $otp, prompt: Text("XXXXXXXX").foregroundStyle(RSMSTheme.Colors.textTertiary))
                         .foregroundStyle(RSMSTheme.Colors.textPrimary)
                         .keyboardType(.numberPad)
                 }
