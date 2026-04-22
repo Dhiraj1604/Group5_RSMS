@@ -27,6 +27,8 @@ final class SupabaseSyncManager {
             // Full ISO8601 without fractional seconds
             formatter.formatOptions = [.withInternetDateTime]
             if let date = formatter.date(from: str) { return date }
+//             formatter.formatOptions = [.withFullDate] // Handles YYYY-MM-DD
+//             if let date = formatter.date(from: str) { return date }
             
             // Fallbacks for Supabase's high-precision 6-digit microseconds
             let fractionFormatters = [
@@ -79,6 +81,8 @@ final class SupabaseSyncManager {
             
             formatter.formatOptions = [.withInternetDateTime]
             if let date = formatter.date(from: str) { return date }
+//             formatter.formatOptions = [.withFullDate]
+//             if let date = formatter.date(from: str) { return date }
             
             let fractionFormatters = [
                 "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZ",
@@ -282,6 +286,74 @@ final class SupabaseSyncManager {
             .execute()
     }
 
+    // MARK: - Employee Sales Summary (all time)
+//     func fetchSalesPerEmployee(boutiqueId: UUID) async throws -> [EmployeeSalesSummary] {
+//         return try await fetchSalesPerEmployee(boutiqueId: boutiqueId, from: nil, to: nil)
+//     }
+
+    // MARK: - Employee Sales Summary (date range)
+    func fetchSalesPerEmployee(boutiqueId: UUID, from: Date? = nil, to: Date? = nil) async throws -> [EmployeeSalesSummary] {
+        struct RawOrder: Codable {
+            let employeeId: UUID?
+            let totalAmount: Double
+
+            enum CodingKeys: String, CodingKey {
+                case employeeId  = "employee_id"
+                case totalAmount = "total_amount"
+            }
+        }
+
+        var query = client
+            .from("customer_orders")
+            .select("employee_id, total_amount")
+            .eq("boutique_id", value: boutiqueId.uuidString)
+
+        if let from = from {
+            query = query.gte("created_at", value: ISO8601DateFormatter().string(from: from))
+        }
+        if let to = to {
+            query = query.lte("created_at", value: ISO8601DateFormatter().string(from: to))
+        }
+
+        let response = try await query.execute()
+        let orders = try supabaseDecoder.decode([RawOrder].self, from: response.data)
+
+        var salesMap: [UUID: Double] = [:]
+        for order in orders {
+            guard let empId = order.employeeId else { continue }
+            salesMap[empId, default: 0.0] += order.totalAmount
+        }
+        return salesMap.map { EmployeeSalesSummary(employeeId: $0.key, totalSales: $0.value) }
+    }
+
+    // MARK: - Staff Shifts
+    func fetchShifts(boutiqueId: UUID) async throws -> [Shift] {
+        let response = try await client
+            .from("shifts")
+            .select()
+            .eq("boutique_id", value: boutiqueId.uuidString)
+            .execute()
+        return try supabaseDecoder.decode([Shift].self, from: response.data)
+    }
+
+    func createShift(_ shift: Shift) async throws {
+        try await client.from("shifts").insert(shift).execute()
+    }
+
+    func updateShift(_ shift: Shift) async throws {
+        try await client
+            .from("shifts")
+            .update(shift)
+            .eq("id", value: shift.id.uuidString)
+            .execute()
+    }
+
+    func deleteShift(id: UUID) async throws {
+        try await client
+            .from("shifts")
+            .delete()
+            .eq("id", value: id.uuidString)
+            .execute()
     func deletePayout(id: UUID) async throws {
         try await client
             .from("commission_payouts")
@@ -379,3 +451,4 @@ final class SupabaseSyncManager {
         return try supabaseDecoder.decode([CommissionPayout].self, from: response.data)
     }
 }
+

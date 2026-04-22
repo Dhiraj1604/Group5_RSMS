@@ -2,14 +2,6 @@
 //  StaffViewModel.swift
 //  Group5_RSMS
 //
-//  Created by Apple on 19/04/26.
-//
-
-
-//
-//  StaffViewModel.swift
-//  Group5_RSMS
-//
 
 import Foundation
 import Combine
@@ -18,7 +10,7 @@ import Combine
 final class StaffViewModel: ObservableObject {
 
     @Published var employees: [Employee] = []
-    @Published var employeeSales: [UUID: Double] = [:]   // employeeId → total sales
+    @Published var employeeSales: [UUID: Double] = [:]   // employeeId → total sales in selected period
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
 
@@ -36,28 +28,45 @@ final class StaffViewModel: ObservableObject {
         isLoading = false
     }
 
-    // MARK: - Fetch sales total per employee
+    // MARK: - Fetch sales total per employee (all time)
     func fetchSalesPerEmployee(boutiqueId: UUID) async {
-        isLoading = true
-        errorMessage = nil
         do {
             let sales = try await sync.fetchSalesPerEmployee(boutiqueId: boutiqueId)
             var map: [UUID: Double] = [:]
-            for sale in sales {
-                map[sale.employeeId] = sale.totalSales
-            }
+            for sale in sales { map[sale.employeeId] = sale.totalSales }
             employeeSales = map
         } catch {
-            errorMessage = error.localizedDescription
+            // Silently ignore — sales data may not be set up yet in the DB
+            employeeSales = [:]
         }
-        isLoading = false
     }
 
-    // MARK: - Helper
+    // MARK: - Fetch sales for a specific date range
+    func fetchSalesPerEmployee(boutiqueId: UUID, from: Date, to: Date) async {
+        do {
+            let sales = try await sync.fetchSalesPerEmployee(boutiqueId: boutiqueId, from: from, to: to)
+            var map: [UUID: Double] = [:]
+            for sale in sales { map[sale.employeeId] = sale.totalSales }
+            employeeSales = map
+        } catch {
+            // Silently ignore — sales data may not be set up yet in the DB
+            employeeSales = [:]
+        }
+    }
+
+    // MARK: - Helper: total sales for one employee
     func totalSales(for employeeId: UUID) -> Double {
         return employeeSales[employeeId] ?? 0.0
     }
-    
+
+    // MARK: - Sorted employees by sales (highest first)
+    func employeesSortedBySales() -> [Employee] {
+        return employees.sorted {
+            totalSales(for: $0.id) > totalSales(for: $1.id)
+        }
+    }
+
+    // MARK: - Add employee
     func addEmployee(_ employee: Employee, boutiqueId: UUID) async {
         isLoading = true
         errorMessage = nil
