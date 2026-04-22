@@ -19,7 +19,9 @@ struct LoginView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var isSignUp = false
-
+    @State private var isOTPLogin = false
+    @State private var showOTPVerification = false
+    @State private var isLoading = false
     var body: some View {
         ZStack {
             RSMSTheme.Colors.backgroundPrimary
@@ -116,29 +118,31 @@ struct LoginView: View {
                 )
             }
 
-            // Password Field
-            VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
-                Text("Password")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                    .textCase(.uppercase)
+            // Password Field (only show if not OTP login)
+            if !isOTPLogin {
+                VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
+                    Text("Password")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                        .textCase(.uppercase)
 
-                HStack(spacing: RSMSTheme.Spacing.md) {
-                    Image(systemName: "lock.fill")
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
-                        .frame(width: 20)
+                    HStack(spacing: RSMSTheme.Spacing.md) {
+                        Image(systemName: "lock.fill")
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                            .frame(width: 20)
 
-                    SecureField("", text: $password, prompt: Text("Enter your password").foregroundStyle(RSMSTheme.Colors.textTertiary))
-                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                        SecureField("", text: $password, prompt: Text("Enter your password").foregroundStyle(RSMSTheme.Colors.textTertiary))
+                            .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                    }
+                    .padding(RSMSTheme.Spacing.lg)
+                    .background(RSMSTheme.Colors.backgroundElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                            .stroke(RSMSTheme.Colors.border, lineWidth: 1)
+                    )
                 }
-                .padding(RSMSTheme.Spacing.lg)
-                .background(RSMSTheme.Colors.backgroundElevated)
-                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
-                .overlay(
-                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                        .stroke(RSMSTheme.Colors.border, lineWidth: 1)
-                )
             }
 
             if isSignUp {
@@ -188,21 +192,45 @@ struct LoginView: View {
     private var signInButton: some View {
         VStack(spacing: RSMSTheme.Spacing.md) {
             Button { attemptLogin() } label: {
-                Text(isSignUp ? "Sign Up" : "Sign In")
+                if isLoading {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Text(isOTPLogin ? "Send OTP" : (isSignUp ? "Sign Up" : "Sign In"))
+                }
             }
             .buttonStyle(GoldButtonStyle())
+            .disabled(isLoading)
             
             Button {
                 withAnimation {
-                    isSignUp.toggle()
+                    isOTPLogin.toggle()
+                    isSignUp = false
                     showError = false
                     errorMessage = ""
                 }
             } label: {
-                Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
+                Text(isOTPLogin ? "Use Password to Sign In" : "Manager? Sign in with OTP")
                     .font(.subheadline)
                     .foregroundStyle(RSMSTheme.Colors.textSecondary)
             }
+            
+            if !isOTPLogin {
+                Button {
+                    withAnimation {
+                        isSignUp.toggle()
+                        showError = false
+                        errorMessage = ""
+                    }
+                } label: {
+                    Text(isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
+                        .font(.footnote)
+                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showOTPVerification) {
+            ManagerOTPView(email: email)
         }
     }
 
@@ -219,6 +247,42 @@ struct LoginView: View {
             withAnimation { showError = true; errorMessage = "Please enter a valid email address." }
             return
         }
+        if isOTPLogin {
+            isLoading = true
+            Task {
+                do {
+                    // Check if a role is assigned to this email before sending OTP
+                    let hasRole = try await SupabaseManager.shared.checkEmailRoleExists(email: trimmedEmail)
+                    
+                    if !hasRole {
+                        await MainActor.run {
+                            withAnimation {
+                                showError = true
+                                errorMessage = "no role is assign"
+                            }
+                            isLoading = false
+                        }
+                        return
+                    }
+
+                    try await SupabaseManager.shared.sendOTP(email: trimmedEmail)
+                    await MainActor.run {
+                        isLoading = false
+                        showOTPVerification = true
+                    }
+                } catch {
+                    await MainActor.run {
+                        withAnimation {
+                            showError = true
+                            errorMessage = error.localizedDescription
+                        }
+                        isLoading = false
+                    }
+                }
+            }
+            return
+        }
+
         guard !password.isEmpty else {
             withAnimation { showError = true; errorMessage = "Please enter your password." }
             return
@@ -231,6 +295,7 @@ struct LoginView: View {
             }
         }
         
+        isLoading = true
         Task {
             do {
                 #if canImport(Supabase)
@@ -241,14 +306,15 @@ struct LoginView: View {
                 }
                 #endif
                 
-                // Now directly await login instead of wrapping in MainActor.run because login is MainActor isolated.
                 try await appState.login(email: trimmedEmail)
+                await MainActor.run { isLoading = false }
             } catch {
                 await MainActor.run {
                     withAnimation { 
                         showError = true
                         errorMessage = error.localizedDescription 
                     }
+                    isLoading = false
                 }
             }
         }

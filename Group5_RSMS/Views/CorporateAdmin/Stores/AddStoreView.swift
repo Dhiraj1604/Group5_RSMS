@@ -30,6 +30,9 @@ struct AddStoreView: View {
     @State private var taxRate = "18.0"
     @State private var showValidationErrors = false
     @State private var showSuccessAlert = false
+    @State private var showOTPVerification = false
+    @State private var isSendingOTP = false
+    @State private var storeToRegister: Store?
 
     private let regions = ["Asia", "Europe", "North America", "South America", "Australia", "Africa"]
 
@@ -231,13 +234,30 @@ struct AddStoreView: View {
             }
             Button { registerStore() } label: {
                 HStack(spacing: RSMSTheme.Spacing.sm) {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Register Boutique")
+                    if isSendingOTP {
+                        ProgressView().tint(.white)
+                    } else {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Register Boutique")
+                    }
                 }
             }
             .buttonStyle(GoldButtonStyle())
+            .disabled(isSendingOTP)
         }
         .padding(.top, RSMSTheme.Spacing.md)
+        .fullScreenCover(isPresented: $showOTPVerification) {
+            if let store = storeToRegister {
+                OTPVerificationView(
+                    managerEmail: managerEmail.trimmingCharacters(in: .whitespaces),
+                    storeId: store.id,
+                    onVerified: {
+                        // The store was already created successfully before this step
+                        showSuccessAlert = true
+                    }
+                )
+            }
+        }
     }
 
     // MARK: - Helpers
@@ -320,24 +340,30 @@ struct AddStoreView: View {
             isActive: true,
             currencyCode: selectedCurrency
         )
+        self.isSendingOTP = true
+        
         Task {
+            // 1. Create the store FIRST so the store_id is valid for the profile link in Edge Function
             await appState.addStore(newStore)
             
-            // Invoke Edge Function securely to invite the manager!
+            if let _ = appState.storeError {
+                await MainActor.run { self.isSendingOTP = false }
+                return
+            }
+            
+            self.storeToRegister = newStore
+            
             do {
-                try await SupabaseManager.shared.inviteManager(
-                    email: managerEmail.trimmingCharacters(in: .whitespaces),
-                    boutiqueId: newStore.id
-                )
-                print("Manager successfully invited!")
-                showSuccessAlert = true
+                // 2. Only if store creation succeeded, send the OTP
+                try await SupabaseManager.shared.sendOTP(email: managerEmail.trimmingCharacters(in: .whitespaces))
+                await MainActor.run {
+                    self.isSendingOTP = false
+                    self.showOTPVerification = true
+                }
             } catch {
-                if let httpError = error as? FunctionsError,
-                   case let .httpError(code, data) = httpError,
-                   let errorJson = String(data: data, encoding: .utf8) {
-                    appState.storeError = "Edge Function Error (HTTP \(code)):\n\(errorJson)"
-                } else {
-                    appState.storeError = "Failed to invite manager: \(error.localizedDescription)"
+                await MainActor.run {
+                    self.isSendingOTP = false
+                    appState.storeError = "Store created, but failed to send OTP: \(error.localizedDescription)"
                 }
             }
         }

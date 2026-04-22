@@ -31,7 +31,7 @@ struct ContentView: View {
                 LoginView()
                     .transition(.opacity.combined(with: .move(edge: .leading)))
             } else if appState.requiresPasswordChange {
-                ForcePasswordChangeView()
+                SetPasswordView()
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             } else if let role = appState.selectedRole {
                 dashboardForRole(role)
