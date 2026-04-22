@@ -18,7 +18,7 @@ final class StaffViewModel: ObservableObject {
 
     // MARK: - Fetch all employees for a boutique
     func fetchEmployees(boutiqueId: UUID) async {
-        isLoading = true
+        if employees.isEmpty { isLoading = true }
         errorMessage = nil
         do {
             employees = try await sync.fetchEmployees(boutiqueId: boutiqueId)

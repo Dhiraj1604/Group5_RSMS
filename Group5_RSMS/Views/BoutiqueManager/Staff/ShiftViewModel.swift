@@ -18,7 +18,7 @@ final class ShiftViewModel: ObservableObject {
     private let sync = SupabaseSyncManager.shared
     
     func fetchShifts(boutiqueId: UUID) async {
-        isLoading = true
+        if shifts.isEmpty { isLoading = true }
         errorMessage = nil
         do {
             shifts = try await sync.fetchShifts(boutiqueId: boutiqueId)

@@ -90,7 +90,7 @@ struct BMStaffTab: View {
             }
         case 2:
             Button { showingAddShift = true } label: {
-                Image(systemName: "plus.calendar")
+                Image(systemName: "calendar.badge.plus")
                     .foregroundColor(RSMSTheme.Colors.accentGold)
             }
         default:
