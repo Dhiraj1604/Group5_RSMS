@@ -131,7 +131,7 @@ class AppState {
                         // Find the store linked to team5rsms@gmail.com
                         self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id
                             // ✅ Fallback to Dior New York Fifth Avenue ID from your screenshot
-                            ?? UUID(uuidString: "8232958a-d93e-44d5-bfc4-68b7604f7736")
+                            ?? UUID(uuidString: "8232958a-d93e-44d5-bfc4-68b7604f773e")
                     } else if self.currentStoreID == nil, let first = fetchedStores.first {
 //             Priority context logic:
 //             if let assigned = assignedStoreId {
