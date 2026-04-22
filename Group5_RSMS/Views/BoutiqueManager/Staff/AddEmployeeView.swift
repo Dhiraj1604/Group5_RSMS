@@ -177,46 +177,7 @@ struct AddEmployeeView: View {
                         }
 
                         Spacer(minLength: 40)
-                        // MARK: - Save Button
-                        Button {
-                            guard !name.isEmpty else { return }
-                            print("DEBUG boutiqueId being sent: \(boutiqueId)")
-                            Task {
-                                let employee = Employee(
-                                    id: UUID(),
-                                    boutiqueId: UUID(uuidString: boutiqueId.uuidString.lowercased())!,
-                                    name: name,
-                                    email: email.isEmpty ? nil : email,
-                                    phone: phone.isEmpty ? nil : phone,
-                                    role: role,
-                                    salary: Double(salary),
-                                    joiningDate: joiningDate,
-                                    isActive: true,
-                                    createdAt: Date()
-                                )
-                                await staffVM.addEmployee(employee, boutiqueId: boutiqueId)
-                                if staffVM.errorMessage == nil {
-                                    dismiss()
-                                }
-                            }
-                        } label: {
-                            Group {
-                                if staffVM.isLoading {
-                                    ProgressView().tint(.black)
-                                } else {
-                                    Text("Add Employee")
-                                        .font(.headline)
-                                        .foregroundColor(.black)
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(name.isEmpty ? RSMSTheme.Colors.accentGold.opacity(0.4) : RSMSTheme.Colors.accentGold)
-                            .cornerRadius(12)
-                        }
-                        .padding(.horizontal)
-                        .padding(.bottom)
-                        .disabled(name.isEmpty || staffVM.isLoading)
+
                     }
                     .padding()
                 }

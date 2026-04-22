@@ -8,16 +8,13 @@ import SwiftUI
 struct EmployeeSalesDetailView: View {
     let employee: Employee
     let boutiqueId: UUID
-    @ObservedObject var staffVM: StaffViewModel
 
+    @StateObject private var staffVM = StaffViewModel()
     @StateObject private var commissionVM = CommissionViewModel()
     @State private var showSetCommission = false
     @State private var showCreatePayout = false
     @State private var showDeleteConfirmation = false
     @State private var optimisticIsActive: Bool? = nil
-    
-    @State private var employeeOrders: [EmployeeOrder] = []
-    @State private var isLoadingOrders = true
 
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
@@ -34,19 +31,6 @@ struct EmployeeSalesDetailView: View {
         optimisticIsActive ?? (currentEmployee.isActive ?? true)
     }
 
-    // Computed Sales Metrics
-    private var totalSalesParams: Double { employeeOrders.reduce(0) { $0 + $1.totalAmount } }
-    private var currentMonthSales: Double {
-        let currentMonth = Calendar.current.component(.month, from: Date())
-        let currentYear = Calendar.current.component(.year, from: Date())
-        return employeeOrders.filter { 
-            Calendar.current.component(.month, from: $0.createdAt) == currentMonth &&
-            Calendar.current.component(.year, from: $0.createdAt) == currentYear
-        }.reduce(0) { $0 + $1.totalAmount }
-    }
-    private var totalOrders: Int { employeeOrders.count }
-    private var avgOrderValue: Double { totalOrders > 0 ? (totalSalesParams / Double(totalOrders)) : 0.0 }
-
     var body: some View {
         ZStack {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
@@ -55,9 +39,8 @@ struct EmployeeSalesDetailView: View {
                 VStack(spacing: 20) {
 
                     // MARK: - Employee Header
-                    // MARK: - Employee Header
                     VStack(spacing: 8) {
-                        ZStack(alignment: .topTrailing) {
+                        ZStack {
                             Circle()
                                 .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
                                 .frame(width: 80, height: 80)
@@ -66,7 +49,7 @@ struct EmployeeSalesDetailView: View {
                                 .foregroundColor(RSMSTheme.Colors.accentGold)
                                 .frame(width: 80, height: 80)
                         }
-                        
+
                         Text(currentEmployee.name)
                             .font(.title2)
                             .foregroundColor(RSMSTheme.Colors.textPrimary)
@@ -74,19 +57,19 @@ struct EmployeeSalesDetailView: View {
                         Text(currentEmployee.role)
                             .font(.body)
                             .foregroundColor(RSMSTheme.Colors.textSecondary)
+
                         if let joining = employee.joiningDate {
                             Text("Since \(joining.formatted(date: .abbreviated, time: .omitted))")
                                 .font(.caption)
                                 .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
                         }
 
-                        // Status Toggle
+                        // Active / Inactive toggle
                         Toggle(isOn: Binding<Bool>(
                             get: { displayIsActive },
-                            set: { newValue in
-                                optimisticIsActive = newValue
+                            set: { _ in
+                                optimisticIsActive = !displayIsActive
                                 Task {
-                                    // Pass currentEmployee so the next toggle correctly negates the NEW status
                                     await staffVM.toggleEmployeeStatus(currentEmployee, boutiqueId: boutiqueId)
                                 }
                             }
@@ -108,40 +91,49 @@ struct EmployeeSalesDetailView: View {
                     }
                     .padding(.horizontal)
 
-                    // MARK: - Sales Summary Card
+                    // MARK: - Key Stats Row
                     HStack(spacing: 0) {
-                        EmployeeStatCell(title: "Salary", value: employee.salary.map { "₹\(Int($0))" } ?? "N/A", icon: "indianrupeesign.circle.fill")
+                        EmployeeStatCell(
+                            title: "Salary",
+                            value: employee.salary.map { "₹\(Int($0))" } ?? "N/A",
+                            icon: "indianrupeesign.circle.fill"
+                        )
                         Divider().frame(height: 40).background(RSMSTheme.Colors.textSecondary.opacity(0.2))
                         EmployeeStatCell(title: "Shifts", value: "–", icon: "clock.fill")
                         Divider().frame(height: 40).background(RSMSTheme.Colors.textSecondary.opacity(0.2))
-                        EmployeeStatCell(title: "Commission", value: currentRate != nil ? String(format: "%.1f", currentRate!.ratePercentage) + "%" : "Not Set", icon: "percent")
+                        EmployeeStatCell(
+                            title: "Commission",
+                            value: currentRate != nil ? String(format: "%.1f", currentRate!.ratePercentage) + "%" : "Not Set",
+                            icon: "percent"
+                        )
                     }
                     .padding()
                     .background(RSMSTheme.Colors.backgroundDeep)
                     .cornerRadius(14)
+                    .padding(.horizontal)
+
                     // MARK: - Sales Performance Card
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Sales Performance")
                             .font(.headline)
                             .foregroundColor(RSMSTheme.Colors.textPrimary)
 
-                        if isLoadingOrders {
-                            ProgressView()
-                                .tint(RSMSTheme.Colors.accentGold)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                                .padding()
-                        } else {
-                            VStack(spacing: 10) {
-                                HStack(spacing: 10) {
-                                    PerformanceMetricBlock(title: "Total Sales", value: "₹\(String(format: "%.0f", totalSalesParams))")
-                                    PerformanceMetricBlock(title: "This Month", value: "₹\(String(format: "%.0f", currentMonthSales))")
-                                }
-                                HStack(spacing: 10) {
-                                    PerformanceMetricBlock(title: "Total Orders", value: "\(totalOrders)")
-                                    PerformanceMetricBlock(title: "Avg Order Value", value: "₹\(String(format: "%.0f", avgOrderValue))")
-                                }
+                        VStack(spacing: 10) {
+                            HStack(spacing: 10) {
+                                PerformanceMetricBlock(title: "Total Sales", value: "₹0")
+                                PerformanceMetricBlock(title: "This Month", value: "₹0")
+                            }
+                            HStack(spacing: 10) {
+                                PerformanceMetricBlock(title: "Total Orders", value: "0")
+                                PerformanceMetricBlock(title: "Avg Order Value", value: "₹0")
                             }
                         }
+
+                        Text("Sales data will appear here once linked to customer orders.")
+                            .font(.caption)
+                            .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
                     }
                     .padding()
                     .background(RSMSTheme.Colors.backgroundDeep)
@@ -164,7 +156,7 @@ struct EmployeeSalesDetailView: View {
                                     .foregroundColor(RSMSTheme.Colors.accentGold)
                             }
                             Spacer()
-                            
+
                             if let rate = currentRate {
                                 Button {
                                     Task {
@@ -173,11 +165,11 @@ struct EmployeeSalesDetailView: View {
                                 } label: {
                                     Image(systemName: "trash.circle.fill")
                                         .font(.title2)
-                                        .foregroundColor(RSMSTheme.Colors.error)
+                                        .foregroundColor(.red)
                                         .padding(.trailing, 8)
                                 }
                             }
-                            
+
                             Button {
                                 showSetCommission = true
                             } label: {
@@ -222,7 +214,7 @@ struct EmployeeSalesDetailView: View {
                             ForEach(commissionVM.payouts) { payout in
                                 PayoutRow(
                                     payout: payout,
-                                    managerId: appState.managerAuthId ?? UUID(),   // ← pass it here
+                                    managerId: appState.managerAuthId ?? UUID(),
                                     commissionVM: commissionVM
                                 )
                             }
@@ -232,11 +224,9 @@ struct EmployeeSalesDetailView: View {
                     .background(RSMSTheme.Colors.backgroundDeep)
                     .cornerRadius(12)
                     .padding(.horizontal)
-
                 }
                 .padding(.bottom, 30)
             }
-
         }
         .navigationTitle(employee.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -248,48 +238,33 @@ struct EmployeeSalesDetailView: View {
                     showDeleteConfirmation = true
                 } label: {
                     Image(systemName: "trash")
-                        .foregroundColor(RSMSTheme.Colors.error)
+                        .foregroundColor(.red)
                 }
-                .confirmationDialog("Delete Employee", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+                .confirmationDialog(
+                    "Delete Employee",
+                    isPresented: $showDeleteConfirmation,
+                    titleVisibility: .visible
+                ) {
                     Button("Delete", role: .destructive) {
                         dismiss()
-                        Task {
-                            await staffVM.deleteEmployee(employee, boutiqueId: boutiqueId)
-                        }
+                        Task { await staffVM.deleteEmployee(employee, boutiqueId: boutiqueId) }
                     }
                     Button("Cancel", role: .cancel) { }
                 } message: {
-                    Text("Are you sure you want to delete \(currentEmployee.name)? This will permanently remove their profile and all associated data.")
+                    Text("Are you sure you want to delete \(currentEmployee.name)?")
                 }
             }
         }
         .task {
-            isLoadingOrders = true
-            
-            async let fetchRates: () = await commissionVM.fetchCommissionRates(boutiqueId: boutiqueId)
-            async let fetchPayouts: () = await commissionVM.fetchPayouts(employeeId: employee.id)
-            async let fetchOrders: () = {
-                if let fetched = try? await SupabaseSyncManager.shared.fetchEmployeeOrders(employeeId: employee.id) {
-                    self.employeeOrders = fetched
-                }
-                isLoadingOrders = false
-            }()
-            
-            _ = await (fetchRates, fetchPayouts, fetchOrders)
+            await commissionVM.fetchCommissionRates(boutiqueId: boutiqueId)
+            await commissionVM.fetchPayouts(employeeId: employee.id)
+            await staffVM.fetchEmployees(boutiqueId: boutiqueId)
         }
         .sheet(isPresented: $showSetCommission) {
-            SetCommissionView(
-                employee: employee,
-                boutiqueId: boutiqueId,
-                commissionVM: commissionVM
-            )
+            SetCommissionView(employee: employee, boutiqueId: boutiqueId, commissionVM: commissionVM)
         }
         .sheet(isPresented: $showCreatePayout) {
-            CommissionPayoutView(
-                employee: employee,
-                boutiqueId: boutiqueId,
-                commissionVM: commissionVM
-            )
+            CommissionPayoutView(employee: employee, boutiqueId: boutiqueId, commissionVM: commissionVM)
         }
     }
 }
@@ -312,8 +287,7 @@ struct InfoCard: View {
                     .font(.body)
                     .foregroundColor(RSMSTheme.Colors.textPrimary)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.7)  // ← shrinks text to fit instead of cutting
-                
+                    .minimumScaleFactor(0.7)
             }
         }
         .padding()
@@ -323,7 +297,7 @@ struct InfoCard: View {
     }
 }
 
-// MARK: - Stat Cell (used in employee 3-column row)
+// MARK: - Employee Stat Cell
 struct EmployeeStatCell: View {
     let title: String
     let value: String
@@ -342,6 +316,9 @@ struct EmployeeStatCell: View {
                 .foregroundColor(RSMSTheme.Colors.textSecondary)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
 // MARK: - Performance Metric Block
 struct PerformanceMetricBlock: View {
     let title: String
@@ -353,7 +330,6 @@ struct PerformanceMetricBlock: View {
                 .font(.caption)
                 .foregroundColor(RSMSTheme.Colors.textSecondary)
                 .lineLimit(1)
-                
             Text(value)
                 .font(.headline)
                 .foregroundColor(RSMSTheme.Colors.accentGold)
@@ -384,7 +360,7 @@ struct PayoutRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("₹\(payout.commissionAmount, specifier: "%.2f")")
+                Text("₹\(String(format: "%.2f", payout.commissionAmount))")
                     .font(.headline)
                     .foregroundColor(RSMSTheme.Colors.textPrimary)
                 Text("\(payout.periodStart.formatted(date: .abbreviated, time: .omitted)) – \(payout.periodEnd.formatted(date: .abbreviated, time: .omitted))")
@@ -402,7 +378,7 @@ struct PayoutRow: View {
                 } label: {
                     Image(systemName: "trash.circle.fill")
                         .font(.title2)
-                        .foregroundColor(RSMSTheme.Colors.error)
+                        .foregroundColor(.red)
                         .padding(.horizontal, 4)
                 }
 

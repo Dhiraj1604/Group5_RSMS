@@ -8,10 +8,10 @@ import Supabase
 
 @MainActor
 final class SupabaseSyncManager {
-
+    
     static let shared = SupabaseSyncManager()
     private init() {}
-
+    
     // MARK: - Decoder
     private var supabaseDecoder: JSONDecoder {
         let decoder = JSONDecoder()
@@ -27,8 +27,8 @@ final class SupabaseSyncManager {
             // Full ISO8601 without fractional seconds
             formatter.formatOptions = [.withInternetDateTime]
             if let date = formatter.date(from: str) { return date }
-//             formatter.formatOptions = [.withFullDate] // Handles YYYY-MM-DD
-//             if let date = formatter.date(from: str) { return date }
+            //             formatter.formatOptions = [.withFullDate] // Handles YYYY-MM-DD
+            //             if let date = formatter.date(from: str) { return date }
             
             // Fallbacks for Supabase's high-precision 6-digit microseconds
             let fractionFormatters = [
@@ -53,7 +53,7 @@ final class SupabaseSyncManager {
                 fallbackFormatter.dateFormat = format
                 if let date = fallbackFormatter.date(from: str) { return date }
             }
-
+            
             // Plain date only e.g. "2026-04-21"
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyy-MM-dd"
@@ -67,7 +67,7 @@ final class SupabaseSyncManager {
         }
         return decoder
     }
-
+    
     // MARK: - Client
     private let client: SupabaseClient = {
         let decoder = JSONDecoder()
@@ -81,8 +81,8 @@ final class SupabaseSyncManager {
             
             formatter.formatOptions = [.withInternetDateTime]
             if let date = formatter.date(from: str) { return date }
-//             formatter.formatOptions = [.withFullDate]
-//             if let date = formatter.date(from: str) { return date }
+            //             formatter.formatOptions = [.withFullDate]
+            //             if let date = formatter.date(from: str) { return date }
             
             let fractionFormatters = [
                 "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZ",
@@ -101,21 +101,21 @@ final class SupabaseSyncManager {
                 fallbackFormatter.dateFormat = format
                 if let date = fallbackFormatter.date(from: str) { return date }
             }
-
+            
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyy-MM-dd"
             dateFormatter.timeZone = TimeZone(identifier: "UTC")
             if let date = dateFormatter.date(from: str) { return date }
-
+            
             throw DecodingError.dataCorruptedError(
                 in: container,
                 debugDescription: "Cannot decode date: \(str)"
             )
         }
-
+        
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
-
+        
         return SupabaseClient(
             supabaseURL: URL(string: "https://bdgwzkpteyxhlgprlmye.supabase.co")!,
             supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkZ3d6a3B0ZXl4aGxncHJsbXllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNTM5OTksImV4cCI6MjA5MTcyOTk5OX0.AU2fdMOK0WfjqQEFqLsMfGCWChf3rMzSdVOzQ_5QYOU",
@@ -127,30 +127,30 @@ final class SupabaseSyncManager {
             )
         )
     }()
-
+    
     private let table = "stores"
-
+    
     // MARK: - CREATE
     func createStore(_ store: Store) async throws {
         try await client.from(table).insert(store).execute()
     }
-
+    
     // MARK: - READ ALL
     func fetchStores() async throws -> [Store] {
         let response = try await client
             .from(table)
             .select()
             .execute()
-
+        
         if let jsonString = String(data: response.data, encoding: .utf8) {
             print("RAW JSON: \(jsonString)")
         }
-
+        
         let stores = try supabaseDecoder.decode([Store].self, from: response.data)
         print("Fetched \(stores.count) stores successfully")
         return stores
     }
-
+    
     // MARK: - READ BY ID
     func fetchStore(by id: UUID) async throws -> Store? {
         let response = try await client
@@ -158,11 +158,11 @@ final class SupabaseSyncManager {
             .select()
             .eq("id", value: id.uuidString)
             .execute()
-
+        
         let results = try supabaseDecoder.decode([Store].self, from: response.data)
         return results.first
     }
-
+    
     // MARK: - UPDATE
     func updateStore(_ store: Store) async throws {
         try await client
@@ -171,7 +171,7 @@ final class SupabaseSyncManager {
             .eq("id", value: store.id.uuidString)
             .execute()
     }
-
+    
     // MARK: - DELETE
     func deleteStore(id: UUID) async throws {
         try await client
@@ -190,21 +190,21 @@ final class SupabaseSyncManager {
             .select()
             .eq("boutique_id", value: boutiqueId.uuidString)
             .execute()
-
+        
         if let jsonString = String(data: response.data, encoding: .utf8) {
             print("RAW EMPLOYEES JSON: \(jsonString)")  // ← add this
         }
-
+        
         return try supabaseDecoder.decode([Employee].self, from: response.data)
     }
-
+    
     func createEmployee(_ employee: Employee) async throws {
         try await client
             .from("employees")
             .insert(employee)
             .execute()
     }
-
+    
     func updateEmployee(_ employee: Employee) async throws {
         try await client
             .from("employees")
@@ -212,7 +212,7 @@ final class SupabaseSyncManager {
             .eq("id", value: employee.id.uuidString)
             .execute()
     }
-
+    
     func toggleEmployeeStatus(id: UUID, isActive: Bool) async throws {
         try await client
             .from("employees")
@@ -220,7 +220,7 @@ final class SupabaseSyncManager {
             .eq("id", value: id.uuidString)
             .execute()
     }
-
+    
     func deleteEmployee(id: UUID) async throws {
         try await client
             .from("employees")
@@ -228,7 +228,7 @@ final class SupabaseSyncManager {
             .eq("id", value: id.uuidString)
             .execute()
     }
-
+    
     // MARK: - Commission Rates
     func fetchCommissionRates(boutiqueId: UUID) async throws -> [CommissionRate] {
         let response = try await client
@@ -238,11 +238,11 @@ final class SupabaseSyncManager {
             .execute()
         return try supabaseDecoder.decode([CommissionRate].self, from: response.data)
     }
-
+    
     func setCommissionRate(_ rate: CommissionRate) async throws {
         try await client.from("commission_rates").insert(rate).execute()
     }
-
+    
     func updateCommissionRate(_ rate: CommissionRate) async throws {
         try await client
             .from("commission_rates")
@@ -250,7 +250,7 @@ final class SupabaseSyncManager {
             .eq("id", value: rate.id.uuidString.lowercased())
             .execute()
     }
-
+    
     func deleteCommissionRate(id: UUID) async throws {
         try await client
             .from("commission_rates")
@@ -258,7 +258,7 @@ final class SupabaseSyncManager {
             .eq("id", value: id.uuidString)
             .execute()
     }
-
+    
     // MARK: - Commission Payouts
     func fetchPayouts(for employeeId: UUID) async throws -> [CommissionPayout] {
         let response = try await client
@@ -268,11 +268,11 @@ final class SupabaseSyncManager {
             .execute()
         return try supabaseDecoder.decode([CommissionPayout].self, from: response.data)
     }
-
+    
     func createPayout(_ payout: CommissionPayout) async throws {
         try await client.from("commission_payouts").insert(payout).execute()
     }
-
+    
     func approvePayout(id: UUID, approvedBy: UUID) async throws {
         try await client
             .from("commission_payouts")
@@ -285,39 +285,35 @@ final class SupabaseSyncManager {
             .eq("id", value: id.uuidString)
             .execute()
     }
+    
 
-    // MARK: - Employee Sales Summary (all time)
-//     func fetchSalesPerEmployee(boutiqueId: UUID) async throws -> [EmployeeSalesSummary] {
-//         return try await fetchSalesPerEmployee(boutiqueId: boutiqueId, from: nil, to: nil)
-//     }
-
-    // MARK: - Employee Sales Summary (date range)
+    // MARK: - Employee Sales Summary (date range — pass nil for all-time)
     func fetchSalesPerEmployee(boutiqueId: UUID, from: Date? = nil, to: Date? = nil) async throws -> [EmployeeSalesSummary] {
         struct RawOrder: Codable {
             let employeeId: UUID?
             let totalAmount: Double
-
+            
             enum CodingKeys: String, CodingKey {
                 case employeeId  = "employee_id"
                 case totalAmount = "total_amount"
             }
         }
-
+        
         var query = client
             .from("customer_orders")
             .select("employee_id, total_amount")
             .eq("boutique_id", value: boutiqueId.uuidString)
-
+        
         if let from = from {
             query = query.gte("created_at", value: ISO8601DateFormatter().string(from: from))
         }
         if let to = to {
             query = query.lte("created_at", value: ISO8601DateFormatter().string(from: to))
         }
-
+        
         let response = try await query.execute()
         let orders = try supabaseDecoder.decode([RawOrder].self, from: response.data)
-
+        
         var salesMap: [UUID: Double] = [:]
         for order in orders {
             guard let empId = order.employeeId else { continue }
@@ -325,7 +321,7 @@ final class SupabaseSyncManager {
         }
         return salesMap.map { EmployeeSalesSummary(employeeId: $0.key, totalSales: $0.value) }
     }
-
+    
     // MARK: - Staff Shifts
     func fetchShifts(boutiqueId: UUID) async throws -> [Shift] {
         let response = try await client
@@ -335,11 +331,11 @@ final class SupabaseSyncManager {
             .execute()
         return try supabaseDecoder.decode([Shift].self, from: response.data)
     }
-
+    
     func createShift(_ shift: Shift) async throws {
         try await client.from("shifts").insert(shift).execute()
     }
-
+    
     func updateShift(_ shift: Shift) async throws {
         try await client
             .from("shifts")
@@ -347,13 +343,16 @@ final class SupabaseSyncManager {
             .eq("id", value: shift.id.uuidString)
             .execute()
     }
-
+    
     func deleteShift(id: UUID) async throws {
         try await client
             .from("shifts")
             .delete()
             .eq("id", value: id.uuidString)
             .execute()
+    }
+
+    // MARK: - Commission Payout Delete
     func deletePayout(id: UUID) async throws {
         try await client
             .from("commission_payouts")
@@ -362,53 +361,14 @@ final class SupabaseSyncManager {
             .execute()
     }
 
-    // MARK: - Employee Sales Summary
-    func fetchBoutiqueOrders(boutiqueId: UUID) async throws -> [EmployeeOrder] {
-        let response = try await client
-            .from("customer_orders")
-            .select("id, employee_id, boutique_id, total_amount, created_at")
-            .eq("boutique_id", value: boutiqueId.uuidString)
-            .execute()
-            
-        return try supabaseDecoder.decode([EmployeeOrder].self, from: response.data)
-    }
-
-    func fetchEmployeeOrders(employeeId: UUID) async throws -> [EmployeeOrder] {
-        let response = try await client
-            .from("customer_orders")
-            .select("id, employee_id, boutique_id, total_amount, created_at")
-            .eq("employee_id", value: employeeId.uuidString)
-            .execute()
-            
-        return try supabaseDecoder.decode([EmployeeOrder].self, from: response.data)
-    }
-
-    // MARK: - Employee Sales Summary
-    func fetchSalesPerEmployee(boutiqueId: UUID) async throws -> [EmployeeSalesSummary] {
+    // MARK: - All Payouts for a Boutique (Dashboard use)
+    func fetchAllPayouts(boutiqueId: UUID) async throws -> [CommissionPayout] {
         let response = try await client
             .from("commission_payouts")
-            .select("employee_id, total_sales_amount")
+            .select()
             .eq("boutique_id", value: boutiqueId.uuidString.lowercased())
             .execute()
-
-        struct RawPayout: Codable {
-            let employeeId: UUID
-            let totalSalesAmount: Double
-            enum CodingKeys: String, CodingKey {
-                case employeeId       = "employee_id"
-                case totalSalesAmount = "total_sales_amount"
-            }
-        }
-
-        let payouts = try supabaseDecoder.decode([RawPayout].self, from: response.data)
-
-        // Group and sum total_sales_amount per employee
-        var salesMap: [UUID: Double] = [:]
-        for payout in payouts {
-            salesMap[payout.employeeId, default: 0.0] += payout.totalSalesAmount
-        }
-
-        return salesMap.map { EmployeeSalesSummary(employeeId: $0.key, totalSales: $0.value) }
+        return try supabaseDecoder.decode([CommissionPayout].self, from: response.data)
     }
 
     // MARK: - Store Tasks
@@ -440,15 +400,6 @@ final class SupabaseSyncManager {
             .delete()
             .eq("id", value: id.uuidString)
             .execute()
-    }
-    
-    func fetchAllPayouts(boutiqueId: UUID) async throws -> [CommissionPayout] {
-        let response = try await client
-            .from("commission_payouts")
-            .select()
-            .eq("boutique_id", value: boutiqueId.uuidString.lowercased())
-            .execute()
-        return try supabaseDecoder.decode([CommissionPayout].self, from: response.data)
     }
 }
 

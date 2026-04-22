@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-// MARK: - Date Range Presets
 enum SalesDateRange: String, CaseIterable {
     case thisWeek  = "This Week"
     case thisMonth = "This Month"
@@ -26,16 +25,13 @@ enum SalesDateRange: String, CaseIterable {
     }
 }
 
-// MARK: - SalesLeaderboardView
 struct SalesLeaderboardView: View {
-    @StateObject private var staffVM = StaffViewModel()
-    @State private var selectedRange: SalesDateRange = .thisMonth
-    @State private var showRangePicker = false
-
+    @ObservedObject var staffVM: StaffViewModel
+    @Binding var showRangePicker: Bool
     let boutiqueId: UUID
 
-    /// Dummy sales amounts seeded so the leaderboard looks meaningful even
-    /// before the customer_orders table has employee_id data.
+    @State private var selectedRange: SalesDateRange = .thisMonth
+
     private let dummySales: [String: Double] = [
         "Priya Sharma":   142500,
         "Ram kumar":      118000,
@@ -46,9 +42,7 @@ struct SalesLeaderboardView: View {
 
     private func displaySales(for employee: Employee) -> Double {
         let live = staffVM.totalSales(for: employee.id)
-        // Use live data if non-zero, else fall back to a deterministic dummy value
         if live > 0 { return live }
-        // Seed from name hash so values are stable across reloads
         let seed = Double(abs(employee.name.hashValue % 130_000) + 40_000)
         return dummySales[employee.name] ?? seed
     }
@@ -62,9 +56,7 @@ struct SalesLeaderboardView: View {
     }
 
     var body: some View {
-        ZStack {
-            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-
+        Group {
             if staffVM.isLoading {
                 ProgressView().tint(RSMSTheme.Colors.accentGold)
             } else if staffVM.employees.isEmpty {
@@ -79,14 +71,6 @@ struct SalesLeaderboardView: View {
                 leaderboardContent
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button { showRangePicker = true } label: {
-                    Image(systemName: "calendar")
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
-                }
-            }
-        }
         .sheet(isPresented: $showRangePicker) { rangePicker }
         .task {
             await staffVM.fetchEmployees(boutiqueId: boutiqueId)
@@ -97,11 +81,9 @@ struct SalesLeaderboardView: View {
         }
     }
 
-    // MARK: - Main Content
     private var leaderboardContent: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Period label
                 HStack {
                     Text(selectedRange.rawValue)
                         .font(.caption.weight(.semibold))
@@ -118,13 +100,11 @@ struct SalesLeaderboardView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
 
-                // Top Performer Banner
                 if sortedEmployees.count >= 1 {
                     topPerformerBanner
                         .padding(.horizontal, 16)
                 }
 
-                // Full Ranked List
                 LazyVStack(spacing: 10) {
                     ForEach(Array(sortedEmployees.enumerated()), id: \.element.id) { index, emp in
                         NavigationLink(destination:
@@ -145,7 +125,6 @@ struct SalesLeaderboardView: View {
         }
     }
 
-    // MARK: - Top Performer Banner
     private var topPerformerBanner: some View {
         let top = sortedEmployees[0]
         let sales = displaySales(for: top)
@@ -199,7 +178,6 @@ struct SalesLeaderboardView: View {
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(RSMSTheme.Colors.accentGold.opacity(0.25), lineWidth: 1))
     }
 
-    // MARK: - Range Picker
     private var rangePicker: some View {
         NavigationStack {
             List(SalesDateRange.allCases, id: \.self) { range in
@@ -227,7 +205,6 @@ struct SalesLeaderboardView: View {
         .presentationDetents([.medium])
     }
 
-    // MARK: - Helpers
     private func reloadSales() async {
         let interval = selectedRange.dateInterval
         if let from = interval.from {
@@ -238,7 +215,7 @@ struct SalesLeaderboardView: View {
     }
 }
 
-// MARK: - Leaderboard Row (no progress bar)
+// Reuse LeaderboardRow from previous but without duplicate ZStack or background if possible.
 struct LeaderboardRow: View {
     let rank: Int
     let employee: Employee
@@ -256,13 +233,11 @@ struct LeaderboardRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Rank number
             Text("\(rank)")
                 .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundColor(rank <= 3 ? rankColor : RSMSTheme.Colors.textSecondary.opacity(0.6))
                 .frame(width: 24, alignment: .center)
 
-            // Avatar
             ZStack {
                 Circle()
                     .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
@@ -273,7 +248,6 @@ struct LeaderboardRow: View {
                     .foregroundColor(RSMSTheme.Colors.accentGold)
             }
 
-            // Name & Role
             VStack(alignment: .leading, spacing: 3) {
                 Text(employee.name)
                     .font(.subheadline.weight(.semibold))
@@ -285,7 +259,6 @@ struct LeaderboardRow: View {
 
             Spacer()
 
-            // Sales amount
             VStack(alignment: .trailing, spacing: 2) {
                 Text("₹\(Int(sales).formatted())")
                     .font(.subheadline.weight(.bold))

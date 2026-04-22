@@ -2,26 +2,26 @@
 //  ShiftScheduleView.swift
 //  Group5_RSMS
 //
+//  Clean content-only view for the Shift Schedule.
+//
 
 import SwiftUI
 
 struct ShiftScheduleView: View {
-    @StateObject private var shiftVM = ShiftViewModel()
-    @StateObject private var staffVM = StaffViewModel()
+    @ObservedObject var shiftVM: ShiftViewModel
+    @ObservedObject var staffVM: StaffViewModel
+    @Binding var showingAddShift: Bool
 
     let boutiqueId: UUID
 
     @State private var selectedDate = Date()
-    @State private var weekOffset = 0          // which week we're viewing
-    @State private var showingAddShift = false
+    @State private var weekOffset = 0
     @State private var shiftToEdit: Shift?
 
     private let calendar = Calendar.current
 
-    // MARK: - Week computation
     private var weekDays: [Date] {
         let today = calendar.startOfDay(for: Date())
-        // Start of current ISO week + offset
         let startOfWeek = calendar.date(
             byAdding: .weekOfYear,
             value: weekOffset,
@@ -32,168 +32,142 @@ struct ShiftScheduleView: View {
 
     private var weekRangeLabel: String {
         guard let first = weekDays.first, let last = weekDays.last else { return "" }
-        let fmt = DateFormatter()
-        fmt.dateFormat = "d MMM"
-        let yearFmt = DateFormatter()
-        yearFmt.dateFormat = "d MMM yyyy"
+        let fmt = DateFormatter(); fmt.dateFormat = "d MMM"
+        let yearFmt = DateFormatter(); yearFmt.dateFormat = "d MMM yyyy"
         return "\(fmt.string(from: first)) – \(yearFmt.string(from: last))"
     }
 
     var body: some View {
-        ZStack {
-            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-
+        VStack(spacing: 0) {
+            // Week Strip
             VStack(spacing: 0) {
-                // ── Week Strip ──────────────────────────────────────
-                VStack(spacing: 0) {
-                    // Month navigation row
-                    HStack {
-                        Button { weekOffset -= 1 } label: {
-                            Image(systemName: "chevron.left")
-                                .foregroundColor(RSMSTheme.Colors.accentGold)
-                                .padding(8)
-                        }
-                        .disabled(weekOffset == 0)
-                        .opacity(weekOffset == 0 ? 0.3 : 1)
-
-                        Spacer()
-                        Text(weekRangeLabel)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(RSMSTheme.Colors.textPrimary)
-                        Spacer()
-
-                        Button { weekOffset += 1 } label: {
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(RSMSTheme.Colors.accentGold)
-                                .padding(8)
-                        }
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.top, 12)
-
-                    // Day bubbles
-                    HStack(spacing: 6) {
-                        ForEach(weekDays, id: \.self) { day in
-                            let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
-                            let isToday   = calendar.isDateInToday(day)
-                            let isPast    = day < calendar.startOfDay(for: Date())
-                            let hasShifts = !shiftVM.shiftsForDay(day).isEmpty
-
-                            VStack(spacing: 4) {
-                                Text(dayLetter(day))
-                                    .font(.caption2.weight(.medium))
-                                    .foregroundColor(isSelected ? .black : RSMSTheme.Colors.textSecondary)
-
-                                ZStack {
-                                    Circle()
-                                        .fill(
-                                            isSelected
-                                            ? RSMSTheme.Colors.accentGold
-                                            : isToday
-                                                ? RSMSTheme.Colors.accentGold.opacity(0.25)
-                                                : Color.clear
-                                        )
-                                        .frame(width: 36, height: 36)
-
-                                    Text("\(calendar.component(.day, from: day))")
-                                        .font(.subheadline.weight(isSelected || isToday ? .bold : .regular))
-                                        .foregroundColor(
-                                            isSelected ? .black :
-                                            isPast ? RSMSTheme.Colors.textSecondary.opacity(0.4) :
-                                            RSMSTheme.Colors.textPrimary
-                                        )
-                                }
-
-                                // Dot indicator
-                                Circle()
-                                    .fill(hasShifts ? RSMSTheme.Colors.accentGold : Color.clear)
-                                    .frame(width: 5, height: 5)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .onTapGesture {
-                                guard !isPast else { return }
-                                selectedDate = day
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                }
-                .background(RSMSTheme.Colors.backgroundDeep)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 4)
-
-                // ── Daily Header ─────────────────────────────────────
-                let dailyShifts = shiftVM.shiftsForDay(selectedDate)
-
                 HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(formattedFullDate(selectedDate))
-                            .font(.title3.weight(.bold))
-                            .foregroundColor(RSMSTheme.Colors.textPrimary)
-                        Text(dailyShifts.isEmpty ? "No shifts scheduled" : "\(dailyShifts.count) shift\(dailyShifts.count == 1 ? "" : "s") scheduled")
-                            .font(.caption)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    Button { weekOffset -= 1 } label: {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(RSMSTheme.Colors.accentGold)
+                            .padding(8)
                     }
+                    .disabled(weekOffset == 0)
+                    .opacity(weekOffset == 0 ? 0.3 : 1)
+
                     Spacer()
+                    Text(weekRangeLabel)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    Spacer()
+
+                    Button { weekOffset += 1 } label: {
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(RSMSTheme.Colors.accentGold)
+                            .padding(8)
+                    }
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 8)
+                .padding(.top, 12)
 
-                Divider()
-                    .background(RSMSTheme.Colors.textSecondary.opacity(0.2))
-                    .padding(.horizontal, 16)
+                HStack(spacing: 6) {
+                    ForEach(weekDays, id: \.self) { day in
+                        let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
+                        let isToday   = calendar.isDateInToday(day)
+                        let isPast    = day < calendar.startOfDay(for: Date())
+                        let hasShifts = !shiftVM.shiftsForDay(day).isEmpty
 
-                // ── Shift List ────────────────────────────────────────
-                if shiftVM.isLoading {
-                    Spacer()
-                    ProgressView().tint(RSMSTheme.Colors.accentGold)
-                    Spacer()
-                } else if dailyShifts.isEmpty {
-                    Spacer()
-                    VStack(spacing: 16) {
-                        Image(systemName: "moon.zzz.fill")
-                            .font(.system(size: 52))
-                            .foregroundColor(RSMSTheme.Colors.accentGold.opacity(0.35))
-                        Text("No shifts on this day")
-                            .font(.headline)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
-                        Text("Tap + to schedule the first shift")
-                            .font(.caption)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
-                    }
-                    Spacer()
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: 14) {
-                            ForEach(dailyShifts) { shift in
-                                ShiftCard(
-                                    shift: shift,
-                                    staffName: employeeName(for: shift.employeeId),
-                                    staffRole: staffRole(for: shift.employeeId),
-                                    isLowCoverage: checkLowCoverage(for: shift, dailyShifts: dailyShifts)
-                                )
-                                .onTapGesture { shiftToEdit = shift }
+                        VStack(spacing: 4) {
+                            Text(dayLetter(day))
+                                .font(.caption2.weight(.medium))
+                                .foregroundColor(isSelected ? .black : RSMSTheme.Colors.textSecondary)
+
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        isSelected
+                                        ? RSMSTheme.Colors.accentGold
+                                        : isToday
+                                            ? RSMSTheme.Colors.accentGold.opacity(0.25)
+                                            : Color.clear
+                                    )
+                                    .frame(width: 36, height: 36)
+
+                                Text("\(calendar.component(.day, from: day))")
+                                    .font(.subheadline.weight(isSelected || isToday ? .bold : .regular))
+                                    .foregroundColor(
+                                        isSelected ? .black :
+                                        isPast ? RSMSTheme.Colors.textSecondary.opacity(0.4) :
+                                        RSMSTheme.Colors.textPrimary
+                                    )
                             }
+
+                            Circle()
+                                .fill(hasShifts ? RSMSTheme.Colors.accentGold : Color.clear)
+                                .frame(width: 5, height: 5)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 14)
-                        .padding(.bottom, 100) // space for FAB
+                        .frame(maxWidth: .infinity)
+                        .onTapGesture {
+                            guard !isPast else { return }
+                            selectedDate = day
+                        }
                     }
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
             }
+            .background(RSMSTheme.Colors.backgroundDeep)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
 
-        }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showingAddShift = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
+            let dailyShifts = shiftVM.shiftsForDay(selectedDate)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(formattedFullDate(selectedDate))
+                        .font(.title3.weight(.bold))
+                        .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    Text(dailyShifts.isEmpty ? "No shifts scheduled" : "\(dailyShifts.count) shift\(dailyShifts.count == 1 ? "" : "s") scheduled")
+                        .font(.caption)
+                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+
+            Divider()
+                .background(RSMSTheme.Colors.textSecondary.opacity(0.2))
+                .padding(.horizontal, 16)
+
+            if shiftVM.isLoading {
+                Spacer()
+                ProgressView().tint(RSMSTheme.Colors.accentGold)
+                Spacer()
+            } else if dailyShifts.isEmpty {
+                Spacer()
+                VStack(spacing: 16) {
+                    Image(systemName: "moon.zzz.fill")
+                        .font(.system(size: 52))
+                        .foregroundColor(RSMSTheme.Colors.accentGold.opacity(0.35))
+                    Text("No shifts on this day")
+                        .font(.headline)
+                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                }
+                Spacer()
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 14) {
+                        ForEach(dailyShifts) { shift in
+                            ShiftCard(
+                                shift: shift,
+                                staffName: employeeName(for: shift.employeeId),
+                                staffRole: staffRole(for: shift.employeeId),
+                                isLowCoverage: checkLowCoverage(for: shift, dailyShifts: dailyShifts)
+                            )
+                            .onTapGesture { shiftToEdit = shift }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 14)
+                    .padding(.bottom, 30)
                 }
             }
         }
@@ -207,15 +181,8 @@ struct ShiftScheduleView: View {
             await shiftVM.fetchShifts(boutiqueId: boutiqueId)
             await staffVM.fetchEmployees(boutiqueId: boutiqueId)
         }
-        .onChange(of: showingAddShift) { _, isShowing in
-            if !isShowing { Task { await shiftVM.fetchShifts(boutiqueId: boutiqueId) } }
-        }
-        .onChange(of: shiftToEdit?.id) { _, newId in
-            if newId == nil { Task { await shiftVM.fetchShifts(boutiqueId: boutiqueId) } }
-        }
     }
 
-    // MARK: - Helpers
     private func dayLetter(_ date: Date) -> String {
         let f = DateFormatter(); f.dateFormat = "EEE"; return String(f.string(from: date).prefix(1))
     }
@@ -343,3 +310,4 @@ struct ShiftCard: View {
         let f = DateFormatter(); f.timeStyle = .short; return f.string(from: date)
     }
 }
+
