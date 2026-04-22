@@ -109,10 +109,11 @@ struct AddEmployeeView: View {
                         // MARK: - Save Button
                         Button {
                             guard !name.isEmpty else { return }
+                            print("DEBUG boutiqueId being sent: \(boutiqueId)")
                             Task {
                                 let employee = Employee(
                                     id: UUID(),
-                                    boutiqueId: boutiqueId,
+                                    boutiqueId: UUID(uuidString: boutiqueId.uuidString.lowercased())!,
                                     name: name,
                                     email: email.isEmpty ? nil : email,
                                     phone: phone.isEmpty ? nil : phone,

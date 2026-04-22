@@ -14,7 +14,10 @@ struct BMInventoryTab: View {
     @State private var animateIn = false
     @State private var selectedAlert: LowStockAlert? = nil
     @State private var hasFetchedStores = false
-    @State private var selectedTabSegment = 0 // 0 = Alerts, 1 = Incoming Requests
+    @State private var selectedTabSegment = 0 // 0 = Transfer, 1 = Insights
+    
+    @State private var isShowingIncomingRequests = false
+    @State private var isShowingMyRequests = false
 
     /// Resolved current store from AppState
     private var currentStore: Store? {
@@ -76,6 +79,9 @@ struct BMInventoryTab: View {
                     if viewModel.incomingRequests.isEmpty {
                         await viewModel.loadIncomingRequests(forStore: storeId)
                     }
+                    if viewModel.myRequests.isEmpty {
+                        await viewModel.loadMyRequests(forStore: storeId)
+                    }
                 }
             }
             .sheet(item: $selectedAlert) { alert in
@@ -107,6 +113,12 @@ struct BMInventoryTab: View {
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
+            .navigationDestination(isPresented: $isShowingIncomingRequests) {
+                IncomingRequestsView(currentStoreName: currentStoreName, viewModel: viewModel)
+            }
+            .navigationDestination(isPresented: $isShowingMyRequests) {
+                MyRequestsView(currentStoreName: currentStoreName, viewModel: viewModel)
+            }
         }
     }
 
@@ -126,8 +138,8 @@ struct BMInventoryTab: View {
                 
             // Tab Picker
             Picker("Inventory View", selection: $selectedTabSegment) {
-                Text("Low Stock Alerts").tag(0)
-                Text("Incoming Requests").tag(1)
+                Text("Transfer").tag(0)
+                Text("Merchandising Insights").tag(1)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
@@ -137,21 +149,100 @@ struct BMInventoryTab: View {
             // Content
             ZStack {
                 if selectedTabSegment == 0 {
-                    if viewModel.isLoading {
-                        loadingState
-                    } else if viewModel.alerts.isEmpty {
-                        emptyState
-                    } else {
-                        inventoryList
-                    }
+                    transferSegment
                 } else {
-                    IncomingRequestsView(
-                        currentStoreName: currentStoreName,
-                        viewModel: viewModel
+                    ComingSoonView(
+                        title: "Merchandising Insights",
+                        icon: "chart.bar.fill",
+                        description: "Understand product velocity and visualize real-time local trends."
                     )
                 }
             }
         }
+    }
+
+    // MARK: - Transfer Segment
+
+    private var transferSegment: some View {
+        VStack(spacing: 0) {
+            // Cards top section
+            HStack(spacing: 16) {
+                // Incoming Requests Card
+                Button {
+                    isShowingIncomingRequests = true
+                } label: {
+                    transferCard(
+                        title: "Incoming Requests",
+                        icon: "tray.fill",
+                        hasNotification: viewModel.incomingRequests.count > 0
+                    )
+                }
+                
+                // My Requests Card
+                Button {
+                    isShowingMyRequests = true
+                } label: {
+                    transferCard(
+                        title: "My Requests",
+                        icon: "paperplane.fill",
+                        hasNotification: false
+                    )
+                }
+            }
+            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+            .padding(.top, RSMSTheme.Spacing.sm)
+            .padding(.bottom, RSMSTheme.Spacing.md)
+            
+            Divider()
+                .background(Color.white.opacity(0.06))
+            
+            if viewModel.isLoading {
+                loadingState
+            } else if viewModel.alerts.isEmpty {
+                emptyState
+            } else {
+                inventoryList
+            }
+        }
+    }
+
+    private func transferCard(title: String, icon: String, hasNotification: Bool) -> some View {
+        VStack(spacing: 12) {
+            ZStack(alignment: .topTrailing) {
+                ZStack {
+                    Circle()
+                        .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: icon)
+                        .font(.system(size: 20))
+                        .foregroundStyle(RSMSTheme.Colors.goldGradient)
+                }
+                
+                if hasNotification {
+                    Circle()
+                        .fill(RSMSTheme.Colors.error)
+                        .frame(width: 14, height: 14)
+                        .overlay(
+                            Circle().stroke(RSMSTheme.Colors.backgroundDeep, lineWidth: 2)
+                        )
+                        .offset(x: 4, y: -4)
+                }
+            }
+
+            Text(title)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(.white)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+        .padding(.horizontal, 10)
+        .background(RSMSTheme.Colors.backgroundElevated)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
+        )
     }
 
     // MARK: - Store Header

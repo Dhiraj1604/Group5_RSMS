@@ -165,6 +165,7 @@ enum AuditEntityType: String, CaseIterable, Codable {
     case promotion = "Promotions"
     case user      = "Users"
     case tax       = "Tax"
+    case inventoryTransfer = "inventory_transfer"
 
     var iconName: String {
         switch self {
@@ -173,6 +174,8 @@ enum AuditEntityType: String, CaseIterable, Codable {
         case .promotion: return "gift.fill"
         case .user:      return "person.fill"
         case .tax:       return "percent"
+//         case .tax:       return "doc.text.fill"
+        case .inventoryTransfer: return "arrow.triangle.swap"
         }
     }
 }
@@ -202,6 +205,7 @@ enum AuditCategoryFilter: String, CaseIterable {
     case promotions = "Promotions"
     case users      = "Users"
     case tax        = "Tax"
+    case inventoryTransfer = "Inventory Transfers"
 }
 
 // MARK: - Operation Filter

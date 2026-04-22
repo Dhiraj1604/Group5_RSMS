@@ -18,11 +18,46 @@ final class SupabaseSyncManager {
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let str = try container.decode(String.self)
+            
+            // Full ISO8601 with fractional seconds (3 digits usually)
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             if let date = formatter.date(from: str) { return date }
+            
+            // Full ISO8601 without fractional seconds
             formatter.formatOptions = [.withInternetDateTime]
             if let date = formatter.date(from: str) { return date }
+            
+            // Fallbacks for Supabase's high-precision 6-digit microseconds
+            let fractionFormatters = [
+                "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZ",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSSSZ",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSSZ",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+            ]
+            let fallbackFormatter = DateFormatter()
+            fallbackFormatter.locale = Locale(identifier: "en_US_POSIX")
+            fallbackFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+            
+            for format in fractionFormatters {
+                fallbackFormatter.dateFormat = format
+                // In DateFormatter, 'Z' matches things like +0000 or +00:00 depending on locale,
+                // but for strict ISO strings like +00:00 it might need 'ZZZZZ'.
+                // A better approach for variable ISO strings with fractions is:
+                fallbackFormatter.dateFormat = format.replacingOccurrences(of: "Z", with: "ZZZZZ")
+                if let date = fallbackFormatter.date(from: str) { return date }
+                
+                // standard Z
+                fallbackFormatter.dateFormat = format
+                if let date = fallbackFormatter.date(from: str) { return date }
+            }
+
+            // Plain date only e.g. "2026-04-21"
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            dateFormatter.timeZone = TimeZone(identifier: "UTC")
+            if let date = dateFormatter.date(from: str) { return date }
+            
             throw DecodingError.dataCorruptedError(
                 in: container,
                 debugDescription: "Cannot decode date: \(str)"
@@ -37,11 +72,37 @@ final class SupabaseSyncManager {
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let str = try container.decode(String.self)
+            
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             if let date = formatter.date(from: str) { return date }
+            
             formatter.formatOptions = [.withInternetDateTime]
             if let date = formatter.date(from: str) { return date }
+            
+            let fractionFormatters = [
+                "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZ",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSSSZ",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSSZ",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+            ]
+            let fallbackFormatter = DateFormatter()
+            fallbackFormatter.locale = Locale(identifier: "en_US_POSIX")
+            fallbackFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+            
+            for format in fractionFormatters {
+                fallbackFormatter.dateFormat = format.replacingOccurrences(of: "Z", with: "ZZZZZ")
+                if let date = fallbackFormatter.date(from: str) { return date }
+                
+                fallbackFormatter.dateFormat = format
+                if let date = fallbackFormatter.date(from: str) { return date }
+            }
+
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            dateFormatter.timeZone = TimeZone(identifier: "UTC")
+            if let date = dateFormatter.date(from: str) { return date }
+
             throw DecodingError.dataCorruptedError(
                 in: container,
                 debugDescription: "Cannot decode date: \(str)"
@@ -124,13 +185,20 @@ final class SupabaseSyncManager {
             .from("employees")
             .select()
             .eq("boutique_id", value: boutiqueId.uuidString)
-            .eq("is_active", value: true)
             .execute()
+
+        if let jsonString = String(data: response.data, encoding: .utf8) {
+            print("RAW EMPLOYEES JSON: \(jsonString)")  // ← add this
+        }
+
         return try supabaseDecoder.decode([Employee].self, from: response.data)
     }
 
     func createEmployee(_ employee: Employee) async throws {
-        try await client.from("employees").insert(employee).execute()
+        try await client
+            .from("employees")
+            .insert(employee)
+            .execute()
     }
 
     func updateEmployee(_ employee: Employee) async throws {
@@ -141,10 +209,18 @@ final class SupabaseSyncManager {
             .execute()
     }
 
-    func deactivateEmployee(id: UUID) async throws {
+    func toggleEmployeeStatus(id: UUID, isActive: Bool) async throws {
         try await client
             .from("employees")
-            .update(["is_active": false])
+            .update(["is_active": isActive])
+            .eq("id", value: id.uuidString)
+            .execute()
+    }
+
+    func deleteEmployee(id: UUID) async throws {
+        try await client
+            .from("employees")
+            .delete()
             .eq("id", value: id.uuidString)
             .execute()
     }
@@ -167,7 +243,15 @@ final class SupabaseSyncManager {
         try await client
             .from("commission_rates")
             .update(rate)
-            .eq("id", value: rate.id.uuidString)
+            .eq("id", value: rate.id.uuidString.lowercased())
+            .execute()
+    }
+
+    func deleteCommissionRate(id: UUID) async throws {
+        try await client
+            .from("commission_rates")
+            .delete()
+            .eq("id", value: id.uuidString)
             .execute()
     }
 
@@ -190,14 +274,33 @@ final class SupabaseSyncManager {
             .from("commission_payouts")
             .update([
                 "status": "approved",
-                "approved_by": approvedBy.uuidString,
-                "approved_at": ISO8601DateFormatter().string(from: Date())
+                "approved_by": approvedBy.uuidString.lowercased(),
+                "approved_at": ISO8601DateFormatter().string(from: Date()),
+                "payout_date": ISO8601DateFormatter().string(from: Date())
             ])
             .eq("id", value: id.uuidString)
             .execute()
     }
 
+    func deletePayout(id: UUID) async throws {
+        try await client
+            .from("commission_payouts")
+            .delete()
+            .eq("id", value: id.uuidString)
+            .execute()
+    }
+
     // MARK: - Employee Sales Summary
+    func fetchEmployeeOrders(employeeId: UUID) async throws -> [EmployeeOrder] {
+        let response = try await client
+            .from("customer_orders")
+            .select("id, employee_id, boutique_id, total_amount, created_at")
+            .eq("employee_id", value: employeeId.uuidString)
+            .execute()
+            
+        return try supabaseDecoder.decode([EmployeeOrder].self, from: response.data)
+    }
+
     func fetchSalesPerEmployee(boutiqueId: UUID) async throws -> [EmployeeSalesSummary] {
 //        let response = try await client
 //            .from("customer_orders")
@@ -226,5 +329,36 @@ final class SupabaseSyncManager {
 //
 //        return salesMap.map { EmployeeSalesSummary(employeeId: $0.key, totalSales: $0.value) }
         return []
+    }
+
+    // MARK: - Store Tasks
+    func fetchTasks(boutiqueId: UUID) async throws -> [StoreTask] {
+        let response = try await client
+            .from("store_tasks")
+            .select()
+            .eq("boutique_id", value: boutiqueId.uuidString)
+            .order("created_at", ascending: false)
+            .execute()
+        return try supabaseDecoder.decode([StoreTask].self, from: response.data)
+    }
+
+    func createTask(_ task: StoreTask) async throws {
+        try await client.from("store_tasks").insert(task).execute()
+    }
+
+    func updateTask(_ task: StoreTask) async throws {
+        try await client
+            .from("store_tasks")
+            .update(task)
+            .eq("id", value: task.id.uuidString)
+            .execute()
+    }
+
+    func deleteTask(id: UUID) async throws {
+        try await client
+            .from("store_tasks")
+            .delete()
+            .eq("id", value: id.uuidString)
+            .execute()
     }
 }
