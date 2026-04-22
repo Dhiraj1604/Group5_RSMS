@@ -49,9 +49,20 @@ public final class SupabaseManager {
     
     // MARK: - Edge Functions
     
+    public func provisionAccount(email: String, storeId: UUID, role: String) async throws {
+        #if canImport(Supabase)
+        let body: [String: AnyJSON] = [
+            "email": .string(email),
+            "store_id": .string(storeId.uuidString),
+            "role": .string(role)
+        ]
+        
+        try await client.functions.invoke("verify-manager-otp-admin", options: FunctionInvokeOptions(body: body))
+        #endif
+    }
+    
     public func inviteManager(email: String, boutiqueId: UUID) async throws {
         #if canImport(Supabase)
-        let _ = try await client.auth.session
         let body: [String: AnyJSON] = [
             "email": .string(email),
             "boutique_id": .string(boutiqueId.uuidString)

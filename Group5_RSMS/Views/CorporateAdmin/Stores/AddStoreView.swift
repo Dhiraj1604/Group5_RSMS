@@ -25,13 +25,14 @@ struct AddStoreView: View {
     @State private var email = ""
     @State private var managerName = ""
     @State private var managerEmail = ""
+    @State private var inventoryName = ""
+    @State private var inventoryEmail = ""
     @State private var selectedRegion = "West"
     @State private var selectedCurrency = "INR"          // ← NEW
     @State private var taxRate = "18.0"
     @State private var showValidationErrors = false
     @State private var showSuccessAlert = false
-    @State private var showOTPVerification = false
-    @State private var isSendingOTP = false
+    @State private var isRegistering = false
     @State private var storeToRegister: Store?
 
     private let regions = ["Asia", "Europe", "North America", "South America", "Australia", "Africa"]
@@ -56,6 +57,8 @@ struct AddStoreView: View {
         !email.trimmingCharacters(in: .whitespaces).isEmpty &&
         !managerName.trimmingCharacters(in: .whitespaces).isEmpty &&
         !managerEmail.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !inventoryName.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !inventoryEmail.trimmingCharacters(in: .whitespaces).isEmpty &&
         (Double(taxRate) != nil)
     }
 
@@ -152,6 +155,10 @@ struct AddStoreView: View {
             formField(label: "Manager Email", placeholder: "manager@example.com", text: $managerEmail, icon: "person.text.rectangle.fill", required: true)
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
+            formField(label: "Inventory Controller Name", placeholder: "Inventory controller name", text: $inventoryName, icon: "person.2.fill", required: true)
+            formField(label: "Inventory Email", placeholder: "inventory@example.com", text: $inventoryEmail, icon: "person.text.rectangle", required: true)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
         }
     }
 
@@ -234,7 +241,7 @@ struct AddStoreView: View {
             }
             Button { registerStore() } label: {
                 HStack(spacing: RSMSTheme.Spacing.sm) {
-                    if isSendingOTP {
+                    if isRegistering {
                         ProgressView().tint(.white)
                     } else {
                         Image(systemName: "checkmark.circle.fill")
@@ -243,21 +250,9 @@ struct AddStoreView: View {
                 }
             }
             .buttonStyle(GoldButtonStyle())
-            .disabled(isSendingOTP)
+            .disabled(isRegistering)
         }
         .padding(.top, RSMSTheme.Spacing.md)
-        .fullScreenCover(isPresented: $showOTPVerification) {
-            if let store = storeToRegister {
-                OTPVerificationView(
-                    managerEmail: managerEmail.trimmingCharacters(in: .whitespaces),
-                    storeId: store.id,
-                    onVerified: {
-                        // The store was already created successfully before this step
-                        showSuccessAlert = true
-                    }
-                )
-            }
-        }
     }
 
     // MARK: - Helpers
@@ -340,30 +335,40 @@ struct AddStoreView: View {
             isActive: true,
             currencyCode: selectedCurrency
         )
-        self.isSendingOTP = true
+        self.isRegistering = true
         
         Task {
-            // 1. Create the store FIRST so the store_id is valid for the profile link in Edge Function
+            // 1. Create the store FIRST
             await appState.addStore(newStore)
             
             if let _ = appState.storeError {
-                await MainActor.run { self.isSendingOTP = false }
+                await MainActor.run { self.isRegistering = false }
                 return
             }
             
-            self.storeToRegister = newStore
-            
             do {
-                // 2. Only if store creation succeeded, send the OTP
-                try await SupabaseManager.shared.sendOTP(email: managerEmail.trimmingCharacters(in: .whitespaces))
+                // 2. Provision the manager silently via Edge Function
+                try await SupabaseManager.shared.provisionAccount(
+                    email: managerEmail.trimmingCharacters(in: .whitespaces),
+                    storeId: newStore.id,
+                    role: "manager"
+                )
+                
+                // 3. Provision the inventory controller silently
+                try await SupabaseManager.shared.provisionAccount(
+                    email: inventoryEmail.trimmingCharacters(in: .whitespaces),
+                    storeId: newStore.id,
+                    role: "inventory"
+                )
+                
                 await MainActor.run {
-                    self.isSendingOTP = false
-                    self.showOTPVerification = true
+                    self.isRegistering = false
+                    self.showSuccessAlert = true
                 }
             } catch {
                 await MainActor.run {
-                    self.isSendingOTP = false
-                    appState.storeError = "Store created, but failed to send OTP: \(error.localizedDescription)"
+                    self.isRegistering = false
+                    appState.storeError = "Store created, but failed to provision staff: \(error.localizedDescription)"
                 }
             }
         }
