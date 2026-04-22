@@ -69,4 +69,43 @@ final class StaffViewModel: ObservableObject {
         }
         isLoading = false
     }
+
+    func toggleEmployeeStatus(_ employee: Employee, boutiqueId: UUID) async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            let newStatus = !(employee.isActive ?? true)
+            try await sync.toggleEmployeeStatus(id: employee.id, isActive: newStatus)
+            await fetchEmployees(boutiqueId: boutiqueId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    func deleteEmployee(_ employee: Employee, boutiqueId: UUID) async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            // Ensure related payout records are deleted to satisfy foreign key constraints
+            let payouts = try? await sync.fetchPayouts(for: employee.id)
+            for payout in payouts ?? [] {
+                try? await sync.deletePayout(id: payout.id)
+            }
+            
+            // Ensure related commission rate records are deleted
+            let rates = try? await sync.fetchCommissionRates(boutiqueId: boutiqueId)
+            let employeeRates = (rates ?? []).filter { $0.employeeId == employee.id }
+            for rate in employeeRates {
+                try? await sync.deleteCommissionRate(id: rate.id)
+            }
+
+            // Finally delete the employee record
+            try await sync.deleteEmployee(id: employee.id)
+            await fetchEmployees(boutiqueId: boutiqueId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
 }

@@ -80,6 +80,16 @@ struct TransferSheet: View {
                     excluding: currentStoreId
                 )
             }
+            .alert("Request Sent", isPresented: Binding(
+                get: { viewModel.transferSuccess },
+                set: { _ in }
+            )) {
+                Button("OK", role: .cancel) {
+                    dismiss()
+                }
+            } message: {
+                Text("\(transferQuantity) unit(s) of \(alert.productName) requested.")
+            }
         }
     }
 

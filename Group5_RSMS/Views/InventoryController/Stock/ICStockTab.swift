@@ -107,7 +107,7 @@ struct ICStockTab: View {
                 await appState.loadStores()
             }
             await appState.fetchProducts()
-            await appState.fetchTotalInventoryCount()
+            await appState.fetchTotalInventoryCount(storeId: appState.assignedStoreId)
             await fetchLowStock()
             await fetchLocalProductsCount()
             await fetchPendingRepairs()
@@ -119,7 +119,12 @@ struct ICStockTab: View {
     private func fetchLowStock() async {
         isLoadingLowStock = true
         do {
-            let alerts = try await LowStockService.shared.fetchAllLowStockAlerts()
+            let alerts: [LowStockAlert]
+            if let storeId = appState.assignedStoreId {
+                alerts = try await LowStockService.shared.fetchLowStockAlerts(forStore: storeId)
+            } else {
+                alerts = try await LowStockService.shared.fetchAllLowStockAlerts()
+            }
             lowStockCount = alerts.count
         } catch {
             print("Failed to fetch low stock alerts: \(error)")

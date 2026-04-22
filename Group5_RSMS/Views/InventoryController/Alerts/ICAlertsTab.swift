@@ -67,7 +67,7 @@ struct ICAlertsTab: View {
                 }
             }
             .task {
-                await viewModel.loadAlerts()
+                await viewModel.loadAlerts(storeId: appState.assignedStoreId)
                 withAnimation(.easeOut(duration: 0.5)) { animateIn = true }
             }
             .alert("Database Error", isPresented: Binding(
@@ -195,7 +195,7 @@ struct ICAlertsTab: View {
             .padding(.bottom, 40)
         }
         .refreshable {
-            await viewModel.loadAlerts()
+            await viewModel.loadAlerts(storeId: appState.assignedStoreId)
         }
     }
 

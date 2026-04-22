@@ -27,12 +27,12 @@ struct InventoryControllerDashboard: View {
                 }
                 .tag(1)
 
-//            ICShipmentsTab()
-//                .tabItem {
-//                    Image(systemName: "shippingbox.fill")
-//                    Text("Shipments") // Shipments icon was the same as Stock, we might want to differentiate, but keeping it
-//                }
-//                .tag(2)
+            ICShipmentsTab()
+                .tabItem {
+                    Image(systemName: "shippingbox.fill")
+                    Text("Shipments") // Shipments icon was the same as Stock, we might want to differentiate, but keeping it
+                }
+                .tag(2)
 
             ICAlertsTab()
                 .tabItem {
@@ -41,18 +41,19 @@ struct InventoryControllerDashboard: View {
                 }
                 .tag(3)
 
-//            ICReportsTab()
-//                .tabItem {
-//                    Image(systemName: "doc.text.fill")
-//                    Text("Reports")
-//                }
-//                .tag(4)
+            ICReportsTab()
+                .tabItem {
+                    Image(systemName: "doc.text.fill")
+                    Text("Reports")
+                }
+                .tag(4)
         }
         .tint(RSMSTheme.Colors.accentGold)
         .task {
+            async let storesLoad: () = appState.loadStores()
             async let productsLoad: () = appState.fetchProducts()
             async let inventoryLoad: () = appState.fetchTotalInventoryCount()
-            _ = await (productsLoad, inventoryLoad)
+            _ = await (storesLoad, productsLoad, inventoryLoad)
         }
     }
 }

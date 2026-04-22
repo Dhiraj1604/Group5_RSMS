@@ -125,6 +125,31 @@ final class LowStockService {
         return requests
     }
     
+    /// Fetches all requests initiated by the currentStore (Outbound/My Requests).
+    func fetchMyRequests(forStore storeId: UUID) async throws -> [TransferRequest] {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateStr = try container.decode(String.self)
+            if let date = formatter.date(from: dateStr) { return date }
+            if let date = ISO8601DateFormatter().date(from: dateStr) { return date }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date format")
+        }
+        
+        let requests: [TransferRequest] = try await client
+            .from("transfer_requests")
+            .select("*, products(*), requesting_store:requesting_store_id(*), fulfilling_store:fulfilling_store_id(*)")
+            .eq("requesting_store_id", value: storeId)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+            
+        return requests
+    }
+    
     /// Fetches the current stock quantity for an item at a specific store.
     func fetchCurrentStock(productId: UUID, storeId: UUID) async throws -> Int {
         struct InventoryRow: Decodable { let stock_quantity: Int }

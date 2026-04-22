@@ -43,18 +43,48 @@ final class CommissionViewModel: ObservableObject {
         errorMessage = nil
         successMessage = nil
         do {
-            let newRate = CommissionRate(
-                id: UUID(),
-                boutiqueId: boutiqueId,
-                employeeId: employeeId,
-                ratePercentage: rate,
-                effectiveFrom: effectiveFrom,
-                effectiveTo: nil,
-                createdBy: createdBy,
-                createdAt: Date()
-            )
-            try await sync.setCommissionRate(newRate)
+            if let existing = currentRate(for: employeeId) {
+                // UPDATE existing rate
+                let updated = CommissionRate(
+                    id: existing.id,
+                    boutiqueId: boutiqueId,
+                    employeeId: employeeId,
+                    ratePercentage: rate,
+                    effectiveFrom: effectiveFrom,
+                    effectiveTo: nil,
+                    createdBy: createdBy,
+                    createdAt: existing.createdAt
+                )
+                try await sync.updateCommissionRate(updated)
+            } else {
+                // INSERT new rate
+                let newRate = CommissionRate(
+                    id: UUID(),
+                    boutiqueId: boutiqueId,
+                    employeeId: employeeId,
+                    ratePercentage: rate,
+                    effectiveFrom: effectiveFrom,
+                    effectiveTo: nil,
+                    createdBy: createdBy,
+                    createdAt: Date()
+                )
+                try await sync.setCommissionRate(newRate)
+            }
             successMessage = "Commission rate set successfully"
+            await fetchCommissionRates(boutiqueId: boutiqueId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    // MARK: - Delete Commission Rate
+    func deleteCommissionRate(id: UUID, boutiqueId: UUID) async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await sync.deleteCommissionRate(id: id)
+            successMessage = "Commission rate deleted"
             await fetchCommissionRates(boutiqueId: boutiqueId)
         } catch {
             errorMessage = error.localizedDescription
@@ -120,6 +150,20 @@ final class CommissionViewModel: ObservableObject {
         do {
             try await sync.approvePayout(id: id, approvedBy: approvedBy)
             successMessage = "Payout approved successfully"
+            await fetchPayouts(employeeId: employeeId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    // MARK: - Delete Payout
+    func deletePayout(id: UUID, employeeId: UUID) async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await sync.deletePayout(id: id)
+            successMessage = "Payout deleted"
             await fetchPayouts(employeeId: employeeId)
         } catch {
             errorMessage = error.localizedDescription
