@@ -2,8 +2,10 @@
 //  AppState.swift
 //  Group5_RSMS
 //
-//  Merged AppState — combines Sprint 1 auth/store logic with full product management.
-//  Manages authentication, role selection, store data, and product inventory.
+//  Merged AppState — Sprint 1 auth/store/product management.
+//  Task #8 (Zeeshan): sets ActivityLogService.shared.currentUserEmail on login
+//  so every service (TaxSettingsViewModel, OfferService, etc.) can log without
+//  needing the email passed through every call site.
 //
 
 import SwiftUI
@@ -40,37 +42,34 @@ class AppState {
     var hasSelectedRole: Bool { selectedRole != nil }
 
     // MARK: - Private
-    private let sync = SupabaseSyncManager.shared
+    private let sync     = SupabaseSyncManager.shared
     private let auditLog = ActivityLogService.shared
 
     // MARK: - Auth Errors
     enum AuthError: Error, LocalizedError {
         case missingRole
-
         var errorDescription: String? {
-            switch self {
-            case .missingRole:
-                return "Your account does not have an assigned role. Please contact your system administrator."
-            }
+            "Your account does not have an assigned role. Please contact your system administrator."
         }
     }
 
     // MARK: - Auth Actions
+
     func login(email: String) async throws {
         userEmail = email
 
+        // ── Task #8: make email available to all services immediately ──
+        ActivityLogService.shared.currentUserEmail = email
+
         #if canImport(Supabase)
         do {
-            struct Profile: Codable {
-                let role: String
-            }
+            struct Profile: Codable { let role: String }
             let session = try await SupabaseManager.shared.client.auth.session
             self.managerAuthId = session.user.id
 
-            if let reqPass = session.user.userMetadata["requires_password_change"] {
-                if reqPass == .bool(true) {
-                    self.requiresPasswordChange = true
-                }
+            if let reqPass = session.user.userMetadata["requires_password_change"],
+               reqPass == .bool(true) {
+                self.requiresPasswordChange = true
             }
 
             let profile: Profile = try await SupabaseManager.shared.client
@@ -84,7 +83,6 @@ class AppState {
             if let fetchedRole = UserRole(rawValue: profile.role) {
                 self.selectedRole = fetchedRole
             } else {
-                print("Unknown role: \(profile.role)")
                 throw AuthError.missingRole
             }
         } catch {
@@ -94,6 +92,17 @@ class AppState {
         #endif
 
         isLoggedIn = true
+
+        // ── Task #8: log the login event ──────────────────────────────
+        let roleLabel = selectedRole?.rawValue ?? "Unknown"
+        auditLog.log(
+            action: .loggedIn,
+            entity: .user,
+            entityName: email,
+            entityId: email,
+            details: "User '\(email)' logged in with role: \(roleLabel).",
+            after: ["email": email, "role": roleLabel]
+        )
     }
 
     func selectRole(_ role: UserRole) {
@@ -106,15 +115,40 @@ class AppState {
         stores = []
         userEmail = ""
         requiresPasswordChange = false
+        ActivityLogService.shared.currentUserEmail = ""
 
         #if canImport(Supabase)
-        Task {
-            try? await SupabaseManager.shared.client.auth.signOut()
-        }
+        Task { try? await SupabaseManager.shared.client.auth.signOut() }
         #endif
     }
 
-    // MARK: - Store Actions (Supabase-backed)
+    // MARK: - User Audit helper (called by UserManagementViewModel when a manager creates staff)
+    /// Call this after successfully inserting a user into Supabase `profiles`.
+    func logUserCreation(createdEmail: String, assignedRole: String) {
+        auditLog.log(
+            action: .created,
+            entity: .user,
+            entityName: createdEmail,
+            entityId: createdEmail,
+            details: "User '\(createdEmail)' created with role '\(assignedRole)' by \(userEmail).",
+            after: ["email": createdEmail, "role": assignedRole, "created_by": userEmail]
+        )
+    }
+
+    /// Call this after a role change in Supabase `profiles`.
+    func logRoleChange(targetEmail: String, oldRole: String, newRole: String) {
+        auditLog.log(
+            action: .roleAssigned,
+            entity: .user,
+            entityName: targetEmail,
+            entityId: targetEmail,
+            details: "Role changed from '\(oldRole)' to '\(newRole)' for '\(targetEmail)' by \(userEmail).",
+            before: ["email": targetEmail, "role": oldRole],
+            after:  ["email": targetEmail, "role": newRole]
+        )
+    }
+
+    // MARK: - Store Actions
 
     func loadStores() async {
         isLoadingStores = true
@@ -122,7 +156,6 @@ class AppState {
         do {
             let fetchedStores = try await sync.fetchStores()
             self.stores = fetchedStores
-
             if selectedRole == .boutiqueManager {
                 self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id
                     ?? UUID(uuidString: "b3fd8cb6-341b-453e-9ed4-8915aa25245c")
@@ -130,19 +163,12 @@ class AppState {
                 self.currentStoreID = first.id
             }
         } catch let DecodingError.keyNotFound(key, context) {
-            print("❌ Key not found: \(key.stringValue)")
-            print("❌ Context: \(context.debugDescription)")
-            storeError = "Key not found: \(key.stringValue)"
-        } catch let DecodingError.typeMismatch(type, context) {
-            print("❌ Type mismatch: \(type)")
-            print("❌ Context: \(context.debugDescription)")
+            storeError = "Key not found: \(key.stringValue) — \(context.debugDescription)"
+        } catch let DecodingError.typeMismatch(_, context) {
             storeError = "Type mismatch: \(context.debugDescription)"
-        } catch let DecodingError.valueNotFound(type, context) {
-            print("❌ Value not found: \(type)")
-            print("❌ Context: \(context.debugDescription)")
+        } catch let DecodingError.valueNotFound(_, context) {
             storeError = "Value not found: \(context.debugDescription)"
         } catch {
-            print("❌ Other error: \(error)")
             storeError = error.localizedDescription
         }
         isLoadingStores = false
@@ -153,16 +179,12 @@ class AppState {
             try await sync.createStore(store)
             stores.append(store)
             auditLog.log(
-                userEmail: userEmail,
-                action: .created,
-                entity: .store,
-                entityName: store.name,
-                entityId: store.id.uuidString,
-                details: "Store created in \(store.city), \(store.country)"
+                action: .created, entity: .store,
+                entityName: store.name, entityId: store.id.uuidString,
+                details: "Store created in \(store.city), \(store.country)",
+                after: store
             )
-        } catch {
-            storeError = error.localizedDescription
-        }
+        } catch { storeError = error.localizedDescription }
     }
 
     func deleteStore(_ store: Store) async {
@@ -170,23 +192,17 @@ class AppState {
             try await sync.deleteStore(id: store.id)
             stores.removeAll { $0.id == store.id }
             auditLog.log(
-                userEmail: userEmail,
-                action: .deleted,
-                entity: .store,
-                entityName: store.name,
-                entityId: store.id.uuidString,
-                details: "Store deleted"
+                action: .deleted, entity: .store,
+                entityName: store.name, entityId: store.id.uuidString,
+                details: "Store deleted",
+                before: store
             )
-        } catch {
-            storeError = error.localizedDescription
-        }
+        } catch { storeError = error.localizedDescription }
     }
 
     func deleteStores(at offsets: IndexSet) async {
         let toDelete = offsets.map { stores[$0] }
-        for store in toDelete {
-            await deleteStore(store)
-        }
+        for store in toDelete { await deleteStore(store) }
     }
 
     func toggleStoreActive(_ store: Store) async {
@@ -197,11 +213,8 @@ class AppState {
         do {
             try await sync.updateStore(updated)
             auditLog.log(
-                userEmail: userEmail,
-                action: !currentActive ? .activated : .deactivated,
-                entity: .store,
-                entityName: store.name,
-                entityId: store.id.uuidString,
+                action: !currentActive ? .activated : .deactivated, entity: .store,
+                entityName: store.name, entityId: store.id.uuidString,
                 details: "Store \(!currentActive ? "activated" : "deactivated")"
             )
         } catch {
@@ -217,12 +230,10 @@ class AppState {
         do {
             try await sync.updateStore(store)
             auditLog.log(
-                userEmail: userEmail,
-                action: .updated,
-                entity: .store,
-                entityName: store.name,
-                entityId: store.id.uuidString,
-                details: "Store details updated"
+                action: .updated, entity: .store,
+                entityName: store.name, entityId: store.id.uuidString,
+                details: "Store details updated",
+                before: backup, after: store
             )
         } catch {
             stores[index] = backup
@@ -238,17 +249,84 @@ class AppState {
         productError = nil
         do {
             let fetched: [Product] = try await SupabaseManager.shared.client
-                .from("products")
-                .select()
-                .order("created_at", ascending: false)
-                .execute()
-                .value
+                .from("products").select().order("created_at", ascending: false).execute().value
             self.products = fetched
         } catch {
-            print("❌ Failed to fetch products: \(error)")
             self.productError = "Failed to load products: \(error.localizedDescription)"
         }
         isLoadingProducts = false
+    }
+
+    func addProduct(_ product: Product) async -> Bool {
+        do {
+            try await SupabaseManager.shared.client.from("products").insert(product).execute()
+            products.insert(product, at: 0)
+            auditLog.log(
+                action: .created, entity: .product,
+                entityName: product.name, entityId: product.id.uuidString,
+                details: "Product created (SKU: \(product.sku))",
+                after: product
+            )
+            return true
+        } catch {
+            productError = "Failed to add product: \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    func updateProduct(_ product: Product) async {
+        guard let index = products.firstIndex(where: { $0.id == product.id }) else { return }
+        let backup = products[index]
+        products[index] = product
+        do {
+            try await SupabaseManager.shared.client
+                .from("products").update(product).eq("id", value: product.id).execute()
+            auditLog.log(
+                action: .updated, entity: .product,
+                entityName: product.name, entityId: product.id.uuidString,
+                details: "Product updated (SKU: \(product.sku))",
+                before: backup, after: product
+            )
+        } catch {
+            products[index] = backup
+            productError = "Failed to update product: \(error.localizedDescription)"
+        }
+    }
+
+    func toggleProductActive(_ product: Product) async {
+        guard let index = products.firstIndex(where: { $0.id == product.id }) else { return }
+        let wasActive = products[index].isActive
+        var updated = products[index]
+        updated.isActive.toggle()
+        products[index] = updated
+        do {
+            try await SupabaseManager.shared.client
+                .from("products").update(updated).eq("id", value: updated.id).execute()
+            auditLog.log(
+                action: wasActive ? .deactivated : .activated, entity: .product,
+                entityName: updated.name, entityId: updated.id.uuidString,
+                details: "Product \(wasActive ? "deactivated" : "activated")"
+            )
+        } catch {
+            products[index].isActive = wasActive
+            productError = "Failed to update product: \(error.localizedDescription)"
+        }
+    }
+
+    func deleteProduct(_ product: Product) async {
+        do {
+            try await SupabaseManager.shared.client
+                .from("products").delete().eq("id", value: product.id).execute()
+            products.removeAll { $0.id == product.id }
+            auditLog.log(
+                action: .deleted, entity: .product,
+                entityName: product.name, entityId: product.id.uuidString,
+                details: "Product deleted (SKU: \(product.sku))",
+                before: product
+            )
+        } catch {
+            productError = "Failed to delete product: \(error.localizedDescription)"
+        }
     }
 
     func submitRepair(for product: Product, issueDescription: String, repairCost: Double) async -> Bool {
@@ -258,19 +336,9 @@ class AppState {
                 issueDescription: issueDescription,
                 repairCost: repairCost
             )
-
+            try await SupabaseManager.shared.client.from("repair").insert(payload).execute()
             try await SupabaseManager.shared.client
-                .from("repair")
-                .insert(payload)
-                .execute()
-
-            try await SupabaseManager.shared.client
-                .from("products")
-                .update(["in_repair": true])
-                .eq("id", value: product.id)
-                .execute()
-
-            // Refresh so the UI reflects the repair flag
+                .from("products").update(["in_repair": true]).eq("id", value: product.id).execute()
             await fetchProducts()
             return true
         } catch {
@@ -287,138 +355,20 @@ class AppState {
                 .eq("product_id", value: product.id)
                 .eq("status", value: "Pending")
                 .execute()
-
             try await SupabaseManager.shared.client
-                .from("products")
-                .update(["in_repair": false])
-                .eq("id", value: product.id)
-                .execute()
-
-            // Refresh so the UI reflects resolved state
+                .from("products").update(["in_repair": false]).eq("id", value: product.id).execute()
             await fetchProducts()
         } catch {
             print("❌ Failed to resolve repair: \(error)")
         }
     }
-    
-    // Add these inside AppState, after fetchProducts()
-
-    func addProduct(_ product: Product) async -> Bool {
-        do {
-            try await SupabaseManager.shared.client
-                .from("products")
-                .insert(product)
-                .execute()
-            products.insert(product, at: 0)
-            auditLog.log(
-                userEmail: userEmail,
-                action: .created,
-                entity: .product,
-                entityName: product.name,
-                entityId: product.id.uuidString,
-                details: "Product created (SKU: \(product.sku))",
-                after: product
-            )
-            return true
-        } catch {
-            print("❌ Failed to add product: \(error)")
-            productError = "Failed to add product: \(error.localizedDescription)"
-            return false
-        }
-    }
-
-    func updateProduct(_ product: Product) async {
-        guard let index = products.firstIndex(where: { $0.id == product.id }) else { return }
-        let backup = products[index]
-        products[index] = product
-        do {
-            try await SupabaseManager.shared.client
-                .from("products")
-                .update(product)
-                .eq("id", value: product.id)
-                .execute()
-            productError = nil
-            auditLog.log(
-                userEmail: userEmail,
-                action: .updated,
-                entity: .product,
-                entityName: product.name,
-                entityId: product.id.uuidString,
-                details: "Product updated (SKU: \(product.sku))",
-                before: backup,
-                after: product
-            )
-        } catch {
-            products[index] = backup
-            print("❌ Failed to update product: \(error)")
-            productError = "Failed to update product: \(error.localizedDescription)"
-        }
-    }
-
-    func toggleProductActive(_ product: Product) async {
-        guard let index = products.firstIndex(where: { $0.id == product.id }) else { return }
-        let wasActive = products[index].isActive
-        var updated = products[index]
-        updated.isActive.toggle()
-        products[index] = updated
-        do {
-            try await SupabaseManager.shared.client
-                .from("products")
-                .update(updated)
-                .eq("id", value: updated.id)
-                .execute()
-            productError = nil
-            auditLog.log(
-                userEmail: userEmail,
-                action: wasActive ? .deactivated : .activated,
-                entity: .product,
-                entityName: updated.name,
-                entityId: updated.id.uuidString,
-                details: "Product \(wasActive ? "deactivated" : "activated")"
-            )
-        } catch {
-            products[index].isActive = wasActive
-            print("❌ Failed to toggle product: \(error)")
-            productError = "Failed to update product: \(error.localizedDescription)"
-        }
-    }
-
-    func deleteProduct(_ product: Product) async {
-        do {
-            try await SupabaseManager.shared.client
-                .from("products")
-                .delete()
-                .eq("id", value: product.id)
-                .execute()
-            products.removeAll { $0.id == product.id }
-            auditLog.log(
-                userEmail: userEmail,
-                action: .deleted,
-                entity: .product,
-                entityName: product.name,
-                entityId: product.id.uuidString,
-                details: "Product deleted (SKU: \(product.sku))",
-                before: product
-            )
-        } catch {
-            print("❌ Failed to delete product: \(error)")
-            productError = "Failed to delete product: \(error.localizedDescription)"
-        }
-    }
 
     func fetchTotalInventoryCount() async {
         do {
-            struct InventoryRecord: Decodable {
-                let stock_quantity: Int
-            }
+            struct InventoryRecord: Decodable { let stock_quantity: Int }
             let records: [InventoryRecord] = try await SupabaseManager.shared.client
-                .from("inventory")
-                .select("stock_quantity")
-                .execute()
-                .value
-            
-            let total = records.reduce(0) { $0 + $1.stock_quantity }
-            self.totalInventoryCount = total
+                .from("inventory").select("stock_quantity").execute().value
+            self.totalInventoryCount = records.reduce(0) { $0 + $1.stock_quantity }
         } catch {
             print("❌ Failed to fetch total inventory count: \(error)")
         }
