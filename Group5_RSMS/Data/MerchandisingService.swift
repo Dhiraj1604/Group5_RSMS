@@ -159,6 +159,137 @@ final class MerchandisingService {
             SalesTrendData(date: date, amount: amount)
         }.sorted(by: { $0.date < $1.date })
     }
+    
+    // MARK: - Fast Movers / Floor Display
+    
+    /// Compares recent local sales against the prior window to identify products gaining momentum.
+    func fetchFastMovingProducts(forStore storeId: UUID) async throws -> [FastMovingProduct] {
+        let calendar = Calendar.current
+        let now = Date()
+        let recentWindowDays = 3
+        let comparisonWindowDays = 3
+        
+        guard
+            let recentStart = calendar.date(byAdding: .day, value: -(recentWindowDays - 1), to: calendar.startOfDay(for: now)),
+            let previousStart = calendar.date(byAdding: .day, value: -comparisonWindowDays, to: recentStart)
+        else {
+            return []
+        }
+        
+        let formatter = ISO8601DateFormatter()
+        let response = try await client
+            .from("customer_orders")
+            .select("created_at, customer_order_items(*, products(sku, image_url))")
+            .eq("store_id", value: storeId)
+            .gte("created_at", value: formatter.string(from: previousStart))
+            .order("created_at", ascending: false)
+            .execute()
+        
+        let orders = try decoder.decode([OrderWithItems].self, from: response.data)
+        let inventory = try await fetchFloorInventory(forStore: storeId)
+        
+        struct SalesAccumulator {
+            var name: String
+            var sku: String
+            var imageUrl: String?
+            var recentUnitsSold: Int
+            var previousUnitsSold: Int
+        }
+        
+        var groupedSales: [UUID: SalesAccumulator] = [:]
+        
+        for order in orders {
+            let bucket: WritableKeyPath<SalesAccumulator, Int>
+            if order.created_at >= recentStart {
+                bucket = \.recentUnitsSold
+            } else {
+                bucket = \.previousUnitsSold
+            }
+            
+            for item in order.customer_order_items ?? [] {
+                let current = groupedSales[item.product_id] ?? SalesAccumulator(
+                    name: item.product_name,
+                    sku: item.products?.sku ?? "N/A",
+                    imageUrl: item.product_image_url ?? item.products?.image_url,
+                    recentUnitsSold: 0,
+                    previousUnitsSold: 0
+                )
+                
+                var updated = current
+                updated[keyPath: bucket] += item.quantity
+                groupedSales[item.product_id] = updated
+            }
+        }
+        
+        return groupedSales.compactMap { productId, sales in
+            guard sales.recentUnitsSold > 0 else { return nil }
+            
+            let inventoryRow = inventory[productId]
+            return FastMovingProduct(
+                id: productId,
+                name: sales.name,
+                sku: sales.sku,
+                imageUrl: sales.imageUrl,
+                recentUnitsSold: sales.recentUnitsSold,
+                previousUnitsSold: sales.previousUnitsSold,
+                currentStock: inventoryRow?.stock_quantity ?? 0,
+                isOnFloor: inventoryRow?.is_on_floor ?? false,
+                lastMovedToFloor: inventoryRow?.last_moved_to_floor
+            )
+        }
+        .sorted { lhs, rhs in
+            if lhs.trendDirection != rhs.trendDirection {
+                return trendPriority(lhs.trendDirection) < trendPriority(rhs.trendDirection)
+            }
+            if lhs.velocityDelta != rhs.velocityDelta {
+                return lhs.velocityDelta > rhs.velocityDelta
+            }
+            return lhs.recentUnitsSold > rhs.recentUnitsSold
+        }
+    }
+    
+    func updateFloorDisplay(
+        productId: UUID,
+        storeId: UUID,
+        isOnFloor: Bool
+    ) async throws {
+        let payload: [String: AnyJSON] = [
+            "is_on_floor": .bool(isOnFloor),
+            "last_moved_to_floor": isOnFloor ? .string(Date().ISO8601Format()) : .null
+        ]
+        
+        try await client
+            .from("inventory")
+            .update(payload)
+            .eq("product_id", value: productId)
+            .eq("store_id", value: storeId)
+            .execute()
+        
+        struct AuditPayload: Encodable {
+            let action: String
+            let event_type: String
+            let user_name: String
+            let entity: String
+            let after_data: [String: String]
+        }
+        
+        let audit = AuditPayload(
+            action: isOnFloor ? "MOVE_TO_FLOOR" : "REMOVE_FROM_FLOOR",
+            event_type: "floor_display",
+            user_name: "Boutique Manager",
+            entity: "Inventory",
+            after_data: [
+                "product_id": productId.uuidString,
+                "store_id": storeId.uuidString,
+                "is_on_floor": isOnFloor ? "true" : "false"
+            ]
+        )
+        
+        try await client
+            .from("audit_logs")
+            .insert(audit)
+            .execute()
+    }
 }
 
 // MARK: - Helper Structures for Decoding
@@ -208,7 +339,33 @@ private struct OrderItem: Decodable {
     }
 }
 
+private struct FloorInventoryRow: Decodable {
+    let product_id: UUID
+    let stock_quantity: Int
+    let is_on_floor: Bool
+    let last_moved_to_floor: Date?
+}
+
 extension MerchandisingService {
+    private func fetchFloorInventory(forStore storeId: UUID) async throws -> [UUID: FloorInventoryRow] {
+        let response = try await client
+            .from("inventory")
+            .select("product_id, stock_quantity, is_on_floor, last_moved_to_floor")
+            .eq("store_id", value: storeId)
+            .execute()
+        
+        let rows = try decoder.decode([FloorInventoryRow].self, from: response.data)
+        return Dictionary(uniqueKeysWithValues: rows.map { ($0.product_id, $0) })
+    }
+    
+    private func trendPriority(_ direction: TrendDirection) -> Int {
+        switch direction {
+        case .up: return 0
+        case .steady: return 1
+        case .down: return 2
+        }
+    }
+    
     private var decoder: JSONDecoder {
         let decoder = JSONDecoder()
         let formatter = ISO8601DateFormatter()

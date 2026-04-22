@@ -37,7 +37,9 @@ final class BMInventoryViewModel: ObservableObject {
     @Published private(set) var soldProducts: [SoldProduct] = []
     @Published private(set) var fallbackItems: [InventoryProduct] = []
     @Published private(set) var weeklySalesData: [SalesTrendData] = []
+    @Published private(set) var fastMovingProducts: [FastMovingProduct] = []
     @Published private(set) var isLoadingInsights: Bool = false
+    @Published private(set) var isUpdatingFloorDisplay: Bool = false
     @Published private(set) var insightsError: String? = nil
 
     // MARK: - Computed
@@ -210,12 +212,14 @@ final class BMInventoryViewModel: ObservableObject {
             async let sold = MerchandisingService.shared.fetchSoldProducts(forStore: storeId)
             async let fallback = MerchandisingService.shared.fetchFallbackItems(forStore: storeId)
             async let trend = MerchandisingService.shared.fetchWeeklySalesTrend(forStore: storeId)
+            async let fastMovers = MerchandisingService.shared.fetchFastMovingProducts(forStore: storeId)
             
-            let (soldResult, fallbackResult, trendResult) = try await (sold, fallback, trend)
+            let (soldResult, fallbackResult, trendResult, fastMoverResult) = try await (sold, fallback, trend, fastMovers)
             
             self.soldProducts = soldResult
             self.fallbackItems = fallbackResult
             self.weeklySalesData = trendResult
+            self.fastMovingProducts = fastMoverResult
             
         } catch {
             self.insightsError = "Failed to load insights: \(error.localizedDescription)"
@@ -223,5 +227,24 @@ final class BMInventoryViewModel: ObservableObject {
         }
         
         isLoadingInsights = false
+    }
+    
+    func toggleFloorDisplay(for product: FastMovingProduct, storeId: UUID) async {
+        isUpdatingFloorDisplay = true
+        insightsError = nil
+        
+        do {
+            try await MerchandisingService.shared.updateFloorDisplay(
+                productId: product.id,
+                storeId: storeId,
+                isOnFloor: !product.isOnFloor
+            )
+            await loadMerchandisingInsights(forStore: storeId)
+        } catch {
+            self.insightsError = "Failed to update floor display: \(error.localizedDescription)"
+            print("❌ [BMInventoryVM] Floor update error: \(error)")
+        }
+        
+        isUpdatingFloorDisplay = false
     }
 }

@@ -203,6 +203,8 @@ struct BMInventoryTab: View {
                     }
                 }
                 .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+                
+                fastMoversSection
 
                 // Weekly Trend Chart
                 VStack(alignment: .leading, spacing: 20) {
@@ -285,6 +287,59 @@ struct BMInventoryTab: View {
         .cornerRadius(20)
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
     }
+    
+    private var fastMoversSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Fastest Selling Right Now")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    Text("Recent local sales vs the prior 3-day window")
+                        .font(.system(size: 12))
+                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                }
+                Spacer()
+                
+                let highlightedCount = viewModel.fastMovingProducts.filter { $0.trendDirection == .up }.count
+                Text("\(highlightedCount) rising")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(RSMSTheme.Colors.accentGold)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(RSMSTheme.Colors.accentGold.opacity(0.12))
+                    .cornerRadius(999)
+            }
+            
+            if viewModel.fastMovingProducts.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "waveform.path.ecg")
+                        .font(.system(size: 26, weight: .medium))
+                        .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.45))
+                    Text("No fast-moving products yet")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    Text("As fresh orders come in, this section will recommend which products deserve premium floor space.")
+                        .font(.system(size: 12))
+                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+            } else {
+                VStack(spacing: 14) {
+                    ForEach(viewModel.fastMovingProducts.prefix(5)) { product in
+                        fastMoverRow(product)
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(RSMSTheme.Colors.backgroundElevated)
+        .cornerRadius(20)
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
+        .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+    }
 
     private var salesChart: some View {
         Chart {
@@ -341,6 +396,186 @@ struct BMInventoryTab: View {
         }
         .frame(height: 180)
         .frame(maxWidth: .infinity)
+    }
+    
+    private func fastMoverRow(_ product: FastMovingProduct) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 14) {
+                Group {
+                    if let urlString = product.imageUrl, let url = URL(string: urlString) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            case .failure, .empty:
+                                productPlaceholder
+                            @unknown default:
+                                productPlaceholder
+                            }
+                        }
+                    } else {
+                        productPlaceholder
+                    }
+                }
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
+                )
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(product.name)
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                                .lineLimit(2)
+                            
+                            Text(product.sku)
+                                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                .foregroundColor(RSMSTheme.Colors.accentGold)
+                        }
+                        
+                        Spacer(minLength: 8)
+                        trendBadge(for: product)
+                    }
+                    
+                    Text(product.recommendationText)
+                        .font(.system(size: 12))
+                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        .lineLimit(2)
+                }
+            }
+            
+            HStack(spacing: 10) {
+                metricTile(
+                    title: "Recent",
+                    value: "\(product.recentUnitsSold)",
+                    tint: RSMSTheme.Colors.success
+                )
+                metricTile(
+                    title: product.previousUnitsSold > 0 ? "Delta" : "Signal",
+                    value: product.previousUnitsSold > 0
+                        ? "\(product.velocityDelta >= 0 ? "+" : "")\(product.velocityDelta)"
+                        : "New",
+                    tint: product.trendDirection == .down ? RSMSTheme.Colors.error : RSMSTheme.Colors.accentGold
+                )
+                metricTile(
+                    title: "Stock",
+                    value: "\(product.currentStock)",
+                    tint: product.currentStock <= 3 ? RSMSTheme.Colors.warning : RSMSTheme.Colors.textSecondary
+                )
+            }
+            
+            HStack {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(product.isOnFloor ? RSMSTheme.Colors.success : RSMSTheme.Colors.textSecondary.opacity(0.45))
+                        .frame(width: 8, height: 8)
+                    Text(product.isOnFloor ? "Currently on floor" : "Not on floor")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                }
+                
+                Spacer()
+                
+                Button {
+                    guard let storeId = appState.currentStoreID else { return }
+                    Task {
+                        await viewModel.toggleFloorDisplay(for: product, storeId: storeId)
+                    }
+                } label: {
+                    Text(product.isOnFloor ? "Remove from Floor" : "Place on Floor")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(product.isOnFloor ? RSMSTheme.Colors.textPrimary : .black)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background {
+                            if product.isOnFloor {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(RSMSTheme.Colors.backgroundElevated)
+                            } else {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(RSMSTheme.Colors.goldGradient)
+                            }
+                        }
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(
+                                    product.isOnFloor ? RSMSTheme.Colors.borderLight : .clear,
+                                    lineWidth: 1
+                                )
+                        )
+                }
+                .disabled(viewModel.isUpdatingFloorDisplay)
+                .opacity(viewModel.isUpdatingFloorDisplay ? 0.65 : 1)
+            }
+        }
+        .padding(14)
+        .background(RSMSTheme.Colors.backgroundDeep)
+        .cornerRadius(18)
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
+        )
+    }
+    
+    private func trendBadge(for product: FastMovingProduct) -> some View {
+        let color: Color
+        let icon: String
+        
+        switch product.trendDirection {
+        case .up:
+            color = RSMSTheme.Colors.success
+            icon = "arrow.up.right"
+        case .steady:
+            color = RSMSTheme.Colors.warning
+            icon = "minus"
+        case .down:
+            color = RSMSTheme.Colors.error
+            icon = "arrow.down.right"
+        }
+        
+        return HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 9, weight: .bold))
+            Text(product.trendDirection.label)
+                .font(.system(size: 10, weight: .bold))
+        }
+        .foregroundColor(color)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(color.opacity(0.12))
+        .cornerRadius(999)
+    }
+    
+    private func insightPill(label: String, color: Color) -> some View {
+        Text(label)
+            .font(.system(size: 10, weight: .bold))
+            .foregroundColor(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(color.opacity(0.10))
+            .cornerRadius(999)
+    }
+    
+    private func metricTile(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title.uppercased())
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(RSMSTheme.Colors.textTertiary)
+            Text(value)
+                .font(.system(size: 16, weight: .black, design: .rounded))
+                .foregroundColor(tint)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(RSMSTheme.Colors.backgroundElevated)
+        .cornerRadius(12)
     }
 
     // MARK: - Transfer Segment
