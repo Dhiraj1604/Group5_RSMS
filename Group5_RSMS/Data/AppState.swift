@@ -63,6 +63,7 @@ class AppState {
         do {
             struct Profile: Codable {
                 let role: String
+                let store_id: UUID?
             }
             let session = try await SupabaseManager.shared.client.auth.session
             self.managerAuthId = session.user.id
@@ -75,7 +76,7 @@ class AppState {
 
             let profile: Profile = try await SupabaseManager.shared.client
                 .from("profiles")
-                .select("role")
+                .select("role, store_id")
                 .eq("id", value: session.user.id)
                 .single()
                 .execute()
@@ -83,6 +84,11 @@ class AppState {
 
             if let fetchedRole = UserRole(rawValue: profile.role) {
                 self.selectedRole = fetchedRole
+                
+                // Directly map the employee's specific store id from their profile!
+                if let assignedStore = profile.store_id {
+                    self.currentStoreID = assignedStore
+                }
             } else {
                 print("Unknown role: \(profile.role)")
                 throw AuthError.missingRole
@@ -123,26 +129,26 @@ class AppState {
             let fetchedStores = try await sync.fetchStores()
             self.stores = fetchedStores
 
-            if selectedRole == .boutiqueManager {
+            if self.currentStoreID == nil && selectedRole == .boutiqueManager {
                 self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id
                     ?? UUID(uuidString: "b3fd8cb6-341b-453e-9ed4-8915aa25245c")
             } else if self.currentStoreID == nil, let first = fetchedStores.first {
                 self.currentStoreID = first.id
             }
         } catch let DecodingError.keyNotFound(key, context) {
-            print("❌ Key not found: \(key.stringValue)")
-            print("❌ Context: \(context.debugDescription)")
+            print("Key not found: \(key.stringValue)")
+            print("Context: \(context.debugDescription)")
             storeError = "Key not found: \(key.stringValue)"
         } catch let DecodingError.typeMismatch(type, context) {
-            print("❌ Type mismatch: \(type)")
-            print("❌ Context: \(context.debugDescription)")
+            print("Type mismatch: \(type)")
+            print(" Context: \(context.debugDescription)")
             storeError = "Type mismatch: \(context.debugDescription)"
         } catch let DecodingError.valueNotFound(type, context) {
-            print("❌ Value not found: \(type)")
-            print("❌ Context: \(context.debugDescription)")
+            print("Value not found: \(type)")
+            print("Context: \(context.debugDescription)")
             storeError = "Value not found: \(context.debugDescription)"
         } catch {
-            print("❌ Other error: \(error)")
+            print("Other error: \(error)")
             storeError = error.localizedDescription
         }
         isLoadingStores = false
@@ -411,11 +417,16 @@ class AppState {
             struct InventoryRecord: Decodable {
                 let stock_quantity: Int
             }
-            let records: [InventoryRecord] = try await SupabaseManager.shared.client
+            
+            var query = SupabaseManager.shared.client
                 .from("inventory")
                 .select("stock_quantity")
-                .execute()
-                .value
+            
+            if let storeId = currentStoreID {
+                query = query.eq("store_id", value: storeId)
+            }
+            
+            let records: [InventoryRecord] = try await query.execute().value
             
             let total = records.reduce(0) { $0 + $1.stock_quantity }
             self.totalInventoryCount = total
