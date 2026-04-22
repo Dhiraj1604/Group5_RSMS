@@ -7,23 +7,32 @@ import SwiftUI
 
 struct BMStaffTab: View {
     let boutiqueId: UUID
+    @State private var selectedTab = 0
 
     var body: some View {
         NavigationStack {
             ZStack {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-                VStack(spacing: RSMSTheme.Spacing.md) {
-//                    Image(systemName: "person.3.fill")
-//                        .font(.system(size: 48))
-//                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
-//                    Text("Coming Soon")
-//                        .font(.title3)
-//                        .fontWeight(.semibold)
-//                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                VStack(spacing: 0) {
+                    Picker("Staff View", selection: $selectedTab) {
+                        Text("Directory").tag(0)
+                        Text("Leaderboard").tag(1)
+                        Text("Schedule").tag(2)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding()
+
+                    if selectedTab == 0 {
+                        StaffListView(boutiqueId: boutiqueId)
+                    } else if selectedTab == 1 {
+                        SalesLeaderboardView(boutiqueId: boutiqueId)
+                    } else {
+                        ShiftScheduleView(boutiqueId: boutiqueId)
+                    }
                 }
             }
-            .navigationTitle("Staff")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle(selectedTab == 0 ? "Staff Directory" : selectedTab == 1 ? "Leaderboard" : "Shift Schedule")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
         }

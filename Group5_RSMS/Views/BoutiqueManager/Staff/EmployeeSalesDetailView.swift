@@ -26,13 +26,14 @@ struct EmployeeSalesDetailView: View {
 
                     // MARK: - Employee Header
                     VStack(spacing: 8) {
-                        ZStack {
+                        ZStack(alignment: .topTrailing) {
                             Circle()
                                 .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
                                 .frame(width: 80, height: 80)
                             Text(employee.name.prefix(1).uppercased())
                                 .font(.system(size: 36, weight: .bold))
                                 .foregroundColor(RSMSTheme.Colors.accentGold)
+                                .frame(width: 80, height: 80)
                         }
                         Text(employee.name)
                             .font(.title2)
@@ -40,6 +41,11 @@ struct EmployeeSalesDetailView: View {
                         Text(employee.role)
                             .font(.body)
                             .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        if let joining = employee.joiningDate {
+                            Text("Since \(joining.formatted(date: .abbreviated, time: .omitted))")
+                                .font(.caption)
+                                .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
+                        }
                     }
                     .padding(.top)
 
@@ -48,6 +54,19 @@ struct EmployeeSalesDetailView: View {
                         InfoCard(title: "Phone", value: employee.phone ?? "N/A", icon: "phone.fill")
                         InfoCard(title: "Email", value: employee.email ?? "N/A", icon: "envelope.fill")
                     }
+                    .padding(.horizontal)
+
+                    // MARK: - Sales Summary Card
+                    HStack(spacing: 0) {
+                        EmployeeStatCell(title: "Salary", value: employee.salary.map { "₹\(Int($0))" } ?? "N/A", icon: "indianrupeesign.circle.fill")
+                        Divider().frame(height: 40).background(RSMSTheme.Colors.textSecondary.opacity(0.2))
+                        EmployeeStatCell(title: "Shifts", value: "–", icon: "clock.fill")
+                        Divider().frame(height: 40).background(RSMSTheme.Colors.textSecondary.opacity(0.2))
+                        EmployeeStatCell(title: "Commission", value: currentRate != nil ? String(format: "%.1f", currentRate!.ratePercentage) + "%" : "Not Set", icon: "percent")
+                    }
+                    .padding()
+                    .background(RSMSTheme.Colors.backgroundDeep)
+                    .cornerRadius(14)
                     .padding(.horizontal)
 
                     // MARK: - Commission Rate Card
@@ -61,7 +80,7 @@ struct EmployeeSalesDetailView: View {
                                 Text("Current Rate")
                                     .font(.caption)
                                     .foregroundColor(RSMSTheme.Colors.textSecondary)
-                                Text(currentRate != nil ? "\(currentRate!.ratePercentage, specifier: "%.1f")%" : "Not Set")
+                                Text(currentRate != nil ? String(format: "%.1f", currentRate!.ratePercentage) + "%" : "Not Set")
                                     .font(.title2)
                                     .foregroundColor(RSMSTheme.Colors.accentGold)
                             }
@@ -169,6 +188,28 @@ struct InfoCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RSMSTheme.Colors.backgroundDeep)
         .cornerRadius(12)
+    }
+}
+
+// MARK: - Stat Cell (used in employee 3-column row)
+struct EmployeeStatCell: View {
+    let title: String
+    let value: String
+    let icon: String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundColor(RSMSTheme.Colors.accentGold)
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .foregroundColor(RSMSTheme.Colors.textPrimary)
+            Text(title)
+                .font(.caption2)
+                .foregroundColor(RSMSTheme.Colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
