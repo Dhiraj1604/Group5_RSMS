@@ -82,7 +82,7 @@ struct ICStockTab: View {
             // Total Items — tappable, navigates to ProductsListView
             NavigationLink(destination: ProductsListView()) {
                 stockKPICard(
-                    title: "Total Items",
+                    title: "Total SKUs",
                     value: isLoadingLocalProducts
                     ? "…"
                     : "\(localProductsCount)",
@@ -166,10 +166,8 @@ struct ICStockTab: View {
                         .foregroundStyle(RSMSTheme.Colors.textPrimary)
                     Spacer()
                     if localInventory.count > 3 {
-                        Button(action: {
-                            withAnimation { showAllInventory.toggle() }
-                        }) {
-                            Text(showAllInventory ? "Show Less" : "See All")
+                        NavigationLink(destination: StockLevelsListView(localInventory: localInventory)) {
+                            Text("See All")
                                 .font(.footnote)
                                 .foregroundStyle(RSMSTheme.Colors.accentGold)
                         }
@@ -177,10 +175,11 @@ struct ICStockTab: View {
                 }
                 
                 VStack(spacing: RSMSTheme.Spacing.sm) {
-                    let displayedItems = showAllInventory ? localInventory : Array(localInventory.prefix(3))
-                    
-                    ForEach(displayedItems) { item in
-                        inventoryRow(for: item)
+                    ForEach(Array(localInventory.prefix(3))) { item in
+                        NavigationLink(destination: StockLevelsListView(localInventory: localInventory)) {
+                            inventoryRow(for: item)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -223,7 +222,6 @@ struct ICStockTab: View {
                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
             
             VStack(spacing: RSMSTheme.Spacing.sm) {
-                stockRow(label: "Total SKUs Tracked", value: isLoadingLocalProducts ? "…" : "\(localProductsCount)")
                 stockRow(label: "Total Inventory Units", value: "\(appState.totalInventoryCount)")
                 stockRow(label: "Items Below Reorder Level", value: isLoadingLowStock ? "…" : "\(lowStockCount)")
                 stockRow(label: "Last Audit Date", value: Date().formatted(.dateTime.month().day().year()))
@@ -254,13 +252,26 @@ struct ICStockTab: View {
         
         if !inRepairProducts.isEmpty {
             VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-                Text("Currently In Repair")
-                    .font(.headline)
-                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                HStack {
+                    Text("Currently In Repair")
+                        .font(.headline)
+                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                    Spacer()
+                    if inRepairProducts.count > 3 {
+                        NavigationLink(destination: ProductsListView(showOnlyInRepair: true)) {
+                            Text("See All")
+                                .font(.footnote)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                    }
+                }
                 
                 VStack(spacing: RSMSTheme.Spacing.sm) {
-                    ForEach(inRepairProducts) { product in
-                        repairRow(for: product)
+                    ForEach(Array(inRepairProducts.prefix(3))) { product in
+                        NavigationLink(destination: ProductsListView(showOnlyInRepair: true)) {
+                            repairRow(for: product)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -375,4 +386,101 @@ struct ICStockTab: View {
 #Preview {
     ICStockTab()
         .environment(AppState())
+}
+
+// MARK: - Stock Levels List View (Searchable)
+struct StockLevelsListView: View {
+    @Environment(AppState.self) private var appState
+    var localInventory: [ICStockTab.LocalInventoryRecord]
+    
+    @State private var searchText = ""
+    
+    var filteredInventory: [ICStockTab.LocalInventoryRecord] {
+        if searchText.isEmpty {
+            return localInventory
+        }
+        return localInventory.filter { item in
+            if let product = appState.products.first(where: { $0.id == item.product_id }) {
+                return product.name.localizedCaseInsensitiveContains(searchText) ||
+                       product.sku.localizedCaseInsensitiveContains(searchText)
+            }
+            return false
+        }
+    }
+    
+    var body: some View {
+        ZStack {
+            RSMSTheme.Colors.backgroundPrimary
+                .ignoresSafeArea()
+            
+            if filteredInventory.isEmpty {
+                emptyView
+            } else {
+                List {
+                    ForEach(filteredInventory) { item in
+                        inventoryRow(for: item)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(
+                                top: RSMSTheme.Spacing.xs,
+                                leading: RSMSTheme.Spacing.lg,
+                                bottom: RSMSTheme.Spacing.xs,
+                                trailing: RSMSTheme.Spacing.lg
+                            ))
+                    }
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+            }
+        }
+        .navigationTitle("Stock Levels")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .searchable(text: $searchText, prompt: "Search by name or SKU")
+    }
+    
+    private var emptyView: some View {
+        VStack(spacing: RSMSTheme.Spacing.lg) {
+            Image(systemName: "shippingbox")
+                .font(.system(size: 48))
+                .foregroundStyle(RSMSTheme.Colors.textTertiary)
+            Text("No products found")
+                .font(.headline)
+                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+        }
+    }
+    
+    private func inventoryRow(for item: ICStockTab.LocalInventoryRecord) -> some View {
+        let product = appState.products.first(where: { $0.id == item.product_id })
+        
+        return HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(product?.name ?? "Loading...")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                Text(product?.sku ?? "N/A")
+                    .font(.caption)
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("\(item.stock_quantity)")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundStyle(item.stock_quantity <= 5 ? RSMSTheme.Colors.warning : RSMSTheme.Colors.textPrimary)
+                Text("units")
+                    .font(.caption2)
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+            }
+        }
+        .padding(RSMSTheme.Spacing.md)
+        .background(RSMSTheme.Colors.backgroundDeep)
+        .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
+        .overlay(
+            RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+        )
+    }
 }
