@@ -168,6 +168,25 @@ class AppState {
         do {
             let fetchedStores = try await sync.fetchStores()
             self.stores = fetchedStores
+<<<<<<< HEAD
+
+            if selectedRole == .boutiqueManager {
+                        // Find the store linked to team5rsms@gmail.com
+                        self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id
+                            // ✅ Fallback to Dior New York Fifth Avenue ID from your screenshot
+                            ?? UUID(uuidString: "8232958a-d93e-44d5-bfc4-68b7604f773e")
+                    } else if self.currentStoreID == nil, let first = fetchedStores.first {
+//             Priority context logic:
+//             if let assigned = assignedStoreId {
+//                  1. Prioritize store explicitly assigned in profile
+//                 self.currentStoreID = assigned
+//             } else if selectedRole == .boutiqueManager {
+//                  2. Fallback to manager field (legacy mapping)
+//                 self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id
+//                     ?? UUID(uuidString: "b3fd8cb6-341b-453e-9ed4-8915aa25245c")
+//             } else if self.currentStoreID == nil, let first = fetchedStores.first {
+//                 3. Fallback to first available store (for Admins or unassigned users)
+=======
             // Priority context logic:
             if let assigned = assignedStoreId {
                  // 1. Prioritize store explicitly assigned in profile
@@ -179,6 +198,7 @@ class AppState {
                     ?? UUID(uuidString: "8232958a-d93e-44d5-bfc4-68b7604f7736")
             } else if self.currentStoreID == nil, let first = fetchedStores.first {
                 // 3. Fallback to first available store (for Admins or unassigned users)
+>>>>>>> merchandise_Isha
                 self.currentStoreID = first.id
             }
         } catch let DecodingError.keyNotFound(key, context) {
