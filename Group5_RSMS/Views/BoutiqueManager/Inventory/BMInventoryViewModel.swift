@@ -33,6 +33,13 @@ final class BMInventoryViewModel: ObservableObject {
     @Published private(set) var myRequests: [TransferRequest] = []
     @Published private(set) var isLoadingMyRequests: Bool = false
 
+    // Merchandising Insights
+    @Published private(set) var soldProducts: [SoldProduct] = []
+    @Published private(set) var fallbackItems: [InventoryProduct] = []
+    @Published private(set) var weeklySalesData: [SalesTrendData] = []
+    @Published private(set) var isLoadingInsights: Bool = false
+    @Published private(set) var insightsError: String? = nil
+
     // MARK: - Computed
 
     var alertCount: Int { alerts.count }
@@ -191,5 +198,30 @@ final class BMInventoryViewModel: ObservableObject {
             print("❌ [BMInventoryVM] Fulfillment failed: \(error)")
         }
         isTransferring = false
+    }
+
+    // MARK: - Merchandising Insights
+
+    func loadMerchandisingInsights(forStore storeId: UUID) async {
+        isLoadingInsights = true
+        insightsError = nil
+        
+        do {
+            async let sold = MerchandisingService.shared.fetchSoldProducts(forStore: storeId)
+            async let fallback = MerchandisingService.shared.fetchFallbackItems(forStore: storeId)
+            async let trend = MerchandisingService.shared.fetchWeeklySalesTrend(forStore: storeId)
+            
+            let (soldResult, fallbackResult, trendResult) = try await (sold, fallback, trend)
+            
+            self.soldProducts = soldResult
+            self.fallbackItems = fallbackResult
+            self.weeklySalesData = trendResult
+            
+        } catch {
+            self.insightsError = "Failed to load insights: \(error.localizedDescription)"
+            print("❌ [BMInventoryVM] Insights error: \(error)")
+        }
+        
+        isLoadingInsights = false
     }
 }
