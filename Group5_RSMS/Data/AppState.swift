@@ -89,6 +89,11 @@ class AppState {
             if let fetchedRole = UserRole(rawValue: profile.role) {
                 self.selectedRole = fetchedRole
                 self.assignedStoreId = profile.store_id
+                
+                // Directly map the employee's specific store id from their profile!
+                if let assignedStore = profile.store_id {
+                    self.currentStoreID = assignedStore
+                }
             } else {
                 throw AuthError.missingRole
             }
@@ -163,32 +168,32 @@ class AppState {
         do {
             let fetchedStores = try await sync.fetchStores()
             self.stores = fetchedStores
-            if selectedRole == .boutiqueManager {
-                        // Find the store linked to team5rsms@gmail.com
-                        self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id
-                            // ✅ Fallback to Dior New York Fifth Avenue ID from your screenshot
-                            ?? UUID(uuidString: "8232958a-d93e-44d5-bfc4-68b7604f7736")
-                    } else if self.currentStoreID == nil, let first = fetchedStores.first {
-//             Priority context logic:
-//             if let assigned = assignedStoreId {
-//                  1. Prioritize store explicitly assigned in profile
-//                 self.currentStoreID = assigned
-//             } else if selectedRole == .boutiqueManager {
-//                  2. Fallback to manager field (legacy mapping)
-//                 self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id
-//                     ?? UUID(uuidString: "b3fd8cb6-341b-453e-9ed4-8915aa25245c")
-//             } else if self.currentStoreID == nil, let first = fetchedStores.first {
-//                 3. Fallback to first available store (for Admins or unassigned users)
+            // Priority context logic:
+            if let assigned = assignedStoreId {
+                 // 1. Prioritize store explicitly assigned in profile
+                self.currentStoreID = assigned
+            } else if self.currentStoreID == nil && selectedRole == .boutiqueManager {
+                 // 2. Fallback to manager field (legacy mapping)
+                self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id
+                    // ✅ Fallback to Dior New York Fifth Avenue ID from your screenshot
+                    ?? UUID(uuidString: "8232958a-d93e-44d5-bfc4-68b7604f7736")
+            } else if self.currentStoreID == nil, let first = fetchedStores.first {
+                // 3. Fallback to first available store (for Admins or unassigned users)
                 self.currentStoreID = first.id
             }
         } catch let DecodingError.keyNotFound(key, context) {
+            print("Key not found: \(key.stringValue) — \(context.debugDescription)")
             storeError = "Key not found: \(key.stringValue) — \(context.debugDescription)"
-        } catch let DecodingError.typeMismatch(_, context) {
+        } catch let DecodingError.typeMismatch(type, context) {
+            print("Type mismatch: \(type) — \(context.debugDescription)")
             storeError = "Type mismatch: \(context.debugDescription)"
-        } catch let DecodingError.valueNotFound(_, context) {
+        } catch let DecodingError.valueNotFound(type, context) {
+            print("Value not found: \(type) — \(context.debugDescription)")
             storeError = "Value not found: \(context.debugDescription)"
         } catch {
+            print("Other error: \(error)")
             storeError = error.localizedDescription
+
         }
         isLoadingStores = false
     }
@@ -398,8 +403,8 @@ class AppState {
                 .from("inventory")
                 .select("stock_quantity")
             
-            if let storeId = storeId {
-                query = query.eq("store_id", value: storeId)
+            if let targetStoreId = storeId ?? currentStoreID {
+                query = query.eq("store_id", value: targetStoreId)
             }
             
             let records: [InventoryRecord] = try await query.execute().value
