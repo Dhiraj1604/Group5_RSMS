@@ -112,16 +112,16 @@ struct ICShipmentsTab: View {
     }
 
     private func loadOrders() async {
-        isLoading = true
-        fetchError = nil
-        do {
-            let status = selectedTab == .pending ? "placed" : "shipped"
-            self.orders = try await shipmentService.fetchShipments(status: status, storeId: appState.currentStoreID)
-        } catch {
-            self.fetchError = error.localizedDescription
+            isLoading = true
+            fetchError = nil
+            do {
+                // Pass the enum directly!
+                self.orders = try await shipmentService.fetchShipments(for: selectedTab, storeId: appState.currentStoreID)
+            } catch {
+                self.fetchError = error.localizedDescription
+            }
+            isLoading = false
         }
-        isLoading = false
-    }
 
     private var ordersList: some View {
         ScrollView(showsIndicators: false) {
@@ -154,10 +154,12 @@ struct ICShipmentsTab: View {
                 // Status badge
                 Text(order.status.capitalized)
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(order.status == "shipped" ? RSMSTheme.Colors.success : RSMSTheme.Colors.accentGold)
+                    // 1. Force the text to be gold
+                    .foregroundColor(RSMSTheme.Colors.accentGold)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background((order.status == "shipped" ? RSMSTheme.Colors.success : RSMSTheme.Colors.accentGold).opacity(0.15))
+                    // 2. Force the background to be the 15% opacity gold
+                    .background(RSMSTheme.Colors.accentGold.opacity(0.15))
                     .cornerRadius(6)
             }
             
