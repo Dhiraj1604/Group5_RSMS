@@ -7,12 +7,30 @@
 
 import SwiftUI
 
+enum StaffFilter: String, CaseIterable {
+    case all = "All"
+    case active = "Active"
+    case inactive = "Inactive"
+}
+
 struct StaffListView: View {
     @StateObject private var staffVM = StaffViewModel()
     @StateObject private var addEmpVM = AddEmployeeViewModel()
     @State private var showAddEmployee = false
+    @State private var selectedFilter: StaffFilter = .all
 
     let boutiqueId: UUID
+    
+    var filteredEmployees: [Employee] {
+        switch selectedFilter {
+        case .all:
+            return staffVM.employees
+        case .active:
+            return staffVM.employees.filter { $0.isActive ?? true }
+        case .inactive:
+            return staffVM.employees.filter { !($0.isActive ?? true) }
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -24,6 +42,48 @@ struct StaffListView: View {
                 emptyState
             } else {
                 employeeList
+                VStack(spacing: 0) {
+                    Picker("Filter Staff", selection: $selectedFilter) {
+                        ForEach(StaffFilter.allCases, id: \.self) { filter in
+                            Text(filter.rawValue).tag(filter)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding()
+
+                    if filteredEmployees.isEmpty {
+                        Spacer()
+                        VStack(spacing: 12) {
+                            Image(systemName: "person.crop.circle.badge.questionmark")
+                                .font(.system(size: 40))
+                                .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.6))
+                            Text("No \(selectedFilter.rawValue.lowercased()) staff members")
+                                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        }
+                        Spacer()
+                    } else {
+                        ScrollView {
+                            LazyVStack(spacing: 12) {
+                                ForEach(filteredEmployees) { employee in
+                                    NavigationLink(destination:
+                                        EmployeeSalesDetailView(
+                                            employee: employee,
+                                            boutiqueId: boutiqueId,
+                                            staffVM: staffVM
+                                        )
+                                    ) {
+                                        EmployeeCard(
+                                            employee: employee,
+                                            totalSales: staffVM.totalSales(for: employee.id)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding()
+                        }
+                    }
+                }
             }
         }
         .toolbar {
@@ -123,6 +183,15 @@ struct StaffDirectoryCard: View {
                         .font(.caption2)
                         .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
                 }
+
+                // Active badge
+                Text((employee.isActive ?? true) ? "ACTIVE" : "INACTIVE")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background((employee.isActive ?? true) ? RSMSTheme.Colors.success.opacity(0.15) : RSMSTheme.Colors.error.opacity(0.15))
+                    .foregroundColor((employee.isActive ?? true) ? RSMSTheme.Colors.success : RSMSTheme.Colors.error)
+                    .cornerRadius(4)
             }
 
             Spacer()
@@ -139,9 +208,16 @@ struct StaffDirectoryCard: View {
             Image(systemName: "chevron.right")
                 .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.4))
                 .font(.caption)
+                .padding(.leading, 8)
         }
         .padding()
         .background(RSMSTheme.Colors.backgroundDeep)
-        .cornerRadius(14)
+        //.cornerRadius(14)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 4)
     }
 }

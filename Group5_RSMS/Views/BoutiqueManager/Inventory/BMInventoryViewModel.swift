@@ -26,9 +26,12 @@ final class BMInventoryViewModel: ObservableObject {
     @Published var transferSuccess: Bool = false
     @Published var transferError: String? = nil
 
-    // Push flow
+    // Push flow (incoming) & Pull flow (outgoing)
     @Published private(set) var incomingRequests: [TransferRequest] = []
     @Published private(set) var isLoadingRequests: Bool = false
+    
+    @Published private(set) var myRequests: [TransferRequest] = []
+    @Published private(set) var isLoadingMyRequests: Bool = false
 
     // MARK: - Computed
 
@@ -142,6 +145,20 @@ final class BMInventoryViewModel: ObservableObject {
             print("❌ [BMInventoryVM] \(error)")
         }
         isLoadingRequests = false
+    }
+
+    // MARK: - Outgoing Requests (My Requests)
+
+    func loadMyRequests(forStore storeId: UUID) async {
+        isLoadingMyRequests = true
+        errorMessage = nil
+        do {
+            self.myRequests = try await LowStockService.shared.fetchMyRequests(forStore: storeId)
+        } catch {
+            self.errorMessage = "Failed to load outbound requests: \(error.localizedDescription)"
+            print("❌ [BMInventoryVM] \(error)")
+        }
+        isLoadingMyRequests = false
     }
 
     func fulfillRequest(

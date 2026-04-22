@@ -35,6 +35,11 @@ struct BMStaffTab: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            StaffListView(boutiqueId: boutiqueId)
+                .navigationTitle("Staff")
+                .navigationBarTitleDisplayMode(.large)
+                .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
+                .toolbarColorScheme(.dark, for: .navigationBar)
         }
     }
 }
