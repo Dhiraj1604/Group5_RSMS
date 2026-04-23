@@ -79,7 +79,7 @@ struct EmployeeSalesDetailView: View {
                                 .foregroundColor(RSMSTheme.Colors.textSecondary)
                         }
                         .tint(RSMSTheme.Colors.success)
-                        .padding(.horizontal, 60)
+                        .padding(.horizontal, 30)
                         .padding(.top, 8)
                     }
                     .padding(.top)
