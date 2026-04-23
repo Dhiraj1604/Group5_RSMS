@@ -6,15 +6,13 @@
 //  Receives scanned SKU values and prepares them for Supabase
 //  integration (stub). Updates published state for the UI card.
 //  Now pulls active tax rule from TaxSettingsViewModel.shared.
-//
-
+//814935
 import Foundation
 import Combine
 import PostgREST
 import Supabase
 import UIKit
 import SwiftUI
-
 /// View model for the Inventory Controller's Scan tab.
 /// Manages scanned SKU state and will later handle Supabase persistence.
 @MainActor

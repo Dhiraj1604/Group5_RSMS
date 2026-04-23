@@ -9,19 +9,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 import CoreTransferable
 
-struct CSVDocument: Transferable {
-    let text: String
-    let filename: String
-    
-    static var transferRepresentation: some TransferRepresentation {
-        DataRepresentation(exportedContentType: .commaSeparatedText) { doc in
-            doc.text.data(using: .utf8) ?? Data()
-        }
-        .suggestedFileName { doc in
-            doc.filename
-        }
-    }
-}
+// No longer using CSVDocument here, moved to ICReportPDFGenerator.swift
 
 struct ICReportsTab: View {
     @Environment(AppState.self) private var appState
@@ -109,9 +97,10 @@ struct ICReportsTab: View {
                 
                 Spacer()
                 
-                let csvDoc = CSVDocument(text: generateVarianceCSV(), filename: "Variance_Report.csv")
+                let pdfData = ICReportPDFGenerator.generateVariancePDF(data: varianceData, storeName: varianceData.first?.store?.name ?? "Current Store")
+                let pdfDoc = PDFReportDocument(data: pdfData, filename: "Variance_Report.pdf")
                 
-                ShareLink(item: csvDoc, preview: SharePreview("Variance Report")) {
+                ShareLink(item: pdfDoc, preview: SharePreview("Variance Report", image: Image(systemName: "doc.text.fill"))) {
                     HStack(spacing: 6) {
                         Image(systemName: "square.and.arrow.up")
                         Text("Share")
@@ -198,9 +187,10 @@ struct ICReportsTab: View {
                 
                 Spacer()
                 
-                let csvDoc = CSVDocument(text: generateHeatMapCSV(), filename: "HeatMap_Report.csv")
+                let pdfData = ICReportPDFGenerator.generateHeatMapPDF(heatmapData: heatmapData, storeName: heatmapData.first?.store?.name ?? "Current Store")
+                let pdfDoc = PDFReportDocument(data: pdfData, filename: "Inventory_HeatMap.pdf")
                 
-                ShareLink(item: csvDoc, preview: SharePreview("Inventory Heat Map")) {
+                ShareLink(item: pdfDoc, preview: SharePreview("Inventory Heat Map", image: Image(systemName: "grid"))) {
                     HStack(spacing: 6) {
                         Image(systemName: "square.and.arrow.up")
                         Text("Share")
@@ -312,57 +302,5 @@ struct ICReportsTab: View {
         }
     }
 
-    // MARK: - CSV Generators
-    private func generateVarianceCSV() -> String {
-        var csv = "Date,Product,Store,Expected Quantity,Actual Quantity,Variance\n"
-        for item in varianceData {
-            let dateStr = item.createdAt.formatted(date: .numeric, time: .omitted)
-            let product = (item.product?.name ?? "Unknown").replacingOccurrences(of: ",", with: " ")
-            let store = (item.store?.name ?? "Unknown").replacingOccurrences(of: ",", with: " ")
-            csv += "\(dateStr),\(product),\(store),\(item.expectedQuantity),\(item.actualScannedQuantity),\(item.variance)\n"
-        }
-        return csv
-    }
-    
-    private func generateHeatMapCSV() -> String {
-        let categories = Array(Set(heatmapData.compactMap { $0.product?.category ?? "Other" })).sorted()
-        let statuses = ["Out of Stock", "Low", "Healthy", "Overstock", "Floor", "Backroom"]
-        
-        var matrix: [String: [String: Int]] = [:]
-        for item in heatmapData {
-            let cat = item.product?.category ?? "Other"
-            
-            let minStock = item.minStockLevel ?? 5
-            let maxStock = item.maxStockLevel ?? 50
-            
-            let status: String
-            if item.stockQuantity == 0 {
-                status = "Out of Stock"
-            } else if item.stockQuantity < minStock {
-                status = "Low"
-            } else if item.stockQuantity > maxStock {
-                status = "Overstock"
-            } else {
-                status = "Healthy"
-            }
-            
-            let current = matrix[cat]?[status] ?? 0
-            matrix[cat, default: [:]][status] = current + 1
-            
-            let locStatus = (item.isOnFloor == true) ? "Floor" : "Backroom"
-            let locCurrent = matrix[cat]?[locStatus] ?? 0
-            matrix[cat, default: [:]][locStatus] = locCurrent + 1
-        }
-        
-        var csv = "Category,Out of Stock,Low,Healthy,Overstock,Floor,Backroom\n"
-        for cat in categories {
-            var row = [cat.replacingOccurrences(of: ",", with: " ")]
-            for status in statuses {
-                let val = matrix[cat]?[status] ?? 0
-                row.append("\(val)")
-            }
-            csv += row.joined(separator: ",") + "\n"
-        }
-        return csv
-    }
+    // CSV Generators removed as we are now using PDF Generator Utility
 }
