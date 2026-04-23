@@ -25,6 +25,7 @@ struct ICStockTab: View {
                     VStack(spacing: RSMSTheme.Spacing.xl) {
                         stockKPISection
                         stockDetailsSection
+                        stockCheckEntryCard
                         Spacer().frame(height: RSMSTheme.Spacing.xxl)
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
@@ -157,6 +158,50 @@ struct ICStockTab: View {
             }
             .cardStyle()
         }
+    }
+
+    // MARK: - Stock Check Entry Card
+
+    private var stockCheckEntryCard: some View {
+        NavigationLink(destination: StockCheckView()) {
+            HStack(spacing: RSMSTheme.Spacing.lg) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                        .fill(RSMSTheme.Colors.accentGold.opacity(0.12))
+                        .frame(width: 52, height: 52)
+                    Image(systemName: "checklist")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Stock Check")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                    Text("Compare expected vs. actual counts & resolve discrepancies")
+                        .font(.system(size: 12, weight: .regular, design: .rounded))
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                        .lineLimit(2)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(RSMSTheme.Colors.accentGoldDark)
+            }
+            .padding(RSMSTheme.Spacing.lg)
+            .background(
+                RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+                    .fill(RSMSTheme.Colors.backgroundDeep)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+                            .stroke(RSMSTheme.Colors.accentGoldDark.opacity(0.35), lineWidth: 1)
+                    )
+                    .shadow(color: RSMSTheme.Colors.accentGold.opacity(0.08), radius: 8, y: 4)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func stockRow(label: String, value: String) -> some View {
