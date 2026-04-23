@@ -11,7 +11,7 @@ class CustomerShipmentService {
     
     /// Fetches customer orders. For Pending, we fetch 'placed' (or you can expand this to exclude 'shipped').
     /// The select parameter joins customer_order_items so we have product details.
-    func fetchShipments(for tab: ShipmentTab, storeId: UUID?) async throws -> [CustomerOrder] {
+    func fetchShipments(for tab: ShipmentTab, storeId: UUID?, fromDate: Date? = nil, toDate: Date? = nil) async throws -> [CustomerOrder] {
             var query = client
                 .from("customer_orders")
                 .select("*, customer_order_items(*, products(*))")
@@ -26,6 +26,13 @@ class CustomerShipmentService {
                 
             if let storeId = storeId {
                 query = query.eq("store_id", value: storeId)
+            }
+                
+            if let from = fromDate {
+                query = query.gte("created_at", value: from.ISO8601Format())
+            }
+            if let to = toDate {
+                query = query.lte("created_at", value: to.ISO8601Format())
             }
                 
             let response: [CustomerOrder] = try await query
