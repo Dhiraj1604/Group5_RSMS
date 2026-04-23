@@ -253,17 +253,54 @@ final class MerchandisingService {
         storeId: UUID,
         isOnFloor: Bool
     ) async throws {
-        let payload: [String: AnyJSON] = [
-            "is_on_floor": .bool(isOnFloor),
-            "last_moved_to_floor": isOnFloor ? .string(Date().ISO8601Format()) : .null
-        ]
-        
-        try await client
+        struct ExistingInventoryRow: Decodable {
+            let product_id: UUID
+            let store_id: UUID
+        }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let dateString = formatter.string(from: Date())
+
+        let existingRows: [ExistingInventoryRow] = try await client
             .from("inventory")
-            .update(payload)
+            .select("product_id, store_id")
             .eq("product_id", value: productId)
             .eq("store_id", value: storeId)
             .execute()
+            .value
+
+        if existingRows.isEmpty {
+            // Create a minimal inventory row so floor placement also works for products
+            // that do not yet have a store-specific inventory record.
+            let insertPayload: [String: AnyJSON] = [
+                "product_id": .string(productId.uuidString),
+                "store_id": .string(storeId.uuidString),
+                "stock_quantity": .integer(0),
+                "is_on_floor": .bool(isOnFloor),
+                "last_moved_to_floor": isOnFloor ? .string(dateString) : .null,
+                "last_updated": .string(dateString)
+            ]
+
+            try await client
+                .from("inventory")
+                .insert(insertPayload)
+                .execute()
+        } else {
+            let updatePayload: [String: AnyJSON] = [
+                "is_on_floor": .bool(isOnFloor),
+                "last_moved_to_floor": isOnFloor ? .string(dateString) : .null,
+                "last_updated": .string(dateString)
+            ]
+
+            try await client
+                .from("inventory")
+                .update(updatePayload)
+                .eq("product_id", value: productId)
+                .eq("store_id", value: storeId)
+                .execute()
+        }
+
         
         struct AuditPayload: Encodable {
             let action: String
