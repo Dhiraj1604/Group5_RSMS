@@ -29,8 +29,8 @@ struct BoutiqueManagerDashboard: View {
 
             BMSalesTab()
                 .tabItem {
-                    Image(systemName: "cart.fill")
-                    Text("Sales")
+                    Image(systemName: "star.fill")
+                    Text("VIP & Events")
                 }
                 .tag(2)
 
@@ -41,13 +41,7 @@ struct BoutiqueManagerDashboard: View {
                     Text("Staff")
                 }
                 .tag(3)
-
-//            BMReportsTab()
-//                .tabItem {
-//                    Image(systemName: "doc.text.fill")
-//                    Text("Reports")
-//                }
-//                .tag(4)
+            
             BMReportsTab()
                 .tabItem {
                     Image(systemName: "doc.text.fill")
