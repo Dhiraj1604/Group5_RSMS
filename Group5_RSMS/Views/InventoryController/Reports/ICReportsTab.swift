@@ -113,8 +113,8 @@ struct ICReportsTab: View {
                 
                 ShareLink(item: csvDoc, preview: SharePreview("Variance Report")) {
                     HStack(spacing: 6) {
-                        Image(systemName: "arrow.down.doc")
-                        Text("Download")
+                        Image(systemName: "square.and.arrow.up")
+                        Text("Share")
                     }
                     .font(.system(size: 13, weight: .bold))
                     .foregroundColor(.black)
@@ -145,6 +145,18 @@ struct ICReportsTab: View {
                                 Text("Store: \(item.store?.name ?? "Current")")
                                     .font(.system(size: 13))
                                     .foregroundColor(RSMSTheme.Colors.textSecondary)
+                                
+                                Text(item.status.capitalized)
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(item.status == "approved" ? RSMSTheme.Colors.success : (item.status == "rejected" ? RSMSTheme.Colors.error : RSMSTheme.Colors.textSecondary))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 2)
+                                    .background(RSMSTheme.Colors.backgroundElevated)
+                                    .cornerRadius(4)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .stroke(item.status == "approved" ? RSMSTheme.Colors.success : (item.status == "rejected" ? RSMSTheme.Colors.error : RSMSTheme.Colors.borderLight), lineWidth: 0.5)
+                                    )
                             }
                             Spacer()
                             VStack(alignment: .trailing, spacing: 4) {
@@ -190,8 +202,8 @@ struct ICReportsTab: View {
                 
                 ShareLink(item: csvDoc, preview: SharePreview("Inventory Heat Map")) {
                     HStack(spacing: 6) {
-                        Image(systemName: "arrow.down.doc")
-                        Text("Download")
+                        Image(systemName: "square.and.arrow.up")
+                        Text("Share")
                     }
                     .font(.system(size: 13, weight: .bold))
                     .foregroundColor(.black)

@@ -21,6 +21,17 @@ struct VarianceReportItem: Codable, Identifiable {
         case createdAt = "created_at"
         case product = "products"
         case store = "stores"
+        case adjustments = "inventory_adjustments"
+    }
+
+    struct SimpleAdjustment: Codable {
+        let status: String
+    }
+    
+    let adjustments: [SimpleAdjustment]?
+
+    var status: String {
+        adjustments?.first?.status ?? "unprocessed"
     }
 
     var variance: Int {
@@ -65,7 +76,7 @@ class ICReportsService {
     func fetchVarianceReport(storeId: UUID?) async throws -> [VarianceReportItem] {
         var query = client
             .from("inventory_discrepancies")
-            .select("*, products(name), stores(name)")
+            .select("*, products(name), stores(name), inventory_adjustments(status)")
         
         if let storeId = storeId {
             query = query.eq("store_id", value: storeId)
