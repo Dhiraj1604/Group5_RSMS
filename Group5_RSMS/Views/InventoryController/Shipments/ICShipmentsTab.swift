@@ -16,12 +16,18 @@ enum ShipmentTab: String, CaseIterable, Identifiable {
 }
 
 struct ICShipmentsTab: View {
+    @Environment(AppState.self) private var appState
     @State private var orders: [CustomerOrder] = []
     @State private var isLoading = false
     @State private var fetchError: String? = nil
     @State private var selectedTab: ShipmentTab = .pending
     @State private var selectedOrderForDetails: CustomerOrder?
     @Namespace private var animation
+    
+    @State private var fromDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+    @State private var toDate: Date = Date()
+    @State private var isFilterApplied: Bool = false
+    @State private var showFilterSheet: Bool = false
 
     private let shipmentService = CustomerShipmentService()
 
@@ -58,6 +64,16 @@ struct ICShipmentsTab: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showFilterSheet = true
+                    }) {
+                        Image(systemName: isFilterApplied ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                            .foregroundColor(isFilterApplied ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textPrimary)
+                    }
+                }
+            }
             .task {
                 await loadOrders()
             }
@@ -71,6 +87,13 @@ struct ICShipmentsTab: View {
                 OrderDetailsSheet(order: order)
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showFilterSheet) {
+                NavigationStack {
+                    filterSheetContent
+                }
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
             }
         }
     }
@@ -110,17 +133,92 @@ struct ICShipmentsTab: View {
         )
     }
 
-    private func loadOrders() async {
-        isLoading = true
-        fetchError = nil
-        do {
-            let status = selectedTab == .pending ? "placed" : "shipped"
-            self.orders = try await shipmentService.fetchShipments(status: status)
-        } catch {
-            self.fetchError = error.localizedDescription
+    private var filterSheetContent: some View {
+        ZStack {
+            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+            
+            VStack(spacing: 24) {
+                VStack(spacing: 16) {
+                    DatePicker("From Date", selection: $fromDate, displayedComponents: .date)
+                        .colorScheme(.dark)
+                        .tint(RSMSTheme.Colors.accentGold)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(RSMSTheme.Colors.backgroundElevated)
+                        .cornerRadius(12)
+                    
+                    DatePicker("To Date", selection: $toDate, displayedComponents: .date)
+                        .colorScheme(.dark)
+                        .tint(RSMSTheme.Colors.accentGold)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(RSMSTheme.Colors.backgroundElevated)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                
+                Spacer()
+                
+                HStack(spacing: 16) {
+                    Button("Clear") {
+                        isFilterApplied = false
+                        fromDate = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+                        toDate = Date()
+                        showFilterSheet = false
+                        Task { await loadOrders() }
+                    }
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(RSMSTheme.Colors.border.opacity(0.3))
+                    .cornerRadius(12)
+                    
+                    Button("Apply") {
+                        isFilterApplied = true
+                        showFilterSheet = false
+                        Task { await loadOrders() }
+                    }
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(RSMSTheme.Colors.accentGold)
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 32)
+            }
         }
-        isLoading = false
+        .navigationTitle("Filter Shipments")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Done") {
+                    showFilterSheet = false
+                }
+                .foregroundColor(RSMSTheme.Colors.accentGold)
+                .fontWeight(.semibold)
+            }
+        }
     }
+
+    private func loadOrders() async {
+            isLoading = true
+            fetchError = nil
+            do {
+                let fDate = isFilterApplied ? Calendar.current.startOfDay(for: fromDate) : nil
+                let tDate = isFilterApplied ? Calendar.current.date(bySettingHour: 23, minute: 59, second: 59, of: toDate) : nil
+                
+                self.orders = try await shipmentService.fetchShipments(for: selectedTab, storeId: appState.currentStoreID, fromDate: fDate, toDate: tDate)
+            } catch {
+                self.fetchError = error.localizedDescription
+            }
+            isLoading = false
+        }
 
     private var ordersList: some View {
         ScrollView(showsIndicators: false) {
@@ -153,10 +251,12 @@ struct ICShipmentsTab: View {
                 // Status badge
                 Text(order.status.capitalized)
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(order.status == "shipped" ? RSMSTheme.Colors.success : RSMSTheme.Colors.accentGold)
+                    // 1. Force the text to be gold
+                    .foregroundColor(RSMSTheme.Colors.accentGold)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background((order.status == "shipped" ? RSMSTheme.Colors.success : RSMSTheme.Colors.accentGold).opacity(0.15))
+                    // 2. Force the background to be the 15% opacity gold
+                    .background(RSMSTheme.Colors.accentGold.opacity(0.15))
                     .cornerRadius(6)
             }
             

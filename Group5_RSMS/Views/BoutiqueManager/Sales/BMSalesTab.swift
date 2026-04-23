@@ -11,11 +11,11 @@ struct BMSalesTab: View {
     var body: some View {
         NavigationStack {
             ComingSoonView(
-                title: "Sales",
-                icon: "cart.fill",
+                title: "VIP & Events",
+                icon: "star.fill",
                 description: "Process sales transactions, apply discounts, and manage the point-of-sale system."
             )
-            .navigationTitle("Sales")
+            .navigationTitle("VIP & Events")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)

@@ -25,11 +25,15 @@ struct AddStoreView: View {
     @State private var email = ""
     @State private var managerName = ""
     @State private var managerEmail = ""
+    @State private var inventoryName = ""
+    @State private var inventoryEmail = ""
     @State private var selectedRegion = "West"
     @State private var selectedCurrency = "INR"          // ← NEW
     @State private var taxRate = "18.0"
     @State private var showValidationErrors = false
     @State private var showSuccessAlert = false
+    @State private var isRegistering = false
+    @State private var storeToRegister: Store?
 
     private let regions = ["Asia", "Europe", "North America", "South America", "Australia", "Africa"]
 
@@ -53,6 +57,8 @@ struct AddStoreView: View {
         !email.trimmingCharacters(in: .whitespaces).isEmpty &&
         !managerName.trimmingCharacters(in: .whitespaces).isEmpty &&
         !managerEmail.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !inventoryName.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !inventoryEmail.trimmingCharacters(in: .whitespaces).isEmpty &&
         (Double(taxRate) != nil)
     }
 
@@ -149,6 +155,10 @@ struct AddStoreView: View {
             formField(label: "Manager Email", placeholder: "manager@example.com", text: $managerEmail, icon: "person.text.rectangle.fill", required: true)
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
+            formField(label: "Inventory Controller Name", placeholder: "Inventory controller name", text: $inventoryName, icon: "person.2.fill", required: true)
+            formField(label: "Inventory Email", placeholder: "inventory@example.com", text: $inventoryEmail, icon: "person.text.rectangle", required: true)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
         }
     }
 
@@ -231,11 +241,16 @@ struct AddStoreView: View {
             }
             Button { registerStore() } label: {
                 HStack(spacing: RSMSTheme.Spacing.sm) {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Register Boutique")
+                    if isRegistering {
+                        ProgressView().tint(.white)
+                    } else {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Register Boutique")
+                    }
                 }
             }
             .buttonStyle(GoldButtonStyle())
+            .disabled(isRegistering)
         }
         .padding(.top, RSMSTheme.Spacing.md)
     }
@@ -320,24 +335,40 @@ struct AddStoreView: View {
             isActive: true,
             currencyCode: selectedCurrency
         )
+        self.isRegistering = true
+        
         Task {
+            // 1. Create the store FIRST
             await appState.addStore(newStore)
             
-            // Invoke Edge Function securely to invite the manager!
+            if let _ = appState.storeError {
+                await MainActor.run { self.isRegistering = false }
+                return
+            }
+            
             do {
-                try await SupabaseManager.shared.inviteManager(
+                // 2. Provision the manager silently via Edge Function
+                try await SupabaseManager.shared.provisionAccount(
                     email: managerEmail.trimmingCharacters(in: .whitespaces),
-                    boutiqueId: newStore.id
+                    storeId: newStore.id,
+                    role: "manager"
                 )
-                print("Manager successfully invited!")
-                showSuccessAlert = true
+                
+                // 3. Provision the inventory controller silently
+                try await SupabaseManager.shared.provisionAccount(
+                    email: inventoryEmail.trimmingCharacters(in: .whitespaces),
+                    storeId: newStore.id,
+                    role: "inventory"
+                )
+                
+                await MainActor.run {
+                    self.isRegistering = false
+                    self.showSuccessAlert = true
+                }
             } catch {
-                if let httpError = error as? FunctionsError,
-                   case let .httpError(code, data) = httpError,
-                   let errorJson = String(data: data, encoding: .utf8) {
-                    appState.storeError = "Edge Function Error (HTTP \(code)):\n\(errorJson)"
-                } else {
-                    appState.storeError = "Failed to invite manager: \(error.localizedDescription)"
+                await MainActor.run {
+                    self.isRegistering = false
+                    appState.storeError = "Store created, but failed to provision staff: \(error.localizedDescription)"
                 }
             }
         }

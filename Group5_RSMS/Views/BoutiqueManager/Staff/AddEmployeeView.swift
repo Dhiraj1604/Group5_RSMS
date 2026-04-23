@@ -2,25 +2,84 @@
 //  AddEmployeeView.swift
 //  Group5_RSMS
 //
-//  Created by Apple on 19/04/26.
-//
 
 import SwiftUI
 
+// MARK: - Custom Dropdown Sheet (works inside any .sheet presentation)
+struct OptionPickerSheet<T: Hashable>: View {
+    let title: String
+    let options: [T]
+    let displayText: (T) -> String
+    @Binding var selected: T
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        NavigationStack {
+            List(options, id: \.self) { option in
+                Button {
+                    selected = option
+                    isPresented = false
+                } label: {
+                    HStack {
+                        Text(displayText(option))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        if option == selected {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.accentColor)
+                        }
+                    }
+                }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { isPresented = false }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
+// MARK: - Reusable Dropdown Row
+struct DropdownRow: View {
+    let label: String
+    let value: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Text(label)
+                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .font(.subheadline)
+                Spacer()
+                Text(value)
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .font(.subheadline)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption)
+                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+            }
+            .padding()
+            .background(RSMSTheme.Colors.backgroundDeep)
+            .cornerRadius(12)
+        }
+    }
+}
+
+// MARK: - AddEmployeeView
 struct AddEmployeeView: View {
     let boutiqueId: UUID
     @ObservedObject var staffVM: StaffViewModel
+    @ObservedObject var vm: AddEmployeeViewModel
 
     @Environment(\.dismiss) private var dismiss
 
-    @State private var name: String = ""
-    @State private var email: String = ""
-    @State private var phone: String = ""
-    @State private var role: String = "Sales Associate"
-    @State private var salary: String = ""
-    @State private var joiningDate: Date = Date()
-
-    let roles = ["Sales Associate", "Store Supervisor", "Cashier", "Visual Merchandiser", "Alteration Tailor"]
+    @State private var showRolePicker = false
+    @State private var showCountryCodePicker = false
 
     var body: some View {
         NavigationStack {
@@ -28,125 +87,99 @@ struct AddEmployeeView: View {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
                 ScrollView {
-                    VStack(spacing: 20) {
+                    VStack(spacing: 24) {
 
-                        // MARK: - Avatar Preview
+                        // Avatar
                         ZStack {
                             Circle()
                                 .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
                                 .frame(width: 80, height: 80)
-                            Text(name.prefix(1).uppercased().isEmpty ? "?" : String(name.prefix(1).uppercased()))
+                            Text(vm.name.prefix(1).uppercased().isEmpty ? "?" : String(vm.name.prefix(1).uppercased()))
                                 .font(.system(size: 36, weight: .bold))
                                 .foregroundColor(RSMSTheme.Colors.accentGold)
                         }
-                        .padding(.top)
+                        .padding(.top, 16)
 
-                        // MARK: - Form Fields
-                        VStack(spacing: 16) {
+                        // Personal Details
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Personal Details")
+                                .font(.headline)
+                                .foregroundColor(RSMSTheme.Colors.textPrimary)
 
-                            // Name
-                            FormField(title: "Full Name *", placeholder: "e.g. Priya Sharma", text: $name)
+                            TextField("Full Name *", text: $vm.name)
+                                .padding()
+                                .background(RSMSTheme.Colors.backgroundDeep)
+                                .cornerRadius(12)
 
-                            // Role Picker
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Role *")
-                                    .font(.caption)
-                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-                                Menu {
-                                    ForEach(roles, id: \.self) { r in
-                                        Button(r) { role = r }
-                                    }
+                            // Phone with country code
+                            HStack(spacing: 8) {
+                                // Country code tap button
+                                Button {
+                                    showCountryCodePicker = true
                                 } label: {
-                                    HStack {
-                                        Text(role)
-                                            .font(.body)
+                                    HStack(spacing: 4) {
+                                        Text(vm.countryCode)
                                             .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                        Spacer()
+                                            .font(.subheadline)
                                         Image(systemName: "chevron.down")
+                                            .font(.caption2)
                                             .foregroundColor(RSMSTheme.Colors.textSecondary)
-                                            .font(.caption)
                                     }
-                                    .padding()
+                                    .padding(.vertical, 14)
+                                    .padding(.horizontal, 10)
                                     .background(RSMSTheme.Colors.backgroundDeep)
-                                    .cornerRadius(10)
+                                    .cornerRadius(12)
                                 }
-                            }
 
-                            // Phone
-                            FormField(title: "Phone", placeholder: "e.g. 9876543210", text: $phone, keyboardType: .phonePad)
-
-                            // Email
-                            FormField(title: "Email", placeholder: "e.g. priya@boutique.com", text: $email, keyboardType: .emailAddress)
-
-                            // Salary
-                            FormField(title: "Salary (₹)", placeholder: "e.g. 25000", text: $salary, keyboardType: .decimalPad)
-
-                            // Joining Date
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Joining Date")
-                                    .font(.caption)
-                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-                                DatePicker("", selection: $joiningDate, displayedComponents: .date)
-                                    .datePickerStyle(.compact)
-                                    .labelsHidden()
-                                    .colorScheme(.dark)
+                                TextField("Phone Number", text: $vm.phone)
+                                    .keyboardType(.phonePad)
                                     .padding()
                                     .background(RSMSTheme.Colors.backgroundDeep)
-                                    .cornerRadius(10)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .cornerRadius(12)
                             }
-                        }
-                        .padding(.horizontal)
 
-                        // MARK: - Error
+                            TextField("Email", text: $vm.email)
+                                .keyboardType(.emailAddress)
+                                .textInputAutocapitalization(.never)
+                                .padding()
+                                .background(RSMSTheme.Colors.backgroundDeep)
+                                .cornerRadius(12)
+                        }
+
+                        // Employment Details
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Employment Details")
+                                .font(.headline)
+                                .foregroundColor(RSMSTheme.Colors.textPrimary)
+
+                            DropdownRow(label: "Role *", value: vm.role) {
+                                showRolePicker = true
+                            }
+
+                            TextField("Salary (₹)", text: $vm.salary)
+                                .keyboardType(.decimalPad)
+                                .padding()
+                                .background(RSMSTheme.Colors.backgroundDeep)
+                                .cornerRadius(12)
+
+                            DatePicker("Joining Date", selection: $vm.joiningDate, displayedComponents: .date)
+                                .padding()
+                                .background(RSMSTheme.Colors.backgroundDeep)
+                                .cornerRadius(12)
+                                .colorScheme(.dark)
+                        }
+
                         if let error = staffVM.errorMessage {
                             Text(error)
                                 .font(.caption)
-                                .foregroundColor(RSMSTheme.Colors.error)
-                                .padding(.horizontal)
+                                .foregroundColor(.red)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
-                        // MARK: - Save Button
-                        Button {
-                            guard !name.isEmpty else { return }
-                            print("DEBUG boutiqueId being sent: \(boutiqueId)")
-                            Task {
-                                let employee = Employee(
-                                    id: UUID(),
-                                    boutiqueId: UUID(uuidString: boutiqueId.uuidString.lowercased())!,
-                                    name: name,
-                                    email: email.isEmpty ? nil : email,
-                                    phone: phone.isEmpty ? nil : phone,
-                                    role: role,
-                                    salary: Double(salary),
-                                    joiningDate: joiningDate,
-                                    isActive: true,
-                                    createdAt: Date()
-                                )
-                                await staffVM.addEmployee(employee, boutiqueId: boutiqueId)
-                                if staffVM.errorMessage == nil {
-                                    dismiss()
-                                }
-                            }
-                        } label: {
-                            Group {
-                                if staffVM.isLoading {
-                                    ProgressView().tint(.black)
-                                } else {
-                                    Text("Add Employee")
-                                        .font(.headline)
-                                        .foregroundColor(.black)
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(name.isEmpty ? RSMSTheme.Colors.accentGold.opacity(0.4) : RSMSTheme.Colors.accentGold)
-                            .cornerRadius(12)
-                        }
-                        .padding(.horizontal)
-                        .padding(.bottom)
-                        .disabled(name.isEmpty || staffVM.isLoading)
+                        Spacer(minLength: 40)
+
                     }
+                    .padding()
                 }
             }
             .navigationTitle("Add Employee")
@@ -156,32 +189,45 @@ struct AddEmployeeView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if staffVM.isLoading {
+                        ProgressView()
+                    } else {
+                        Button("Save") {
+                            guard !vm.name.isEmpty else { return }
+                            Task {
+                                let employee = vm.createEmployee(boutiqueId: boutiqueId)
+                                await staffVM.addEmployee(employee, boutiqueId: boutiqueId)
+                                if staffVM.errorMessage == nil {
+                                    dismiss()
+                                }
+                            }
+                        }
+                        .disabled(vm.name.isEmpty)
+                    }
                 }
             }
-        }
-    }
-}
-
-// MARK: - Reusable Form Field
-struct FormField: View {
-    let title: String
-    let placeholder: String
-    @Binding var text: String
-    var keyboardType: UIKeyboardType = .default
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(RSMSTheme.Colors.textSecondary)
-            TextField(placeholder, text: $text)
-                .keyboardType(keyboardType)
-                .font(.body)
-                .foregroundColor(RSMSTheme.Colors.textPrimary)
-                .padding()
-                .background(RSMSTheme.Colors.backgroundDeep)
-                .cornerRadius(10)
+            // Role picker sheet — presented independently from parent sheet
+            .sheet(isPresented: $showRolePicker) {
+                OptionPickerSheet(
+                    title: "Select Role",
+                    options: vm.roles,
+                    displayText: { $0 },
+                    selected: $vm.role,
+                    isPresented: $showRolePicker
+                )
+            }
+            // Country code picker sheet
+            .sheet(isPresented: $showCountryCodePicker) {
+                OptionPickerSheet(
+                    title: "Country Code",
+                    options: vm.countryCodes,
+                    displayText: { $0 },
+                    selected: $vm.countryCode,
+                    isPresented: $showCountryCodePicker
+                )
+            }
         }
     }
 }
