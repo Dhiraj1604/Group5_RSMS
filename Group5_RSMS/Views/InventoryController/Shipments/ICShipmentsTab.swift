@@ -3,31 +3,55 @@
 //  Group5_RSMS
 //
 //  Inventory Controller — Shipments Tab.
-//  Displays inventory transfer actions across the company's boutiques.
+//  Displays customer orders pending shipment and shipped ones.
 //
 
 import SwiftUI
 
+enum ShipmentTab: String, CaseIterable, Identifiable {
+    case pending = "Pending"
+    case shipped = "Shipped"
+    
+    var id: String { self.rawValue }
+}
+
 struct ICShipmentsTab: View {
-    @State private var shipments: [AuditLog] = []
+    @State private var orders: [CustomerOrder] = []
     @State private var isLoading = false
     @State private var fetchError: String? = nil
+    @State private var selectedTab: ShipmentTab = .pending
+    @State private var selectedOrderForDetails: CustomerOrder?
+    @Namespace private var animation
 
-    private let logService = AuditLogService()
+    private let shipmentService = CustomerShipmentService()
 
     var body: some View {
         NavigationStack {
             ZStack {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
-                if isLoading {
-                    loadingState
-                } else if let error = fetchError {
-                    errorState(error)
-                } else if shipments.isEmpty {
-                    emptyState
-                } else {
-                    shipmentsList
+                VStack(spacing: 0) {
+                    // Segmented Control
+                    segmentedControl
+                        .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+                        .padding(.top, RSMSTheme.Spacing.sm)
+                        .padding(.bottom, RSMSTheme.Spacing.md)
+
+                    if isLoading {
+                        Spacer()
+                        loadingState
+                        Spacer()
+                    } else if let error = fetchError {
+                        Spacer()
+                        errorState(error)
+                        Spacer()
+                    } else if orders.isEmpty {
+                        Spacer()
+                        emptyState
+                        Spacer()
+                    } else {
+                        ordersList
+                    }
                 }
             }
             .navigationTitle("Shipments")
@@ -35,119 +59,199 @@ struct ICShipmentsTab: View {
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .task {
-                await loadShipments()
+                await loadOrders()
+            }
+            .onChange(of: selectedTab) { _ in
+                Task { await loadOrders() }
             }
             .refreshable {
-                await loadShipments()
+                await loadOrders()
+            }
+            .sheet(item: $selectedOrderForDetails) { order in
+                OrderDetailsSheet(order: order)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
             }
         }
     }
 
-    private func loadShipments() async {
+    private var segmentedControl: some View {
+        HStack(spacing: 0) {
+            ForEach(ShipmentTab.allCases) { tab in
+                Button(action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        selectedTab = tab
+                    }
+                }) {
+                    Text(tab.rawValue)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(selectedTab == tab ? .black : .white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            ZStack {
+                                if selectedTab == tab {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(RSMSTheme.Colors.accentGold)
+                                        .matchedGeometryEffect(id: "TAB_BG", in: animation)
+                                }
+                            }
+                        )
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .padding(4)
+        .background(RSMSTheme.Colors.backgroundElevated)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+        )
+    }
+
+    private func loadOrders() async {
         isLoading = true
         fetchError = nil
         do {
-            let logs = try await logService.fetchLogs()
-            // Filter logs directly based on the eventType string parsing or exact match
-            self.shipments = logs.filter { $0.eventType == .inventoryTransfer }
+            let status = selectedTab == .pending ? "placed" : "shipped"
+            self.orders = try await shipmentService.fetchShipments(status: status)
         } catch {
             self.fetchError = error.localizedDescription
         }
         isLoading = false
     }
 
-    private var shipmentsList: some View {
+    private var ordersList: some View {
         ScrollView(showsIndicators: false) {
             LazyVStack(spacing: 16) {
-                ForEach(shipments) { log in
-                    shipmentCard(for: log)
+                ForEach(orders) { order in
+                    orderCard(for: order)
                 }
             }
             .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-            .padding(.top, RSMSTheme.Spacing.md)
             .padding(.bottom, 40)
         }
     }
 
-    private func shipmentCard(for log: AuditLog) -> some View {
-        let fromStore = log.beforeData?["from_store"] ?? "Unknown Store"
-        let toStore = log.afterData?["to_store"] ?? "Unknown Store"
-        let quantity = log.afterData?["quantity_transferred"] ?? "N/A"
-        let product = log.afterData?["product"] ?? log.entity
-
-        return VStack(spacing: 0) {
-            HStack(alignment: .top, spacing: 14) {
-                // Icon
-                ZStack {
-                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                        .fill(RSMSTheme.Colors.accentGold.opacity(0.12))
-                        .frame(width: 50, height: 50)
-                    Image(systemName: "box.truck.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
-                }
-
+    private func orderCard(for order: CustomerOrder) -> some View {
+        VStack(spacing: 16) {
+            // Header
+            HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(product)
-                        .font(.system(size: 15, weight: .bold))
+                    Text("Order #\(order.orderNumber.prefix(8).uppercased())")
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundColor(RSMSTheme.Colors.textPrimary)
-
-                    HStack(spacing: 4) {
-                        Image(systemName: "building.2.fill")
-                            .font(.system(size: 10))
-                        Text(fromStore)
-                    }
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(RSMSTheme.Colors.accentGold)
-                        Text("To: \(toStore)")
-                    }
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.white)
+                    
+                    Text("\(order.consolidatedItems.count) items • \(order.createdAt.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(RSMSTheme.Colors.textSecondary)
                 }
-
+                
                 Spacer()
-
-                // Quantity
-                VStack(spacing: 2) {
-                    Text(quantity)
-                        .font(.system(size: 22, weight: .black, design: .rounded))
-                        .foregroundColor(RSMSTheme.Colors.success)
-                    Text("Qty")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(RSMSTheme.Colors.success.opacity(0.7))
-                        .textCase(.uppercase)
-                        .tracking(0.4)
+                
+                // Status badge
+                Text(order.status.capitalized)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(order.status == "shipped" ? RSMSTheme.Colors.success : RSMSTheme.Colors.accentGold)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background((order.status == "shipped" ? RSMSTheme.Colors.success : RSMSTheme.Colors.accentGold).opacity(0.15))
+                    .cornerRadius(6)
+            }
+            
+            // Product Images Scroll
+            let items = order.consolidatedItems
+            if !items.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(items) { item in
+                            VStack(spacing: 4) {
+                                // Image
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(RSMSTheme.Colors.border.opacity(0.3))
+                                        .frame(width: 60, height: 60)
+                                    
+                                    if let urlString = item.product?.imageUrl ?? item.productImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
+                                        AsyncImage(url: url) { image in
+                                            image
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: 60, height: 60)
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        } placeholder: {
+                                            Image(systemName: "photo")
+                                                .foregroundColor(RSMSTheme.Colors.textTertiary)
+                                        }
+                                    } else {
+                                        Image(systemName: "shippingbox.fill")
+                                            .foregroundColor(RSMSTheme.Colors.textTertiary)
+                                            .font(.system(size: 24))
+                                    }
+                                    
+                                    // Quantity badge
+                                    if item.quantity > 1 {
+                                        Text("x\(item.quantity)")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundColor(.black)
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 2)
+                                            .background(RSMSTheme.Colors.accentGold)
+                                            .clipShape(Capsule())
+                                            .offset(x: 20, y: -20)
+                                    }
+                                }
+                                
+                                let displayName = item.product?.name ?? item.productName
+                                Text(displayName.isEmpty ? "Unknown Product" : displayName)
+                                    .font(.system(size: 10))
+                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                                    .lineLimit(1)
+                                    .frame(width: 60)
+                            }
+                            .onTapGesture {
+                                selectedOrderForDetails = order
+                            }
+                        }
+                    }
                 }
             }
-
+            
             Divider()
                 .background(RSMSTheme.Colors.borderLight)
-                .padding(.vertical, RSMSTheme.Spacing.md)
-
-            // Bottom section
-            HStack {
-                Text(log.formattedTimestamp)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(RSMSTheme.Colors.textTertiary)
-
-                Spacer()
-
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 10))
-                    Text("Processed")
+            
+            // Action button
+            if selectedTab == .pending {
+                Button {
+                    updateStatus(for: order, to: "shipped")
+                } label: {
+                    HStack {
+                        Image(systemName: "shippingbox.fill")
+                        Text("Mark as Shipped")
+                    }
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(RSMSTheme.Colors.accentGold)
+                    .foregroundColor(.black)
+                    .cornerRadius(8)
                 }
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(RSMSTheme.Colors.textSecondary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(RSMSTheme.Colors.border)
-                .cornerRadius(4)
+            } else {
+                Button {
+                    updateStatus(for: order, to: "placed")
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.uturn.backward")
+                        Text("Move to Pending")
+                    }
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(RSMSTheme.Colors.border.opacity(0.5))
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .cornerRadius(8)
+                }
             }
         }
         .padding(16)
@@ -157,6 +261,20 @@ struct ICShipmentsTab: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
         )
+    }
+
+    private func updateStatus(for order: CustomerOrder, to newStatus: String) {
+        Task {
+            do {
+                try await shipmentService.updateOrderStatus(orderId: order.id, newStatus: newStatus)
+                // Remove from current list visually
+                withAnimation {
+                    orders.removeAll { $0.id == order.id }
+                }
+            } catch {
+                print("Failed to update order status: \(error.localizedDescription)")
+            }
+        }
     }
 
     private var loadingState: some View {
@@ -183,7 +301,7 @@ struct ICShipmentsTab: View {
                 .foregroundColor(RSMSTheme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
             Button("Retry") {
-                Task { await loadShipments() }
+                Task { await loadOrders() }
             }
             .buttonStyle(GoldButtonStyle())
             .padding(.top, 8)
@@ -197,20 +315,123 @@ struct ICShipmentsTab: View {
                 Circle()
                     .fill(RSMSTheme.Colors.border.opacity(0.3))
                     .frame(width: 88, height: 88)
-                Image(systemName: "shippingbox.circle.fill")
+                Image(systemName: selectedTab == .pending ? "shippingbox.circle.fill" : "checkmark.circle.fill")
                     .font(.system(size: 40, weight: .light))
                     .foregroundColor(RSMSTheme.Colors.textTertiary)
             }
             VStack(spacing: 8) {
-                Text("No Shipments Found")
+                Text(selectedTab == .pending ? "No Pending Shipments" : "No Shipped Orders")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(.white)
-                Text("There are no recent inter-store\ntransfers to display.")
+                Text(selectedTab == .pending ? "All customer orders have been shipped." : "You haven't shipped any orders yet.")
                     .font(.system(size: 15))
                     .foregroundColor(RSMSTheme.Colors.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
             }
         }
+    }
+}
+
+// MARK: - Details Sheet
+struct OrderDetailsSheet: View {
+    let order: CustomerOrder
+    
+    var body: some View {
+        ZStack {
+            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+            
+            VStack(alignment: .leading, spacing: 24) {
+                // Header
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Order #\(order.orderNumber.uppercased())")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                    
+                    Text("\(order.status.capitalized) • \(order.createdAt.formatted(date: .long, time: .shortened))")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 32)
+                
+                Divider()
+                    .background(RSMSTheme.Colors.borderLight)
+                
+                // Products List
+                ScrollView {
+                    VStack(spacing: 16) {
+                        let items = order.consolidatedItems
+                        if !items.isEmpty {
+                            ForEach(items) { item in
+                                productRow(for: item)
+                            }
+                        } else {
+                            Text("No items found for this order.")
+                                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                                .font(.system(size: 14))
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                }
+            }
+        }
+    }
+    
+    private func productRow(for item: CustomerOrderItem) -> some View {
+        HStack(spacing: 16) {
+            // Product Image
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(RSMSTheme.Colors.border.opacity(0.3))
+                    .frame(width: 70, height: 70)
+                
+                if let urlString = item.product?.imageUrl ?? item.productImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
+                    AsyncImage(url: url) { image in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 70, height: 70)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    } placeholder: {
+                        ProgressView()
+                    }
+                } else {
+                    Image(systemName: "shippingbox.fill")
+                        .foregroundColor(RSMSTheme.Colors.textTertiary)
+                        .font(.system(size: 30))
+                }
+            }
+            
+            // Product Details
+            VStack(alignment: .leading, spacing: 6) {
+                let displayName = item.product?.name ?? item.productName
+                Text(displayName.isEmpty ? "Unknown Product" : displayName)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+                
+                if let variant = item.variant, !variant.isEmpty {
+                    Text("Variant: \(variant)")
+                        .font(.system(size: 13))
+                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                }
+                
+                HStack {
+                    Text("Qty: \(item.quantity)")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(12)
+        .background(RSMSTheme.Colors.backgroundElevated)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
+        )
     }
 }

@@ -179,7 +179,7 @@ final class LowStockService {
     ///   - quantity: Number of units to transfer.
     ///   - productName: Display name for audit log.
     ///   - fromStoreName: Source store name for audit log.
-    ///   - toStoreName: Destination store name for audit log.
+    ///   - toStoreName: Destination store n    ame for audit log.
     ///   - requestId: Optional ID of the transfer request to mark as fulfilled.
     func executeTransfer(
         productId: UUID,

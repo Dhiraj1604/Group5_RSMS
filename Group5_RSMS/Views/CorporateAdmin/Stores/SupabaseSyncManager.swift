@@ -291,6 +291,16 @@ final class SupabaseSyncManager {
     }
 
     // MARK: - Employee Sales Summary
+    func fetchBoutiqueOrders(boutiqueId: UUID) async throws -> [EmployeeOrder] {
+        let response = try await client
+            .from("customer_orders")
+            .select("id, employee_id, boutique_id, total_amount, created_at")
+            .eq("boutique_id", value: boutiqueId.uuidString)
+            .execute()
+            
+        return try supabaseDecoder.decode([EmployeeOrder].self, from: response.data)
+    }
+
     func fetchEmployeeOrders(employeeId: UUID) async throws -> [EmployeeOrder] {
         let response = try await client
             .from("customer_orders")
@@ -301,34 +311,32 @@ final class SupabaseSyncManager {
         return try supabaseDecoder.decode([EmployeeOrder].self, from: response.data)
     }
 
+    // MARK: - Employee Sales Summary
     func fetchSalesPerEmployee(boutiqueId: UUID) async throws -> [EmployeeSalesSummary] {
-//        let response = try await client
-//            .from("customer_orders")
-//            .select("employee_id, total_amount")
-//            .eq("boutique_id", value: boutiqueId.uuidString)
-//            .execute()
-//
-//        // Decode raw orders and manually sum per employee
-//        struct RawOrder: Codable {
-//            let employeeId: UUID
-//            let totalAmount: Double
-//
-//            enum CodingKeys: String, CodingKey {
-//                case employeeId  = "employee_id"
-//                case totalAmount = "total_amount"
-//            }
-//        }
-//
-//        let orders = try supabaseDecoder.decode([RawOrder].self, from: response.data)
-//
-//        // Group and sum by employeeId
-//        var salesMap: [UUID: Double] = [:]
-//        for order in orders {
-//            salesMap[order.employeeId, default: 0.0] += order.totalAmount
-//        }
-//
-//        return salesMap.map { EmployeeSalesSummary(employeeId: $0.key, totalSales: $0.value) }
-        return []
+        let response = try await client
+            .from("commission_payouts")
+            .select("employee_id, total_sales_amount")
+            .eq("boutique_id", value: boutiqueId.uuidString.lowercased())
+            .execute()
+
+        struct RawPayout: Codable {
+            let employeeId: UUID
+            let totalSalesAmount: Double
+            enum CodingKeys: String, CodingKey {
+                case employeeId       = "employee_id"
+                case totalSalesAmount = "total_sales_amount"
+            }
+        }
+
+        let payouts = try supabaseDecoder.decode([RawPayout].self, from: response.data)
+
+        // Group and sum total_sales_amount per employee
+        var salesMap: [UUID: Double] = [:]
+        for payout in payouts {
+            salesMap[payout.employeeId, default: 0.0] += payout.totalSalesAmount
+        }
+
+        return salesMap.map { EmployeeSalesSummary(employeeId: $0.key, totalSales: $0.value) }
     }
 
     // MARK: - Store Tasks
@@ -360,5 +368,14 @@ final class SupabaseSyncManager {
             .delete()
             .eq("id", value: id.uuidString)
             .execute()
+    }
+    
+    func fetchAllPayouts(boutiqueId: UUID) async throws -> [CommissionPayout] {
+        let response = try await client
+            .from("commission_payouts")
+            .select()
+            .eq("boutique_id", value: boutiqueId.uuidString.lowercased())
+            .execute()
+        return try supabaseDecoder.decode([CommissionPayout].self, from: response.data)
     }
 }
