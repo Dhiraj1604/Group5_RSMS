@@ -229,7 +229,7 @@ final class BMInventoryViewModel: ObservableObject {
         isLoadingInsights = false
     }
     
-    func toggleFloorDisplay(for product: FastMovingProduct, storeId: UUID) async {
+    func toggleFloorDisplay(for product: FastMovingProduct, storeId: UUID, quantity: Int) async {
         isUpdatingFloorDisplay = true
         insightsError = nil
         
@@ -237,7 +237,8 @@ final class BMInventoryViewModel: ObservableObject {
             try await MerchandisingService.shared.updateFloorDisplay(
                 productId: product.id,
                 storeId: storeId,
-                isOnFloor: !product.isOnFloor
+                isOnFloor: !product.isOnFloor,
+                quantity: quantity
             )
             await loadMerchandisingInsights(forStore: storeId)
         } catch {
@@ -247,4 +248,5 @@ final class BMInventoryViewModel: ObservableObject {
         
         isUpdatingFloorDisplay = false
     }
+
 }

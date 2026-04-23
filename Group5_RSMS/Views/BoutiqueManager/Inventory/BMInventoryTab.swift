@@ -19,8 +19,10 @@ struct BMInventoryTab: View {
     
     @State private var isShowingIncomingRequests = false
     @State private var isShowingMyRequests = false
+    @State private var productToMove: FastMovingProduct? = nil
 
     /// Resolved current store from AppState
+
     private var currentStore: Store? {
         guard let storeId = appState.currentStoreID else { return nil }
         return appState.stores.first(where: { $0.id == storeId })
@@ -119,6 +121,15 @@ struct BMInventoryTab: View {
             }
             .navigationDestination(isPresented: $isShowingMyRequests) {
                 MyRequestsView(currentStoreName: currentStoreName, viewModel: viewModel)
+            }
+            .sheet(item: $productToMove) { product in
+                FloorQuantitySheet(
+                    product: product,
+                    storeId: appState.currentStoreID ?? UUID(),
+                    viewModel: viewModel
+                )
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
             }
         }
     }
@@ -342,10 +353,7 @@ struct BMInventoryTab: View {
                 Spacer()
                 
                 Button {
-                    guard let storeId = appState.currentStoreID else { return }
-                    Task {
-                        await viewModel.toggleFloorDisplay(for: product, storeId: storeId)
-                    }
+                    productToMove = product
                 } label: {
                     Text(product.isOnFloor ? "Remove from Floor" : "Place on Floor")
                         .font(.system(size: 12, weight: .bold))

@@ -251,7 +251,8 @@ final class MerchandisingService {
     func updateFloorDisplay(
         productId: UUID,
         storeId: UUID,
-        isOnFloor: Bool
+        isOnFloor: Bool,
+        quantity: Int
     ) async throws {
         struct ExistingInventoryRow: Decodable {
             let product_id: UUID
@@ -318,7 +319,8 @@ final class MerchandisingService {
             after_data: [
                 "product_id": productId.uuidString,
                 "store_id": storeId.uuidString,
-                "is_on_floor": isOnFloor ? "true" : "false"
+                "is_on_floor": isOnFloor ? "true" : "false",
+                "quantity": "\(quantity)"
             ]
         )
         
@@ -327,6 +329,7 @@ final class MerchandisingService {
             .insert(audit)
             .execute()
     }
+
 }
 
 // MARK: - Helper Structures for Decoding
