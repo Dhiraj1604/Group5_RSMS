@@ -11,6 +11,7 @@ struct EmployeeSalesDetailView: View {
 
     @StateObject private var staffVM = StaffViewModel()
     @StateObject private var commissionVM = CommissionViewModel()
+    @StateObject private var shiftVM = ShiftViewModel()
     @State private var showSetCommission = false
     @State private var showCreatePayout = false
     @State private var showDeleteConfirmation = false
@@ -99,7 +100,11 @@ struct EmployeeSalesDetailView: View {
                             icon: "indianrupeesign.circle.fill"
                         )
                         Divider().frame(height: 40).background(RSMSTheme.Colors.textSecondary.opacity(0.2))
-                        EmployeeStatCell(title: "Shifts", value: "–", icon: "clock.fill")
+                        EmployeeStatCell(
+                            title: "Shifts",
+                            value: shiftVM.shifts.isEmpty ? "–" : "\(shiftVM.shifts.filter { $0.employeeId == employee.id }.count)",
+                            icon: "clock.fill"
+                        )
                         Divider().frame(height: 40).background(RSMSTheme.Colors.textSecondary.opacity(0.2))
                         EmployeeStatCell(
                             title: "Commission",
@@ -259,6 +264,7 @@ struct EmployeeSalesDetailView: View {
             await commissionVM.fetchCommissionRates(boutiqueId: boutiqueId)
             await commissionVM.fetchPayouts(employeeId: employee.id)
             await staffVM.fetchEmployees(boutiqueId: boutiqueId)
+            await shiftVM.fetchShifts(boutiqueId: boutiqueId)
         }
         .sheet(isPresented: $showSetCommission) {
             SetCommissionView(employee: employee, boutiqueId: boutiqueId, commissionVM: commissionVM)
@@ -279,15 +285,17 @@ struct InfoCard: View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .foregroundColor(RSMSTheme.Colors.accentGold)
+                .frame(width: 20)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.caption)
                     .foregroundColor(RSMSTheme.Colors.textSecondary)
                 Text(value)
-                    .font(.body)
+                    .font(.subheadline.weight(.medium))
                     .foregroundColor(RSMSTheme.Colors.textPrimary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .truncationMode(.middle)
             }
         }
         .padding()

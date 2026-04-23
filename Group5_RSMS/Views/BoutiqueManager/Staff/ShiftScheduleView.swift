@@ -160,7 +160,8 @@ struct ShiftScheduleView: View {
                                 shift: shift,
                                 staffName: employeeName(for: shift.employeeId),
                                 staffRole: staffRole(for: shift.employeeId),
-                                isLowCoverage: checkLowCoverage(for: shift, dailyShifts: dailyShifts)
+                                isLowCoverage: checkLowCoverage(for: shift, dailyShifts: dailyShifts),
+                                isAbsent: isAbsent(for: shift.employeeId)
                             )
                             .onTapGesture { shiftToEdit = shift }
                         }
@@ -195,6 +196,10 @@ struct ShiftScheduleView: View {
     private func staffRole(for id: UUID) -> String {
         staffVM.employees.first(where: { $0.id == id })?.role ?? ""
     }
+    private func isAbsent(for id: UUID) -> Bool {
+        // An employee is considered absent if their isActive flag is explicitly false
+        return staffVM.employees.first(where: { $0.id == id })?.isActive == false
+    }
     private func checkLowCoverage(for shift: Shift, dailyShifts: [Shift]) -> Bool {
         let overlapping = dailyShifts.filter { shift.startTime < $0.endTime && shift.endTime > $0.startTime }
         return Set(overlapping.map { $0.employeeId }).count < shiftVM.minimumCoverageThreshold
@@ -214,6 +219,7 @@ struct ShiftCard: View {
     let staffName: String
     let staffRole: String
     let isLowCoverage: Bool
+    var isAbsent: Bool = false
 
     var body: some View {
         HStack(spacing: 16) {
@@ -222,14 +228,18 @@ struct ShiftCard: View {
                 Text(timeString(from: shift.startTime))
                     .font(.caption.weight(.semibold))
                     .foregroundColor(RSMSTheme.Colors.accentGold)
+                    .lineLimit(1)
+                    .fixedSize()
                 Rectangle()
                     .fill(RSMSTheme.Colors.accentGold.opacity(0.4))
                     .frame(width: 2)
                 Text(timeString(from: shift.endTime))
                     .font(.caption.weight(.semibold))
                     .foregroundColor(RSMSTheme.Colors.accentGold)
+                    .lineLimit(1)
+                    .fixedSize()
             }
-            .frame(width: 52)
+            .frame(width: 64)
 
             // Card body
             VStack(alignment: .leading, spacing: 6) {
@@ -267,6 +277,21 @@ struct ShiftCard: View {
                         .cornerRadius(8)
                 }
 
+                if isAbsent {
+                    HStack(spacing: 4) {
+                        Image(systemName: "person.slash.fill")
+                            .foregroundColor(.red)
+                            .font(.caption)
+                        Text("Absent — staff member inactive")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.red)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.red.opacity(0.1))
+                    .cornerRadius(6)
+                }
+
                 if isLowCoverage {
                     HStack(spacing: 4) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -290,7 +315,12 @@ struct ShiftCard: View {
                     .fill(RSMSTheme.Colors.backgroundDeep)
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
-                            .stroke(isLowCoverage ? Color.orange.opacity(0.5) : RSMSTheme.Colors.accentGold.opacity(0.08), lineWidth: 1)
+                            .stroke(
+                                isAbsent ? Color.red.opacity(0.5) :
+                                isLowCoverage ? Color.orange.opacity(0.5) :
+                                RSMSTheme.Colors.accentGold.opacity(0.08),
+                                lineWidth: 1
+                            )
                     )
             )
 

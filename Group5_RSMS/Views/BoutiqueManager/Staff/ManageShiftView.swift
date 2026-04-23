@@ -19,6 +19,7 @@ struct ManageShiftView: View {
     @State private var startTime: Date
     @State private var endTime: Date
     @State private var errorMessage: String?
+    @State private var showConflictAlert = false
     
     init(shiftVM: ShiftViewModel, boutiqueId: UUID, employees: [Employee], existingShift: Shift?, selectedDate: Date = Date()) {
         self.shiftVM = shiftVM
@@ -125,6 +126,14 @@ struct ManageShiftView: View {
                     .disabled(selectedEmployeeId == nil || startTime >= endTime)
                 }
             }
+            .alert("Shift Conflict Detected", isPresented: $showConflictAlert) {
+                Button("Save Anyway", role: .destructive) {
+                    Task { await saveShiftForced() }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("This employee already has a shift scheduled during this time. Do you still want to save this shift?")
+            }
             .sheet(isPresented: $showEmployeePicker) {
                 NavigationStack {
                     List(employees) { employee in
@@ -165,7 +174,20 @@ struct ManageShiftView: View {
     
     private func saveShift() async {
         guard let empId = selectedEmployeeId else { return }
-        
+
+        // Check for conflict BEFORE saving — show a warning alert if found
+        if shiftVM.hasConflict(for: empId, start: startTime, end: endTime, excludingShiftId: existingShift?.id) {
+            showConflictAlert = true
+            return
+        }
+
+        await saveShiftForced()
+    }
+
+    /// Saves the shift without conflict checking (used after user confirms the conflict alert)
+    private func saveShiftForced() async {
+        guard let empId = selectedEmployeeId else { return }
+
         let newShift = Shift(
             id: existingShift?.id ?? UUID(),
             boutiqueId: boutiqueId,
@@ -174,14 +196,14 @@ struct ManageShiftView: View {
             endTime: endTime,
             createdAt: existingShift?.createdAt ?? Date()
         )
-        
+
         let success: Bool
         if existingShift == nil {
             success = await shiftVM.createShift(newShift, boutiqueId: boutiqueId)
         } else {
             success = await shiftVM.updateShift(newShift, boutiqueId: boutiqueId)
         }
-        
+
         if success {
             dismiss()
         } else {
