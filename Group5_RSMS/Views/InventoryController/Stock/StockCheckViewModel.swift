@@ -41,6 +41,8 @@ struct StockDiscrepancy: Identifiable {
     var difference: Int { scannedQty - expectedQty }    // positive = surplus, negative = shortage
     var isApproved: Bool = false
     var isApplying: Bool = false
+    /// Primary key of the corresponding `inventory_discrepancies` row in Supabase.
+    var dbDiscrepancyId: UUID? = nil
 }
 
 /// A suggested fix built from discrepancy + recent audit context.
@@ -50,6 +52,8 @@ struct SuggestedFix {
     let recommendedAdjustment: Int      // absolute target quantity
     let recentAuditCount: Int           // # recent audit events found for this SKU
     let confidence: FixConfidence
+    /// Primary key of the corresponding `inventory_adjustments` row in Supabase (nil until persisted).
+    var dbAdjustmentId: UUID? = nil
 
     enum FixConfidence {
         case high, medium, low
@@ -94,6 +98,7 @@ final class StockCheckViewModel: ObservableObject {
 
     // MARK: Private state
     private var storeId: UUID?
+    private var userId: UUID?
 
     // MARK: - Load Inventory
     // -----------------------------------------------------------------------
@@ -103,8 +108,9 @@ final class StockCheckViewModel: ObservableObject {
     // (PostgREST may return either depending on FK cardinality config).
     // -----------------------------------------------------------------------
 
-    func load(storeId: UUID?) async {
+    func load(storeId: UUID?, userId: UUID? = nil) async {
         self.storeId = storeId
+        self.userId = userId
         isLoading = true
         errorMessage = nil
         discrepancies = []
@@ -168,7 +174,113 @@ final class StockCheckViewModel: ObservableObject {
             errorMessage = "Failed to load inventory: \(error.localizedDescription)"
         }
 
+        // Resume any pending adjustments from a previous session
+        await loadPendingAdjustments()
+
         isLoading = false
+    }
+
+    // MARK: - Resume Pending Session
+    // -----------------------------------------------------------------------
+    // Queries inventory_adjustments for status='pending' rows belonging to this
+    // store. Reconstructs StockDiscrepancy + SuggestedFix in memory and
+    // pre-populates scannedQty on items so the IC sees the exact state they
+    // left the last session in.
+    // -----------------------------------------------------------------------
+
+    private func loadPendingAdjustments() async {
+        guard let sid = storeId else { return }
+        guard discrepancies.isEmpty else { return }  // don't overwrite a fresh check
+
+        do {
+            struct PendingRow: Decodable {
+                let id: UUID
+                let product_id: UUID
+                let discrepancy_id: UUID?
+                let expected_quantity: Int
+                let actual_quantity: Int
+                let suggested_change: Int
+                let products: ProductEmbed
+
+                struct ProductEmbed: Decodable {
+                    let sku: String
+                    let name: String
+                }
+
+                // Resilient decoder (PostgREST may wrap embed in array)
+                enum CodingKeys: String, CodingKey {
+                    case id, product_id, discrepancy_id
+                    case expected_quantity, actual_quantity, suggested_change
+                    case products
+                }
+
+                init(from decoder: Decoder) throws {
+                    let c = try decoder.container(keyedBy: CodingKeys.self)
+                    self.id                = try c.decode(UUID.self, forKey: .id)
+                    self.product_id        = try c.decode(UUID.self, forKey: .product_id)
+                    self.discrepancy_id    = try? c.decode(UUID.self, forKey: .discrepancy_id)
+                    self.expected_quantity = try c.decode(Int.self,  forKey: .expected_quantity)
+                    self.actual_quantity   = try c.decode(Int.self,  forKey: .actual_quantity)
+                    self.suggested_change  = try c.decode(Int.self,  forKey: .suggested_change)
+
+                    if let arr = try? c.decode([ProductEmbed].self, forKey: .products),
+                       let first = arr.first {
+                        self.products = first
+                    } else {
+                        self.products = try c.decode(ProductEmbed.self, forKey: .products)
+                    }
+                }
+            }
+
+            let rows: [PendingRow] = try await SupabaseManager.shared.client
+                .from("inventory_adjustments")
+                .select("id, product_id, discrepancy_id, expected_quantity, actual_quantity, suggested_change, products(sku, name)")
+                .eq("store_id", value: sid)
+                .eq("status", value: "pending")
+                .execute()
+                .value
+
+            guard !rows.isEmpty else {
+                print("ℹ️ [StockCheck] No pending session to resume for store: \(sid)")
+                return
+            }
+
+            print("✅ [StockCheck] Resuming session — \(rows.count) pending adjustment(s) found")
+
+            var restoredDiscrepancies: [StockDiscrepancy] = []
+            var restoredFixes: [UUID: SuggestedFix] = [:]
+
+            for row in rows {
+                // Build the local discrepancy
+                var disc = StockDiscrepancy(
+                    productId:   row.product_id,
+                    sku:         row.products.sku,
+                    productName: row.products.name,
+                    expectedQty: row.expected_quantity,
+                    scannedQty:  row.actual_quantity
+                )
+                disc.dbDiscrepancyId = row.discrepancy_id
+
+                // Re-generate AI fix from the stored quantities (no audit re-fetch needed)
+                var fix = generateFix(for: disc, recentAuditCount: 0)
+                fix.dbAdjustmentId = row.id
+
+                restoredDiscrepancies.append(disc)
+                restoredFixes[disc.id] = fix
+
+                // Pre-populate the row's scanned qty so the count sheet shows previous entry
+                if let idx = items.firstIndex(where: { $0.productId == row.product_id }) {
+                    items[idx].scannedQty = row.actual_quantity
+                }
+            }
+
+            self.discrepancies   = restoredDiscrepancies
+            self.fixes           = restoredFixes
+            self.checkCompletedAt = Date()  // signal UI that a check is already in progress
+
+        } catch {
+            print("⚠️ [StockCheck] Could not resume pending session: \(error)")
+        }
     }
 
     // MARK: - Update Scanned Count (Local)
@@ -251,7 +363,121 @@ final class StockCheckViewModel: ObservableObject {
             let auditCount = auditCountBySKU[d.sku] ?? 0
             newFixes[d.id] = generateFix(for: d, recentAuditCount: auditCount)
         }
-        self.fixes = newFixes
+
+        // Step 4: Persist discrepancies → inventory_discrepancies table
+        // Then create a pending adjustment → inventory_adjustments table
+        // Both operations are best-effort: UI still shows results even if DB write fails.
+        do {
+            guard let sid = storeId else {
+                print("⚠️ [StockCheck] No storeId — skipping DB persistence of discrepancies")
+                self.discrepancies = newDiscrepancies
+                self.fixes = newFixes
+                isRunningCheck = false
+                return
+            }
+
+            // ── 4a. Insert discrepancy rows ──────────────────────────────
+            struct DiscrepancyInsert: Encodable {
+                let product_id: UUID
+                let store_id: UUID
+                let expected_quantity: Int
+                let actual_scanned_quantity: Int
+                let created_by: UUID?
+            }
+            struct DiscrepancyRow: Decodable {
+                let id: UUID
+                let product_id: UUID
+            }
+
+            let discInserts = newDiscrepancies.map {
+                DiscrepancyInsert(
+                    product_id: $0.productId,
+                    store_id: sid,
+                    expected_quantity: $0.expectedQty,
+                    actual_scanned_quantity: $0.scannedQty,
+                    created_by: userId
+                )
+            }
+
+            var updatedDiscrepancies = newDiscrepancies
+            if !discInserts.isEmpty {
+                let discRows: [DiscrepancyRow] = try await SupabaseManager.shared.client
+                    .from("inventory_discrepancies")
+                    .insert(discInserts)
+                    .select("id, product_id")
+                    .execute()
+                    .value
+
+                // Map db UUID back to local discrepancy by productId
+                let dbIdByProduct = Dictionary(uniqueKeysWithValues: discRows.map { ($0.product_id, $0.id) })
+                for i in updatedDiscrepancies.indices {
+                    updatedDiscrepancies[i].dbDiscrepancyId = dbIdByProduct[updatedDiscrepancies[i].productId]
+                }
+                print("✅ [StockCheck] Inserted \(discRows.count) rows into inventory_discrepancies")
+            }
+
+            // ── 4b. Insert pending adjustment rows ───────────────────────
+            struct AdjustmentInsert: Encodable {
+                let product_id: UUID
+                let store_id: UUID
+                let discrepancy_id: UUID?
+                let expected_quantity: Int
+                let actual_quantity: Int
+                let suggested_change: Int
+                let status: String
+                let created_by: UUID?
+            }
+            struct AdjustmentRow: Decodable {
+                let id: UUID
+                let discrepancy_id: UUID?
+            }
+
+            let adjInserts: [AdjustmentInsert] = updatedDiscrepancies.compactMap { d in
+                guard let fix = newFixes[d.id] else { return nil }
+                return AdjustmentInsert(
+                    product_id: d.productId,
+                    store_id: sid,
+                    discrepancy_id: d.dbDiscrepancyId,
+                    expected_quantity: d.expectedQty,
+                    actual_quantity: d.scannedQty,
+                    suggested_change: fix.recommendedAdjustment - d.expectedQty,
+                    status: "pending",
+                    created_by: userId
+                )
+            }
+
+            if !adjInserts.isEmpty {
+                let adjRows: [AdjustmentRow] = try await SupabaseManager.shared.client
+                    .from("inventory_adjustments")
+                    .insert(adjInserts)
+                    .select("id, discrepancy_id")
+                    .execute()
+                    .value
+
+                // Map adjustment db UUID back to fix via discrepancy_id
+                let adjIdByDiscrepancyId = Dictionary(
+                    uniqueKeysWithValues: adjRows.compactMap { row -> (UUID, UUID)? in
+                        guard let discId = row.discrepancy_id else { return nil }
+                        return (discId, row.id)
+                    }
+                )
+                for d in updatedDiscrepancies {
+                    if let dbDiscId = d.dbDiscrepancyId,
+                       let adjDbId  = adjIdByDiscrepancyId[dbDiscId] {
+                        newFixes[d.id]?.dbAdjustmentId = adjDbId
+                    }
+                }
+                print("✅ [StockCheck] Inserted \(adjRows.count) rows into inventory_adjustments (status: pending)")
+            }
+
+            self.discrepancies = updatedDiscrepancies
+            self.fixes = newFixes
+
+        } catch {
+            print("⚠️ [StockCheck] DB persistence failed — showing results in-memory only: \(error)")
+            self.discrepancies = newDiscrepancies
+            self.fixes = newFixes
+        }
 
         isRunningCheck = false
         print("✅ [StockCheck] Check complete — \(newDiscrepancies.count) discrepancies found")
@@ -395,69 +621,48 @@ final class StockCheckViewModel: ObservableObject {
         errorMessage = nil
 
         let d = discrepancies[idx]
-        let delta = fix.recommendedAdjustment - d.expectedQty
-        let deltaStr = delta >= 0 ? "+\(delta)" : "\(delta)"
 
         do {
-            // ── 1. Update inventory ──────────────────────────────────────
+            // ── 1. Mark inventory_adjustments row as approved ────────────
+            if let adjDbId = fix.dbAdjustmentId {
+                struct AdjApproval: Encodable {
+                    let status: String
+                    let approved_by: UUID?
+                    let approved_at: String
+                }
+                try await SupabaseManager.shared.client
+                    .from("inventory_adjustments")
+                    .update(AdjApproval(
+                        status: "approved",
+                        approved_by: userId,
+                        approved_at: Date().ISO8601Format()
+                    ))
+                    .eq("id", value: adjDbId)
+                    .execute()
+                print("✅ [StockCheck] inventory_adjustments → approved (id: \(adjDbId))")
+            } else {
+                print("⚠️ [StockCheck] No dbAdjustmentId — skipping inventory_adjustments update")
+            }
+
+            // ── 2. Update inventory stock_quantity ───────────────────────
             struct InventoryUpdate: Encodable {
                 let stock_quantity: Int
                 let last_updated: String
             }
-            let updatePayload = InventoryUpdate(
-                stock_quantity: fix.recommendedAdjustment,
-                last_updated: Date().ISO8601Format()
-            )
 
             var invQuery = try SupabaseManager.shared.client
                 .from("inventory")
-                .update(updatePayload)
+                .update(InventoryUpdate(
+                    stock_quantity: fix.recommendedAdjustment,
+                    last_updated: Date().ISO8601Format()
+                ))
                 .eq("product_id", value: d.productId)
 
             if let sid = storeId {
                 invQuery = invQuery.eq("store_id", value: sid)
             }
             try await invQuery.execute()
-
             print("✅ [StockCheck] inventory updated — \(d.sku): \(d.expectedQty) → \(fix.recommendedAdjustment)")
-
-            // ── 2. Write audit log (full schema) ─────────────────────────
-            // before_data / after_data match the JSONB columns used by
-            // LowStockService (String-keyed dictionaries serialised as JSON).
-            struct AuditPayload: Encodable {
-                let action: String
-                let event_type: String
-                let user_name: String
-                let entity: String
-                let before_data: [String: String]?
-                let after_data: [String: String]?
-            }
-
-            let auditEntry = AuditPayload(
-                action: "Stock-Check Adjustment (\(deltaStr)) — SKU: \(d.sku)",
-                event_type: "stock_check_adjustment",
-                user_name: "Inventory Controller",
-                entity: "Inventory",
-                before_data: [
-                    "sku": d.sku,
-                    "product": d.productName,
-                    "stock_quantity": "\(d.expectedQty)"
-                ],
-                after_data: [
-                    "sku": d.sku,
-                    "product": d.productName,
-                    "stock_quantity": "\(fix.recommendedAdjustment)",
-                    "delta": deltaStr,
-                    "reason": fix.reasonCode
-                ]
-            )
-
-            try await SupabaseManager.shared.client
-                .from("audit_logs")
-                .insert(auditEntry)
-                .execute()
-
-            print("✅ [StockCheck] audit_log inserted for SKU: \(d.sku)")
 
             // ── 3. Update local state ────────────────────────────────────
             discrepancies[idx].isApplying = false
@@ -479,14 +684,41 @@ final class StockCheckViewModel: ObservableObject {
     // MARK: - Dismiss / Reset
 
     func dismissDiscrepancy(id: UUID) {
+        // Mark the corresponding inventory_adjustments row as rejected in the DB
+        if let fix = fixes[id], let adjDbId = fix.dbAdjustmentId {
+            Task {
+                do {
+                    try await SupabaseManager.shared.client
+                        .from("inventory_adjustments")
+                        .update(["status": "rejected"])
+                        .eq("id", value: adjDbId)
+                        .execute()
+                    print("✅ [StockCheck] inventory_adjustments → rejected (id: \(adjDbId))")
+                } catch {
+                    print("⚠️ [StockCheck] Could not reject adjustment in DB: \(error)")
+                }
+            }
+        }
         discrepancies.removeAll { $0.id == id }
         fixes.removeValue(forKey: id)
     }
 
     func resetCheck() {
-        for idx in items.indices {
-            items[idx].scannedQty = nil
+        // Bulk-reject any pending DB adjustments so they don't resurface on next load
+        let pendingAdjIds = fixes.values.compactMap { $0.dbAdjustmentId }
+        if !pendingAdjIds.isEmpty {
+            Task {
+                for adjId in pendingAdjIds {
+                    try? await SupabaseManager.shared.client
+                        .from("inventory_adjustments")
+                        .update(["status": "rejected"])
+                        .eq("id", value: adjId)
+                        .execute()
+                }
+                print("✅ [StockCheck] Reset — \(pendingAdjIds.count) pending adjustment(s) rejected in DB")
+            }
         }
+        for idx in items.indices { items[idx].scannedQty = nil }
         discrepancies = []
         fixes = [:]
         checkCompletedAt = nil

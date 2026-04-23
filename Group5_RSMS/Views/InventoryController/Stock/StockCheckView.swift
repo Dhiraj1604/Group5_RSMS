@@ -63,13 +63,13 @@ struct StockCheckView: View {
                 .animation(.spring(response: 0.35, dampingFraction: 0.75), value: vm.showSuccessToast)
                 .zIndex(20)
             }
-            .navigationTitle("Stock Check")
+            .navigationTitle("Audit")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar { toolbarContent }
             .searchable(text: $searchText, prompt: "Search SKU or product")
-            .task { await vm.load(storeId: effectiveStoreId) }
+            .task { await vm.load(storeId: effectiveStoreId, userId: appState.managerAuthId) }
             .navigationDestination(isPresented: $showDiscrepancies) {
                 DiscrepancyReportView(vm: vm)
             }
@@ -113,15 +113,15 @@ struct StockCheckView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(vm.checkCompletedAt != nil ? "Check Completed" : "Stock Count in Progress")
+                    Text(vm.checkCompletedAt != nil ? "Audit Completed" : "Audit in Progress")
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundStyle(RSMSTheme.Colors.textPrimary)
                     if let date = vm.checkCompletedAt {
-                        Text("Ran \(date.formatted(date: .omitted, time: .shortened))")
+                        Text("Last run \(date.formatted(date: .omitted, time: .shortened))")
                             .font(.caption)
                             .foregroundStyle(RSMSTheme.Colors.textSecondary)
                     } else {
-                        Text("Enter actual counts below, then tap Run Check")
+                        Text("Enter physical counts below, then tap Run Audit")
                             .font(.caption)
                             .foregroundStyle(RSMSTheme.Colors.textSecondary)
                     }
@@ -242,7 +242,7 @@ struct StockCheckView: View {
                 HStack(spacing: RSMSTheme.Spacing.sm) {
                     Image(systemName: "arrow.triangle.2.circlepath")
                         .font(.system(size: 15, weight: .bold))
-                    Text(vm.checkCompletedAt == nil ? "Run Stock Check" : "Re-Run Check")
+                    Text(vm.checkCompletedAt == nil ? "Run Audit" : "Re-Run Audit")
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                 }
                 .foregroundStyle(.black)
