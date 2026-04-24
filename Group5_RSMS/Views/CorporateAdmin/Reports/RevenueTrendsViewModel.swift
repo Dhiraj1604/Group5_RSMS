@@ -130,7 +130,7 @@ class RevenueTrendsViewModel: ObservableObject {
 
     private struct TransactionRow: Decodable {
         let id: UUID
-        let store_id: UUID
+        let store_id: UUID?
         let item_count: Int
         let total_amount: Double
         let category: String?
