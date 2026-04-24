@@ -401,5 +401,14 @@ final class SupabaseSyncManager {
             .eq("id", value: id.uuidString)
             .execute()
     }
+    
+    func fetchBoutiqueOrders(boutiqueId: UUID) async throws -> [EmployeeOrder] {
+        return try await client
+            .from("orders")
+            .select()
+            .eq("boutique_id", value: boutiqueId.uuidString)
+            .execute()
+            .value
+    }
 }
 

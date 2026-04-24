@@ -2,111 +2,198 @@
 //  BMReportsTab.swift
 //  Group5_RSMS
 //
-//  Boutique Manager — Reports tab placeholder.
+//  Boutique Manager — Reports tab with weekly performance metrics.
 //
 
 import SwiftUI
-
 import Charts
 
 struct BMReportsTab: View {
     @Environment(AppState.self) private var appState
-    @StateObject private var viewModel = BMInventoryViewModel()
-    
-    private var currentStore: Store? {
-        guard let storeId = appState.currentStoreID else { return nil }
-        return appState.stores.first(where: { $0.id == storeId })
-    }
+    @StateObject private var vm = BMReportsViewModel()
 
-    private var currentStoreName: String {
-        currentStore?.name ?? "My Boutique"
+    @State private var chartRange: ChartRange = .oneWeek
+    @State private var showFullReport = false
+
+    private var storeName: String {
+        guard let storeId = appState.currentStoreID else { return "My Boutique" }
+        return appState.stores.first(where: { $0.id == storeId })?.name ?? "My Boutique"
     }
 
     var body: some View {
         NavigationStack {
             ZStack {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-                
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 24) {
-                        // Header
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Boutique Performance")
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(RSMSTheme.Colors.textPrimary)
-                            Text("Comprehensive analytics and sales trends for \(currentStoreName).")
-                                .font(.system(size: 14))
-                                .foregroundColor(RSMSTheme.Colors.textSecondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-                        .padding(.top, RSMSTheme.Spacing.md)
 
-                        if let error = viewModel.insightsError {
-                            errorState(error)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+
+                        // MARK: - Weekly Performance Header
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Weekly Performance")
+                                    .font(RSMSTheme.Typography.heading3)
+                                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                                Text("This month's overview")
+                                    .font(RSMSTheme.Typography.caption)
+                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            }
+                            Spacer()
                         }
 
-                        // Sales & Fallback Cards
-                        HStack(spacing: 16) {
-                            NavigationLink(destination: SoldProductsListView(products: viewModel.soldProducts)) {
-                                insightCard(
-                                    title: "Total Sale",
-                                    value: "\(viewModel.soldProducts.reduce(0, { $0 + $1.quantitySold }))",
-                                    subtitle: "This Month",
-                                    icon: "cart.fill",
-                                    color: RSMSTheme.Colors.accentGold
+                        // MARK: - Metric Cards Row
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ReportMetricCard(
+                                    title: "Total Sales",
+                                    value: "₹\(formatNumber(vm.totalSales))",
+                                    icon: "indianrupeesign.circle.fill",
+                                    trendText: "\(vm.totalOrders) orders",
+                                    accentColor: RSMSTheme.Colors.accentGold
+                                )
+                                ReportMetricCard(
+                                    title: "Footfall",
+                                    value: "\(vm.footfall)",
+                                    icon: "figure.walk.circle.fill",
+                                    trendText: "This month",
+                                    accentColor: RSMSTheme.Colors.accentGoldLight
+                                )
+                                ReportMetricCard(
+                                    title: "Dormant Staff",
+                                    value: "\(vm.dormantEmployees)",
+                                    icon: "person.crop.circle.badge.exclamationmark.fill",
+                                    trendText: "No sales",
+                                    accentColor: RSMSTheme.Colors.warning
                                 )
                             }
-
-                            NavigationLink(destination: FallbackItemsListView(items: viewModel.fallbackItems)) {
-                                insightCard(
-                                    title: "Dormant",
-                                    value: "\(viewModel.fallbackItems.count)",
-                                    subtitle: "> 30 Days",
-                                    icon: "exclamationmark.arrow.triangle.2.circlepath",
-                                    color: RSMSTheme.Colors.error
-                                )
-                            }
                         }
-                        .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
 
-                        // Weekly Trend Chart
-                        VStack(alignment: .leading, spacing: 20) {
+                        // MARK: - Targets vs Actual Panel
+                        VStack(alignment: .leading, spacing: 14) {
                             HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Weekly Sales")
-                                        .font(.system(size: 17, weight: .bold))
-                                        .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                    Text("Revenue trend over last 7 days")
-                                        .font(.system(size: 12))
+                                Text("Targets vs Actual")
+                                    .font(RSMSTheme.Typography.heading4)
+                                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                                Spacer()
+                                HStack(spacing: 8) {
+                                    Circle().fill(RSMSTheme.Colors.accentGold).frame(width: 8, height: 8)
+                                    Text("Met").font(.caption2).foregroundColor(RSMSTheme.Colors.textSecondary)
+                                    Circle().fill(RSMSTheme.Colors.error).frame(width: 8, height: 8)
+                                    Text("Missed").font(.caption2).foregroundColor(RSMSTheme.Colors.textSecondary)
+                                }
+                            }
+
+                            ForEach(vm.targetMetrics) { metric in
+                                TargetRow(metric: metric)
+                            }
+                        }
+                        .padding()
+                        .background(RSMSTheme.Colors.backgroundElevated)
+                        .cornerRadius(16)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+                        )
+
+                        // MARK: - Weekly Sales Chart
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack {
+                                Text("Sales Trend")
+                                    .font(RSMSTheme.Typography.heading4)
+                                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                                Spacer()
+                                Picker("Range", selection: $chartRange) {
+                                    ForEach(ChartRange.allCases, id: \.self) { range in
+                                        Text(range.rawValue).tag(range)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                                .frame(width: 100)
+                            }
+
+                            let data = vm.chartData(for: chartRange)
+
+                            if data.isEmpty || data.allSatisfy({ $0.amount == 0 }) {
+                                VStack(spacing: 10) {
+                                    Image(systemName: "chart.bar.xaxis")
+                                        .font(.system(size: 36))
+                                        .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.4))
+                                    Text("No sales data for this period")
+                                        .font(RSMSTheme.Typography.bodyCopy2)
                                         .foregroundColor(RSMSTheme.Colors.textSecondary)
                                 }
-                                Spacer()
-                                
-                                let total = viewModel.weeklySalesData.reduce(0, { $0 + $1.amount })
-                                Text(String(format: "$%.2f", total))
-                                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                                    .foregroundColor(RSMSTheme.Colors.accentGold)
-                            }
-
-                            if viewModel.weeklySalesData.isEmpty {
-                                chartPlaceholder
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 180)
                             } else {
-                                salesChart
+                                Chart(data) { point in
+                                    BarMark(
+                                        x: .value("Day", point.date, unit: .day),
+                                        y: .value("Sales", point.amount)
+                                    )
+                                    .foregroundStyle(RSMSTheme.Colors.accentGold.gradient)
+                                    .cornerRadius(4)
+                                }
+                                .chartXAxis {
+                                    AxisMarks(values: .stride(by: .day, count: chartRange == .twoWeeks ? 3 : 1)) { value in
+                                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3))
+                                            .foregroundStyle(RSMSTheme.Colors.border)
+                                        AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                                            .offset(x: 0, y: 4)
+                                    }
+                                }
+                                .chartYAxis {
+                                    AxisMarks { _ in
+                                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3))
+                                            .foregroundStyle(RSMSTheme.Colors.border)
+                                        AxisValueLabel()
+                                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                                    }
+                                }
+                                .frame(height: 200)
+                                .animation(.easeInOut, value: chartRange)
                             }
                         }
-                        .padding(20)
+                        .padding()
                         .background(RSMSTheme.Colors.backgroundElevated)
-                        .cornerRadius(20)
-                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
-                        .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-                        
-                        Spacer(minLength: 40)
+                        .cornerRadius(16)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+                        )
+
+                        // MARK: - View Full Report CTA
+                        Button {
+                            showFullReport = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "doc.text.magnifyingglass")
+                                Text("View Full Report")
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                        .buttonStyle(GoldButtonStyle())
+                        .padding(.top, 4)
                     }
-                }
-                .refreshable {
-                    if let storeId = appState.currentStoreID {
-                        await viewModel.loadMerchandisingInsights(forStore: storeId)
+                    .padding()
+                    // Inside the ZStack, after ScrollView closing brace
+                    if vm.isLoading {
+                        ZStack {
+                            RSMSTheme.Colors.backgroundPrimary.opacity(0.85)
+                                .ignoresSafeArea()
+                            
+                            VStack(spacing: 16) {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: RSMSTheme.Colors.accentGold))
+                                    .scaleEffect(1.4)
+                                
+                                Text("Loading report...")
+                                    .font(RSMSTheme.Typography.bodyCopy2)
+                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            }
+                        }
+                        .transition(.opacity)
+                        .animation(.easeInOut(duration: 0.3), value: vm.isLoading)
                     }
                 }
             }
@@ -114,125 +201,141 @@ struct BMReportsTab: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
-        }
-        .task {
-            if let storeId = appState.currentStoreID {
-                await viewModel.loadMerchandisingInsights(forStore: storeId)
-            }
-        }
-    }
-
-    // MARK: - Helper Views
-
-    private func insightCard(title: String, value: String, subtitle: String, icon: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                ZStack {
-                    Circle()
-                        .fill(color.opacity(0.15))
-                        .frame(width: 36, height: 36)
-                    Image(systemName: icon)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(color)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        Task {
+                            if let boutiqueId = appState.currentStoreID {
+                                await vm.loadReports(boutiqueId: boutiqueId)
+                            }
+                        }
+                    } label: {
+                        Image(systemName: vm.isLoading ? "arrow.clockwise" : "arrow.clockwise")
+                            .foregroundColor(RSMSTheme.Colors.accentGold)
+                            .rotationEffect(.degrees(vm.isLoading ? 360 : 0))
+                            .animation(
+                                vm.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
+                                value: vm.isLoading
+                            )
+                    }
+                    .disabled(vm.isLoading)
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.5))
             }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(value)
-                    .font(.system(size: 28, weight: .black, design: .rounded))
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
-                Text(title)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
-                Text(subtitle)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+            .task {
+                if let boutiqueId = appState.currentStoreID {
+                    await vm.loadReports(boutiqueId: boutiqueId)
+                }
             }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(RSMSTheme.Colors.backgroundElevated)
-        .cornerRadius(20)
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
-    }
-
-    private var salesChart: some View {
-        Chart {
-            ForEach(viewModel.weeklySalesData) { data in
-                BarMark(
-                    x: .value("Day", data.dayName),
-                    y: .value("Sales", data.amount)
-                )
-                .foregroundStyle(RSMSTheme.Colors.goldGradient)
-                .cornerRadius(4)
-                
-                AreaMark(
-                    x: .value("Day", data.dayName),
-                    y: .value("Sales", data.amount)
-                )
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [RSMSTheme.Colors.accentGold.opacity(0.1), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-            }
-        }
-        .frame(height: 180)
-        .chartXAxis {
-            AxisMarks(values: .automatic) { _ in
-                AxisValueLabel()
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                    .font(.system(size: 10, weight: .medium))
-            }
-        }
-        .chartYAxis {
-            AxisMarks(position: .leading, values: .automatic) { value in
-                AxisValueLabel()
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                    .font(.system(size: 10, weight: .medium))
-                AxisGridLine()
-                    .foregroundStyle(Color.white.opacity(0.05))
+            .sheet(isPresented: $showFullReport) {
+                FullReportView(storeName: storeName, vm: vm)
             }
         }
     }
 
-    private var chartPlaceholder: some View {
-        VStack(spacing: 12) {
-            Spacer()
-            Image(systemName: "chart.bar.xaxis")
-                .font(.system(size: 30))
-                .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.3))
-            Text("No sales data available for this week")
-                .font(.system(size: 13))
-                .foregroundColor(RSMSTheme.Colors.textSecondary)
-            Spacer()
-        }
-        .frame(height: 180)
-        .frame(maxWidth: .infinity)
-    }
-
-    private func errorState(_ message: String) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 24))
-                .foregroundColor(RSMSTheme.Colors.error)
-            Text(message)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(RSMSTheme.Colors.textPrimary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(24)
-        .background(RSMSTheme.Colors.error.opacity(0.05))
-        .cornerRadius(16)
+    private func formatNumber(_ value: Double) -> String {
+        if value >= 100_000 { return String(format: "%.1fL", value / 100_000) }
+        if value >= 1_000 { return String(format: "%.1fK", value / 1_000) }
+        return String(format: "%.0f", value)
     }
 }
 
+// MARK: - Report Metric Card
+struct ReportMetricCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let trendText: String
+    let accentColor: Color
 
-#Preview { BMReportsTab() }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(accentColor)
+                Spacer()
+            }
+            Text(value)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(RSMSTheme.Typography.caption)
+                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                Text("·")
+                    .foregroundColor(RSMSTheme.Colors.textTertiary)
+                Text(trendText)
+                    .font(RSMSTheme.Typography.caption)
+                    .foregroundColor(accentColor)
+            }
+        }
+        .frame(width: 160)
+        .padding()
+        .background(RSMSTheme.Colors.backgroundElevated)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Target Row
+struct TargetRow: View {
+    let metric: TargetMetric
+
+    private var barColor: Color {
+        metric.isMet ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.error
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(metric.label)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                Spacer()
+                Text("\(Int(metric.progress * 100))%")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(barColor)
+            }
+            HStack {
+                Text("Target: \(shortFormat(metric.target))")
+                    .font(.caption)
+                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                Spacer()
+                Text("Actual: \(shortFormat(metric.actual))")
+                    .font(.caption)
+                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(RSMSTheme.Colors.surfacePrimary)
+                        .frame(height: 5)
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(barColor)
+                        .frame(width: geo.size.width * min(metric.progress, 1.0), height: 5)
+                        .animation(.easeOut(duration: 0.8), value: metric.progress)
+                }
+            }
+            .frame(height: 5)
+        }
+        .padding(12)
+        .background(RSMSTheme.Colors.backgroundDeep)
+        .cornerRadius(10)
+    }
+
+    private func shortFormat(_ val: Double) -> String {
+        if val >= 100_000 { return "₹\(String(format: "%.1fL", val / 100_000))" }
+        if val >= 1_000 { return "₹\(String(format: "%.1fK", val / 1_000))" }
+        return String(format: "%.0f", val)
+    }
+}
+
+#Preview {
+    BMReportsTab()
+        .environment(AppState())
+}
