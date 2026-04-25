@@ -68,14 +68,14 @@ class BasketTrendsViewModel: ObservableObject {
     }
 
     var categories: [String] {
-        ["Jewelry", "Bags", "Watches", "Clothing", "Accessories"]
+        ProductCategory.allCases.filter { $0 != .other }.map(\.rawValue)
     }
 
     // MARK: - Fetch
 
     private struct TransactionRow: Decodable {
         let id: UUID
-        let store_id: UUID
+        let store_id: UUID?
         let item_count: Int
         let total_amount: Double
         let category: String?
@@ -87,15 +87,23 @@ class BasketTrendsViewModel: ObservableObject {
         errorMessage = nil
 
         do {
+            // We join customer_order_items and products to filter by category correctly, 
+            // as the order-level category column is often unpopulated.
+            var selectString = "id, store_id, item_count, total_amount, created_at"
+            if selectedCategory != nil {
+                selectString += ", customer_order_items!inner(products!inner(category))"
+            }
+            
             var query = client
                 .from("customer_orders")
-                .select("id, store_id, item_count, total_amount, category, created_at")
+                .select(selectString)
 
             if let storeId = selectedStoreId {
                 query = query.eq("store_id", value: storeId)
             }
             if let cat = selectedCategory {
-                query = query.eq("category", value: cat)
+                // PostgREST syntax for filtering through nested joins
+                query = query.eq("customer_order_items.products.category", value: cat)
             }
 
             let rows: [TransactionRow] = try await query
