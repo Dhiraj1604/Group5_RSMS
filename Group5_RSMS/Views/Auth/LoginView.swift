@@ -1,3 +1,4 @@
+
 //
 //  LoginView.swift
 //  Group5_RSMS
@@ -300,18 +301,30 @@ struct LoginView: View {
                 #if canImport(Supabase)
                 if isSignUp {
                     _ = try await SupabaseManager.shared.client.auth.signUp(email: trimmedEmail, password: password)
+                    try await appState.login(email: trimmedEmail)
+                    await MainActor.run { isLoading = false }
                 } else {
+                    // 1. Verify password via standard sign in
                     _ = try await SupabaseManager.shared.client.auth.signIn(email: trimmedEmail, password: password)
+                    
+                    // 2. Trigger OTP for 2FA
+                    try await SupabaseManager.shared.sendOTP(email: trimmedEmail)
+                    
+                    // 3. Show OTP view instead of logging in immediately
+                    await MainActor.run {
+                        isLoading = false
+                        showOTPVerification = true
+                    }
                 }
-                #endif
-                
+                #else
                 try await appState.login(email: trimmedEmail)
                 await MainActor.run { isLoading = false }
+                #endif
             } catch {
                 await MainActor.run {
-                    withAnimation { 
+                    withAnimation {
                         showError = true
-                        errorMessage = error.localizedDescription 
+                        errorMessage = error.localizedDescription
                     }
                     isLoading = false
                 }
