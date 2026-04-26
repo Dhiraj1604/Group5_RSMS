@@ -48,12 +48,17 @@ struct StockDiscrepancy: Identifiable {
 /// A suggested fix built from discrepancy + recent audit context.
 struct SuggestedFix {
     let discrepancyId: UUID
-    let reasonCode: String              // human-readable explanation
+    var reasonCode: String              // human-readable explanation
     let recommendedAdjustment: Int      // absolute target quantity
     let recentAuditCount: Int           // # recent audit events found for this SKU
     let confidence: FixConfidence
     /// Primary key of the corresponding `inventory_adjustments` row in Supabase (nil until persisted).
     var dbAdjustmentId: UUID? = nil
+
+    // AI State
+    var isAIDiagnosis: Bool = false
+    var isAnalyzing: Bool = false
+    var aiError: String? = nil
 
     enum FixConfidence {
         case high, medium, low
@@ -99,6 +104,7 @@ final class StockCheckViewModel: ObservableObject {
     // MARK: Private state
     private var storeId: UUID?
     private var userId: UUID?
+    private let aiService = AIForecastService()
 
     // MARK: - Load Inventory
     // -----------------------------------------------------------------------
@@ -288,6 +294,26 @@ final class StockCheckViewModel: ObservableObject {
     func updateScanned(itemId: UUID, qty: Int) {
         guard let idx = items.firstIndex(where: { $0.id == itemId }) else { return }
         items[idx].scannedQty = max(0, qty)
+    }
+
+    func matchUncounted(for itemIds: [UUID]? = nil) {
+        let targets = itemIds ?? items.map { $0.id }
+        for id in targets {
+            if let idx = items.firstIndex(where: { $0.id == id }), items[idx].scannedQty == nil {
+                items[idx].scannedQty = items[idx].expectedQty
+            }
+        }
+    }
+
+    func handleScan(sku: String) {
+        guard let idx = items.firstIndex(where: { $0.sku.lowercased() == sku.lowercased() }) else {
+            showToast("⚠️ Unknown SKU: \(sku)")
+            return
+        }
+        let current = items[idx].scannedQty ?? 0
+        let newQty = current + 1
+        items[idx].scannedQty = newQty
+        showToast("✓ \(items[idx].productName): Total Count is \(newQty)")
     }
 
     // MARK: - Run Stock Check
@@ -605,6 +631,77 @@ final class StockCheckViewModel: ObservableObject {
         )
     }
 
+    // MARK: - Deep AI Analysis (Gemini Integration)
+    // -----------------------------------------------------------------------
+    // This goes beyond the local heuristic engine by sending the full SKU 
+    // history to Google Gemini for a multi-variable forensic reasoning.
+    // -----------------------------------------------------------------------
+
+    func requestAIDiagnosis(for discrepancyId: UUID) async {
+        guard let idx = discrepancies.firstIndex(where: { $0.id == discrepancyId }),
+              let fix = fixes[discrepancyId] else { return }
+        
+        let d = discrepancies[idx]
+        
+        // Fetch raw history from audit_logs and filter in memory for compatibility
+        var historyLogs: [String] = []
+        do {
+            struct AuditRow: Decodable { let action: String; let created_at: String }
+            let rows: [AuditRow] = try await SupabaseManager.shared.client
+                .from("audit_logs")
+                .select("action, created_at")
+                .order("created_at", ascending: false)
+                .limit(100) // Fetch a larger batch to find SKU matches
+                .execute()
+                .value
+            
+            historyLogs = rows
+                .filter { $0.action.contains(d.sku) }
+                .prefix(10)
+                .map { "[\($0.created_at)]: \($0.action)" }
+        } catch {
+            print("⚠️ [StockCheck] Failed to fetch SKU history for AI: \(error)")
+        }
+
+        do {
+            // Update UI to show "AI Analyzing..."
+            fixes[discrepancyId]?.isAnalyzing = true
+            fixes[discrepancyId]?.reasonCode = "AI is analyzing audit history logs for patterns..."
+            fixes[discrepancyId]?.aiError = nil
+            
+            // Call Gemini
+            let diagnosis = try await aiService.fetchAuditDiagnosis(
+                sku: d.sku,
+                productName: d.productName,
+                expected: d.expectedQty,
+                actual: d.scannedQty,
+                historyLogs: historyLogs
+            )
+            
+            // Finalize with AI reasoning
+            fixes[discrepancyId]?.reasonCode = diagnosis
+            fixes[discrepancyId]?.isAIDiagnosis = true
+            fixes[discrepancyId]?.isAnalyzing = false
+            fixes[discrepancyId]?.aiError = nil
+            
+        } catch {
+            print("❌ [StockCheck] AI Diagnosis failed: \(error)")
+            
+            let errorMsg: String
+            if let urlError = error as? URLError, urlError.code == .userAuthenticationRequired {
+                errorMsg = "⚠️ Gemini API Key not configured in AIForecastService.swift. Please add your key to enable deep audit."
+            } else {
+                errorMsg = "⚠️ AI Analysis failed. Please check your connection and try again."
+            }
+            
+            // Revert to a state that doesn't start with ✨ so the button stays visible
+            fixes[discrepancyId]?.isAnalyzing = false
+            fixes[discrepancyId]?.isAIDiagnosis = false
+            fixes[discrepancyId]?.aiError = errorMsg
+            fixes[discrepancyId]?.reasonCode = errorMsg
+        }
+    }
+
     // MARK: - Approve Fix
     // -----------------------------------------------------------------------
     // 1. UPDATEs inventory row: stock_quantity + last_updated
@@ -663,6 +760,41 @@ final class StockCheckViewModel: ObservableObject {
             }
             try await invQuery.execute()
             print("✅ [StockCheck] inventory updated — \(d.sku): \(d.expectedQty) → \(fix.recommendedAdjustment)")
+
+            // ── 2.5. Insert Audit Log (Forensic Trail) ──────────────────
+            struct AuditPayload: Encodable {
+                let action: String
+                let event_type: String
+                let user_name: String
+                let entity: String
+                let before_data: [String: String]?
+                let after_data: [String: String]?
+            }
+
+            let audit = AuditPayload(
+                action: "STOCK_CHECK_ADJUSTMENT",
+                event_type: "inventory_adjustment",
+                user_name: "Inventory Controller",
+                entity: "Inventory",
+                before_data: [
+                    "sku": d.sku,
+                    "product": d.productName,
+                    "stock_before": "\(d.expectedQty)"
+                ],
+                after_data: [
+                    "sku": d.sku,
+                    "product": d.productName,
+                    "stock_after": "\(fix.recommendedAdjustment)",
+                    "adjustment_reason": fix.reasonCode
+                ]
+            )
+
+            try? await SupabaseManager.shared.client
+                .from("audit_logs")
+                .insert(audit)
+                .execute()
+            
+            print("✅ [StockCheck] Audit log inserted for \(d.sku)")
 
             // ── 3. Update local state ────────────────────────────────────
             discrepancies[idx].isApplying = false
