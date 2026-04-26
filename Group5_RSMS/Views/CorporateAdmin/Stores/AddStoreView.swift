@@ -46,20 +46,52 @@ struct AddStoreView: View {
         ("JPY", "¥  JPY — Japanese Yen")
     ]
 
+    private var isZipCodeValid: Bool {
+        let trimmed = zipCode.trimmingCharacters(in: .whitespaces)
+        return trimmed.count == 6 && trimmed.allSatisfy { $0.isNumber }
+    }
+
+    private var isPhoneValid: Bool {
+        let trimmed = phone.trimmingCharacters(in: .whitespaces)
+        return trimmed.count == 10 && trimmed.allSatisfy { $0.isNumber }
+    }
+
+    private func isValidEmail(_ email: String) -> Bool {
+        let emailRegEx = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+        let emailPred = NSPredicate(format:"SELF MATCHES %@", emailRegEx)
+        return emailPred.evaluate(with: email)
+    }
+
+    private var isStoreEmailValid: Bool {
+        isValidEmail(email.trimmingCharacters(in: .whitespaces))
+    }
+
+    private var isManagerEmailValid: Bool {
+        isValidEmail(managerEmail.trimmingCharacters(in: .whitespaces))
+    }
+
+    private var isInventoryEmailValid: Bool {
+        isValidEmail(inventoryEmail.trimmingCharacters(in: .whitespaces))
+    }
+
+    private var isTaxRateValid: Bool {
+        Double(taxRate) != nil
+    }
+
     private var isFormValid: Bool {
         !storeName.trimmingCharacters(in: .whitespaces).isEmpty &&
         !storeCode.trimmingCharacters(in: .whitespaces).isEmpty &&
         !address.trimmingCharacters(in: .whitespaces).isEmpty &&
         !city.trimmingCharacters(in: .whitespaces).isEmpty &&
         !state.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !zipCode.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !phone.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !email.trimmingCharacters(in: .whitespaces).isEmpty &&
+        isZipCodeValid &&
+        isPhoneValid &&
+        isStoreEmailValid &&
         !managerName.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !managerEmail.trimmingCharacters(in: .whitespaces).isEmpty &&
+        isManagerEmailValid &&
         !inventoryName.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !inventoryEmail.trimmingCharacters(in: .whitespaces).isEmpty &&
-        (Double(taxRate) != nil)
+        isInventoryEmailValid &&
+        isTaxRateValid
     }
 
     var body: some View {
@@ -136,7 +168,7 @@ struct AddStoreView: View {
                 formField(label: "State", placeholder: "State", text: $state, icon: "map", required: true)
             }
             HStack(spacing: RSMSTheme.Spacing.md) {
-                formField(label: "ZIP Code", placeholder: "ZIP", text: $zipCode, icon: "number", required: true)
+                formField(label: "ZIP Code", placeholder: "ZIP", text: $zipCode, icon: "number", required: true, isValid: isZipCodeValid, errorMessage: "6 Digits")
                     .keyboardType(.numberPad)
                 formField(label: "Country", placeholder: "Country", text: $country, icon: "globe", required: false)
             }
@@ -146,17 +178,17 @@ struct AddStoreView: View {
     // MARK: - Contact
     private var contactSection: some View {
         formSection(title: "Contact") {
-            formField(label: "Phone", placeholder: "+91 XX XXXX XXXX", text: $phone, icon: "phone.fill", required: true)
+            formField(label: "Phone", placeholder: "10-digit number", text: $phone, icon: "phone.fill", required: true, isValid: isPhoneValid, errorMessage: "10 Digits")
                 .keyboardType(.phonePad)
-            formField(label: "Store Email", placeholder: "store@rsms.com", text: $email, icon: "envelope.fill", required: true)
+            formField(label: "Store Email", placeholder: "store@rsms.com", text: $email, icon: "envelope.fill", required: true, isValid: isStoreEmailValid, errorMessage: "Invalid Email")
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
             formField(label: "Manager Name", placeholder: "Store manager name", text: $managerName, icon: "person.fill", required: true)
-            formField(label: "Manager Email", placeholder: "manager@example.com", text: $managerEmail, icon: "person.text.rectangle.fill", required: true)
+            formField(label: "Manager Email", placeholder: "manager@example.com", text: $managerEmail, icon: "person.text.rectangle.fill", required: true, isValid: isManagerEmailValid, errorMessage: "Invalid Email")
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
             formField(label: "Inventory Controller Name", placeholder: "Inventory controller name", text: $inventoryName, icon: "person.2.fill", required: true)
-            formField(label: "Inventory Email", placeholder: "inventory@example.com", text: $inventoryEmail, icon: "person.text.rectangle", required: true)
+            formField(label: "Inventory Email", placeholder: "inventory@example.com", text: $inventoryEmail, icon: "person.text.rectangle", required: true, isValid: isInventoryEmailValid, errorMessage: "Invalid Email")
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
         }
@@ -226,7 +258,7 @@ struct AddStoreView: View {
                 )
             }
 
-            formField(label: "Tax Rate (%)", placeholder: "18.0", text: $taxRate, icon: "percent", required: true)
+            formField(label: "Tax Rate (%)", placeholder: "18.0", text: $taxRate, icon: "percent", required: true, isValid: isTaxRateValid, errorMessage: "Invalid Rate")
                 .keyboardType(.decimalPad)
         }
     }
@@ -276,8 +308,17 @@ struct AddStoreView: View {
         }
     }
 
-    private func formField(label: String, placeholder: String, text: Binding<String>, icon: String, required: Bool) -> some View {
+    private func formField(
+        label: String,
+        placeholder: String,
+        text: Binding<String>,
+        icon: String,
+        required: Bool,
+        isValid: Bool = true,
+        errorMessage: String? = nil
+    ) -> some View {
         let isEmpty = text.wrappedValue.trimmingCharacters(in: .whitespaces).isEmpty
+        let showError = showValidationErrors && (!isValid || (required && isEmpty))
 
         return VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
             HStack(spacing: RSMSTheme.Spacing.xs) {
@@ -289,6 +330,14 @@ struct AddStoreView: View {
                 if required {
                     Text("*")
                         .font(.caption)
+                        .foregroundStyle(RSMSTheme.Colors.error)
+                }
+                
+                Spacer()
+                
+                if showError, let msg = errorMessage, !isEmpty {
+                    Text(msg)
+                        .font(.caption2)
                         .foregroundStyle(RSMSTheme.Colors.error)
                 }
             }
@@ -306,7 +355,7 @@ struct AddStoreView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
                     .stroke(
-                        showValidationErrors && required && isEmpty
+                        showError
                             ? RSMSTheme.Colors.error.opacity(0.7)
                             : RSMSTheme.Colors.border,
                         lineWidth: 1
