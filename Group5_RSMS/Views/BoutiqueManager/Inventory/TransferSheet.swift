@@ -62,7 +62,7 @@ struct TransferSheet: View {
             .navigationTitle("Request Stock")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -79,6 +79,16 @@ struct TransferSheet: View {
                     forProduct: alert.productId,
                     excluding: currentStoreId
                 )
+            }
+            .alert("Request Sent", isPresented: Binding(
+                get: { viewModel.transferSuccess },
+                set: { _ in }
+            )) {
+                Button("OK", role: .cancel) {
+                    dismiss()
+                }
+            } message: {
+                Text("\(transferQuantity) unit(s) of \(alert.productName) requested.")
             }
         }
     }

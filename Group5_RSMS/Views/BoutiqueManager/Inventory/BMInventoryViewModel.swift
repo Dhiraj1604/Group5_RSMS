@@ -26,9 +26,21 @@ final class BMInventoryViewModel: ObservableObject {
     @Published var transferSuccess: Bool = false
     @Published var transferError: String? = nil
 
-    // Push flow
+    // Push flow (incoming) & Pull flow (outgoing)
     @Published private(set) var incomingRequests: [TransferRequest] = []
     @Published private(set) var isLoadingRequests: Bool = false
+    
+    @Published private(set) var myRequests: [TransferRequest] = []
+    @Published private(set) var isLoadingMyRequests: Bool = false
+
+    // Merchandising Insights
+    @Published private(set) var soldProducts: [SoldProduct] = []
+    @Published private(set) var fallbackItems: [InventoryProduct] = []
+    @Published private(set) var weeklySalesData: [SalesTrendData] = []
+    @Published private(set) var fastMovingProducts: [FastMovingProduct] = []
+    @Published private(set) var isLoadingInsights: Bool = false
+    @Published private(set) var isUpdatingFloorDisplay: Bool = false
+    @Published private(set) var insightsError: String? = nil
 
     // MARK: - Computed
 
@@ -42,6 +54,7 @@ final class BMInventoryViewModel: ObservableObject {
         do {
             self.alerts = try await LowStockService.shared.fetchLowStockAlerts(forStore: storeId)
         } catch {
+            if error is CancellationError { return }
             self.errorMessage = "Failed to load inventory: \(error.localizedDescription)"
             print("❌ [BMInventoryVM] \(error)")
         }
@@ -67,6 +80,7 @@ final class BMInventoryViewModel: ObservableObject {
                 excluding: storeId
             )
         } catch {
+            if error is CancellationError { return }
             self.transferError = "Failed to find transfer sources: \(error.localizedDescription)"
             print("❌ [BMInventoryVM] \(error)")
         }
@@ -98,6 +112,7 @@ final class BMInventoryViewModel: ObservableObject {
             )
             transferSuccess = true
         } catch {
+            if error is CancellationError { return }
             self.transferError = error.localizedDescription
             print("❌ [BMInventoryVM] Transfer failed: \(error)")
         }
@@ -124,6 +139,7 @@ final class BMInventoryViewModel: ObservableObject {
             )
             transferSuccess = true
         } catch {
+            if error is CancellationError { return }
             self.transferError = error.localizedDescription
             print("❌ [BMInventoryVM] Request failed: \(error)")
         }
@@ -138,10 +154,26 @@ final class BMInventoryViewModel: ObservableObject {
         do {
             self.incomingRequests = try await LowStockService.shared.fetchIncomingRequests(forStore: storeId)
         } catch {
+            if error is CancellationError { return }
             self.errorMessage = "Failed to load incoming requests: \(error.localizedDescription)"
             print("❌ [BMInventoryVM] \(error)")
         }
         isLoadingRequests = false
+    }
+
+    // MARK: - Outgoing Requests (My Requests)
+
+    func loadMyRequests(forStore storeId: UUID) async {
+        isLoadingMyRequests = true
+        errorMessage = nil
+        do {
+            self.myRequests = try await LowStockService.shared.fetchMyRequests(forStore: storeId)
+        } catch {
+            if error is CancellationError { return }
+            self.errorMessage = "Failed to load outbound requests: \(error.localizedDescription)"
+            print("❌ [BMInventoryVM] \(error)")
+        }
+        isLoadingMyRequests = false
     }
 
     func fulfillRequest(
@@ -170,9 +202,60 @@ final class BMInventoryViewModel: ObservableObject {
                 self.incomingRequests.removeAll { $0.id == request.id }
             }
         } catch {
+            if error is CancellationError { return }
             self.transferError = error.localizedDescription
             print("❌ [BMInventoryVM] Fulfillment failed: \(error)")
         }
         isTransferring = false
     }
+
+    // MARK: - Merchandising Insights
+
+    func loadMerchandisingInsights(forStore storeId: UUID) async {
+        isLoadingInsights = true
+        insightsError = nil
+        
+        do {
+            async let sold = MerchandisingService.shared.fetchSoldProducts(forStore: storeId)
+            async let fallback = MerchandisingService.shared.fetchFallbackItems(forStore: storeId)
+            async let trend = MerchandisingService.shared.fetchWeeklySalesTrend(forStore: storeId)
+            async let fastMovers = MerchandisingService.shared.fetchFastMovingProducts(forStore: storeId)
+            
+            let (soldResult, fallbackResult, trendResult, fastMoverResult) = try await (sold, fallback, trend, fastMovers)
+            
+            self.soldProducts = soldResult
+            self.fallbackItems = fallbackResult
+            self.weeklySalesData = trendResult
+            self.fastMovingProducts = fastMoverResult
+            
+        } catch {
+            if error is CancellationError { return }
+            self.insightsError = "Failed to load insights: \(error.localizedDescription)"
+            print("❌ [BMInventoryVM] Insights error: \(error)")
+        }
+        
+        isLoadingInsights = false
+    }
+    
+    func toggleFloorDisplay(for product: FastMovingProduct, storeId: UUID, quantity: Int) async {
+        isUpdatingFloorDisplay = true
+        insightsError = nil
+        
+        do {
+            try await MerchandisingService.shared.updateFloorDisplay(
+                productId: product.id,
+                storeId: storeId,
+                isOnFloor: !product.isOnFloor,
+                quantity: quantity
+            )
+            await loadMerchandisingInsights(forStore: storeId)
+        } catch {
+            if error is CancellationError { return }
+            self.insightsError = "Failed to update floor display: \(error.localizedDescription)"
+            print("❌ [BMInventoryVM] Floor update error: \(error)")
+        }
+        
+        isUpdatingFloorDisplay = false
+    }
+
 }

@@ -25,11 +25,15 @@ struct AddStoreView: View {
     @State private var email = ""
     @State private var managerName = ""
     @State private var managerEmail = ""
+    @State private var inventoryName = ""
+    @State private var inventoryEmail = ""
     @State private var selectedRegion = "West"
     @State private var selectedCurrency = "INR"          // ← NEW
     @State private var taxRate = "18.0"
     @State private var showValidationErrors = false
     @State private var showSuccessAlert = false
+    @State private var isRegistering = false
+    @State private var storeToRegister: Store?
 
     private let regions = ["Asia", "Europe", "North America", "South America", "Australia", "Africa"]
 
@@ -42,18 +46,52 @@ struct AddStoreView: View {
         ("JPY", "¥  JPY — Japanese Yen")
     ]
 
+    private var isZipCodeValid: Bool {
+        let trimmed = zipCode.trimmingCharacters(in: .whitespaces)
+        return trimmed.count == 6 && trimmed.allSatisfy { $0.isNumber }
+    }
+
+    private var isPhoneValid: Bool {
+        let trimmed = phone.trimmingCharacters(in: .whitespaces)
+        return trimmed.count == 10 && trimmed.allSatisfy { $0.isNumber }
+    }
+
+    private func isValidEmail(_ email: String) -> Bool {
+        let emailRegEx = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+        let emailPred = NSPredicate(format:"SELF MATCHES %@", emailRegEx)
+        return emailPred.evaluate(with: email)
+    }
+
+    private var isStoreEmailValid: Bool {
+        isValidEmail(email.trimmingCharacters(in: .whitespaces))
+    }
+
+    private var isManagerEmailValid: Bool {
+        isValidEmail(managerEmail.trimmingCharacters(in: .whitespaces))
+    }
+
+    private var isInventoryEmailValid: Bool {
+        isValidEmail(inventoryEmail.trimmingCharacters(in: .whitespaces))
+    }
+
+    private var isTaxRateValid: Bool {
+        Double(taxRate) != nil
+    }
+
     private var isFormValid: Bool {
         !storeName.trimmingCharacters(in: .whitespaces).isEmpty &&
         !storeCode.trimmingCharacters(in: .whitespaces).isEmpty &&
         !address.trimmingCharacters(in: .whitespaces).isEmpty &&
         !city.trimmingCharacters(in: .whitespaces).isEmpty &&
         !state.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !zipCode.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !phone.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !email.trimmingCharacters(in: .whitespaces).isEmpty &&
+        isZipCodeValid &&
+        isPhoneValid &&
+        isStoreEmailValid &&
         !managerName.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !managerEmail.trimmingCharacters(in: .whitespaces).isEmpty &&
-        (Double(taxRate) != nil)
+        isManagerEmailValid &&
+        !inventoryName.trimmingCharacters(in: .whitespaces).isEmpty &&
+        isInventoryEmailValid &&
+        isTaxRateValid
     }
 
     var body: some View {
@@ -130,7 +168,7 @@ struct AddStoreView: View {
                 formField(label: "State", placeholder: "State", text: $state, icon: "map", required: true)
             }
             HStack(spacing: RSMSTheme.Spacing.md) {
-                formField(label: "ZIP Code", placeholder: "ZIP", text: $zipCode, icon: "number", required: true)
+                formField(label: "ZIP Code", placeholder: "ZIP", text: $zipCode, icon: "number", required: true, isValid: isZipCodeValid, errorMessage: "6 Digits")
                     .keyboardType(.numberPad)
                 formField(label: "Country", placeholder: "Country", text: $country, icon: "globe", required: false)
             }
@@ -140,13 +178,17 @@ struct AddStoreView: View {
     // MARK: - Contact
     private var contactSection: some View {
         formSection(title: "Contact") {
-            formField(label: "Phone", placeholder: "+91 XX XXXX XXXX", text: $phone, icon: "phone.fill", required: true)
+            formField(label: "Phone", placeholder: "10-digit number", text: $phone, icon: "phone.fill", required: true, isValid: isPhoneValid, errorMessage: "10 Digits")
                 .keyboardType(.phonePad)
-            formField(label: "Store Email", placeholder: "store@rsms.com", text: $email, icon: "envelope.fill", required: true)
+            formField(label: "Store Email", placeholder: "store@rsms.com", text: $email, icon: "envelope.fill", required: true, isValid: isStoreEmailValid, errorMessage: "Invalid Email")
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
             formField(label: "Manager Name", placeholder: "Store manager name", text: $managerName, icon: "person.fill", required: true)
-            formField(label: "Manager Email", placeholder: "manager@example.com", text: $managerEmail, icon: "person.text.rectangle.fill", required: true)
+            formField(label: "Manager Email", placeholder: "manager@example.com", text: $managerEmail, icon: "person.text.rectangle.fill", required: true, isValid: isManagerEmailValid, errorMessage: "Invalid Email")
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+            formField(label: "Inventory Controller Name", placeholder: "Inventory controller name", text: $inventoryName, icon: "person.2.fill", required: true)
+            formField(label: "Inventory Email", placeholder: "inventory@example.com", text: $inventoryEmail, icon: "person.text.rectangle", required: true, isValid: isInventoryEmailValid, errorMessage: "Invalid Email")
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
         }
@@ -216,7 +258,7 @@ struct AddStoreView: View {
                 )
             }
 
-            formField(label: "Tax Rate (%)", placeholder: "18.0", text: $taxRate, icon: "percent", required: true)
+            formField(label: "Tax Rate (%)", placeholder: "18.0", text: $taxRate, icon: "percent", required: true, isValid: isTaxRateValid, errorMessage: "Invalid Rate")
                 .keyboardType(.decimalPad)
         }
     }
@@ -231,11 +273,16 @@ struct AddStoreView: View {
             }
             Button { registerStore() } label: {
                 HStack(spacing: RSMSTheme.Spacing.sm) {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Register Boutique")
+                    if isRegistering {
+                        ProgressView().tint(.white)
+                    } else {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Register Boutique")
+                    }
                 }
             }
             .buttonStyle(GoldButtonStyle())
+            .disabled(isRegistering)
         }
         .padding(.top, RSMSTheme.Spacing.md)
     }
@@ -261,8 +308,17 @@ struct AddStoreView: View {
         }
     }
 
-    private func formField(label: String, placeholder: String, text: Binding<String>, icon: String, required: Bool) -> some View {
+    private func formField(
+        label: String,
+        placeholder: String,
+        text: Binding<String>,
+        icon: String,
+        required: Bool,
+        isValid: Bool = true,
+        errorMessage: String? = nil
+    ) -> some View {
         let isEmpty = text.wrappedValue.trimmingCharacters(in: .whitespaces).isEmpty
+        let showError = showValidationErrors && (!isValid || (required && isEmpty))
 
         return VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
             HStack(spacing: RSMSTheme.Spacing.xs) {
@@ -274,6 +330,14 @@ struct AddStoreView: View {
                 if required {
                     Text("*")
                         .font(.caption)
+                        .foregroundStyle(RSMSTheme.Colors.error)
+                }
+                
+                Spacer()
+                
+                if showError, let msg = errorMessage, !isEmpty {
+                    Text(msg)
+                        .font(.caption2)
                         .foregroundStyle(RSMSTheme.Colors.error)
                 }
             }
@@ -291,7 +355,7 @@ struct AddStoreView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
                     .stroke(
-                        showValidationErrors && required && isEmpty
+                        showError
                             ? RSMSTheme.Colors.error.opacity(0.7)
                             : RSMSTheme.Colors.border,
                         lineWidth: 1
@@ -320,24 +384,40 @@ struct AddStoreView: View {
             isActive: true,
             currencyCode: selectedCurrency
         )
+        self.isRegistering = true
+        
         Task {
+            // 1. Create the store FIRST
             await appState.addStore(newStore)
             
-            // Invoke Edge Function securely to invite the manager!
+            if let _ = appState.storeError {
+                await MainActor.run { self.isRegistering = false }
+                return
+            }
+            
             do {
-                try await SupabaseManager.shared.inviteManager(
+                // 2. Provision the manager silently via Edge Function
+                try await SupabaseManager.shared.provisionAccount(
                     email: managerEmail.trimmingCharacters(in: .whitespaces),
-                    boutiqueId: newStore.id
+                    storeId: newStore.id,
+                    role: "manager"
                 )
-                print("Manager successfully invited!")
-                showSuccessAlert = true
+                
+                // 3. Provision the inventory controller silently
+                try await SupabaseManager.shared.provisionAccount(
+                    email: inventoryEmail.trimmingCharacters(in: .whitespaces),
+                    storeId: newStore.id,
+                    role: "inventory"
+                )
+                
+                await MainActor.run {
+                    self.isRegistering = false
+                    self.showSuccessAlert = true
+                }
             } catch {
-                if let httpError = error as? FunctionsError,
-                   case let .httpError(code, data) = httpError,
-                   let errorJson = String(data: data, encoding: .utf8) {
-                    appState.storeError = "Edge Function Error (HTTP \(code)):\n\(errorJson)"
-                } else {
-                    appState.storeError = "Failed to invite manager: \(error.localizedDescription)"
+                await MainActor.run {
+                    self.isRegistering = false
+                    appState.storeError = "Store created, but failed to provision staff: \(error.localizedDescription)"
                 }
             }
         }

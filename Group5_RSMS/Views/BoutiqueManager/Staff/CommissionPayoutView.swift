@@ -59,7 +59,7 @@ struct CommissionPayoutView: View {
                                     DatePicker("", selection: $periodStart, displayedComponents: .date)
                                         .datePickerStyle(.compact)
                                         .labelsHidden()
-                                        .colorScheme(.dark)
+                                        
                                 }
                                 Divider().background(RSMSTheme.Colors.textSecondary.opacity(0.3))
                                 HStack {
@@ -70,7 +70,7 @@ struct CommissionPayoutView: View {
                                     DatePicker("", selection: $periodEnd, displayedComponents: .date)
                                         .datePickerStyle(.compact)
                                         .labelsHidden()
-                                        .colorScheme(.dark)
+                                        
                                 }
                             }
                             .padding()
@@ -180,7 +180,7 @@ struct CommissionPayoutView: View {
             .navigationTitle("Payout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

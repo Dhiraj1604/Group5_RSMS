@@ -24,11 +24,21 @@ struct EditStoreView: View {
     @State private var email: String
     @State private var managerName: String
     @State private var selectedRegion: String
+    @State private var selectedCurrency: String
+    @State private var isActive: Bool
     @State private var taxRate: String
     @State private var showValidationErrors = false
     @State private var showSuccessAlert = false
 
-    private let regions = ["North", "South", "East", "West", "Central"]
+    private let regions = ["Asia", "Europe", "North America", "South America", "Australia", "Africa"]
+
+    private let currencies: [(code: String, label: String)] = [
+        ("INR", "₹  INR — Indian Rupee"),
+        ("USD", "$  USD — US Dollar"),
+        ("EUR", "€  EUR — Euro"),
+        ("GBP", "£  GBP — British Pound"),
+        ("JPY", "¥  JPY — Japanese Yen")
+    ]
 
     init(store: Store) {
         self.store = store
@@ -42,8 +52,34 @@ struct EditStoreView: View {
         _phone       = State(initialValue: store.phone ?? "")
         _email       = State(initialValue: store.email ?? "")
         _managerName = State(initialValue: store.managerName ?? "")
-        _selectedRegion = State(initialValue: store.region ?? "West")
+        _selectedRegion = State(initialValue: store.region ?? "Asia")
+        _selectedCurrency = State(initialValue: store.currencyCode ?? "INR")
+        _isActive    = State(initialValue: store.isActive)
         _taxRate     = State(initialValue: String(store.taxRate ?? 18.0))
+    }
+
+    private var isZipCodeValid: Bool {
+        let trimmed = zipCode.trimmingCharacters(in: .whitespaces)
+        return trimmed.count == 6 && trimmed.allSatisfy { $0.isNumber }
+    }
+
+    private var isPhoneValid: Bool {
+        let trimmed = phone.trimmingCharacters(in: .whitespaces)
+        return trimmed.count == 10 && trimmed.allSatisfy { $0.isNumber }
+    }
+
+    private func isValidEmail(_ email: String) -> Bool {
+        let emailRegEx = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+        let emailPred = NSPredicate(format:"SELF MATCHES %@", emailRegEx)
+        return emailPred.evaluate(with: email)
+    }
+
+    private var isStoreEmailValid: Bool {
+        isValidEmail(email.trimmingCharacters(in: .whitespaces))
+    }
+
+    private var isTaxRateValid: Bool {
+        Double(taxRate) != nil
     }
 
     private var isFormValid: Bool {
@@ -52,11 +88,11 @@ struct EditStoreView: View {
         !address.trimmingCharacters(in: .whitespaces).isEmpty &&
         !city.trimmingCharacters(in: .whitespaces).isEmpty &&
         !state.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !zipCode.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !phone.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !email.trimmingCharacters(in: .whitespaces).isEmpty &&
+        isZipCodeValid &&
+        isPhoneValid &&
+        isStoreEmailValid &&
         !managerName.trimmingCharacters(in: .whitespaces).isEmpty &&
-        (Double(taxRate) != nil)
+        isTaxRateValid
     }
 
     var body: some View {
@@ -118,6 +154,31 @@ struct EditStoreView: View {
     // MARK: - Store Info
     private var storeInfoSection: some View {
         formSection(title: "Store Information") {
+            // Read-only ID
+            HStack {
+                VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
+                    Text("Store ID")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                        .textCase(.uppercase)
+                    Text(store.id.uuidString)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                }
+                Spacer()
+                
+                // Active Toggle
+                Toggle("", isOn: $isActive)
+                    .tint(RSMSTheme.Colors.accentGold)
+                    .labelsHidden()
+                Text(isActive ? "ACTIVE" : "INACTIVE")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundStyle(isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.error)
+            }
+            .padding(.bottom, RSMSTheme.Spacing.sm)
+
             formField(label: "Store Name", placeholder: "e.g. RSMS Flagship Mumbai", text: $storeName, icon: "building.2", required: true)
             formField(label: "Store Code", placeholder: "e.g. BTQ-MUM-001", text: $storeCode, icon: "qrcode", required: true)
                 .textInputAutocapitalization(.characters)
@@ -133,7 +194,7 @@ struct EditStoreView: View {
                 formField(label: "State", placeholder: "State", text: $state, icon: "map", required: true)
             }
             HStack(spacing: RSMSTheme.Spacing.md) {
-                formField(label: "ZIP Code", placeholder: "ZIP", text: $zipCode, icon: "number", required: true)
+                formField(label: "ZIP Code", placeholder: "ZIP", text: $zipCode, icon: "number", required: true, isValid: isZipCodeValid, errorMessage: "6 Digits")
                     .keyboardType(.numberPad)
                 formField(label: "Country", placeholder: "Country", text: $country, icon: "globe", required: false)
             }
@@ -143,9 +204,9 @@ struct EditStoreView: View {
     // MARK: - Contact
     private var contactSection: some View {
         formSection(title: "Contact") {
-            formField(label: "Phone", placeholder: "+91 XX XXXX XXXX", text: $phone, icon: "phone.fill", required: true)
+            formField(label: "Phone", placeholder: "10-digit number", text: $phone, icon: "phone.fill", required: true, isValid: isPhoneValid, errorMessage: "10 Digits")
                 .keyboardType(.phonePad)
-            formField(label: "Email", placeholder: "store@rsms.com", text: $email, icon: "envelope.fill", required: true)
+            formField(label: "Email", placeholder: "store@rsms.com", text: $email, icon: "envelope.fill", required: true, isValid: isStoreEmailValid, errorMessage: "Invalid Email")
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
             formField(label: "Manager Name", placeholder: "Store manager name", text: $managerName, icon: "person.fill", required: true)
@@ -183,7 +244,38 @@ struct EditStoreView: View {
                         .stroke(RSMSTheme.Colors.border, lineWidth: 1)
                 )
             }
-            formField(label: "Tax Rate (%)", placeholder: "18.0", text: $taxRate, icon: "percent", required: true)
+
+            // Currency picker
+            VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
+                Text("Currency")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    .textCase(.uppercase)
+
+                HStack(spacing: RSMSTheme.Spacing.sm) {
+                    Image(systemName: "banknote.fill")
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        .frame(width: 20)
+                    Picker("Currency", selection: $selectedCurrency) {
+                        ForEach(currencies, id: \.code) { currency in
+                            Text(currency.label).tag(currency.code)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(RSMSTheme.Colors.textPrimary)
+                    Spacer()
+                }
+                .padding(RSMSTheme.Spacing.md)
+                .background(RSMSTheme.Colors.backgroundElevated)
+                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm))
+                .overlay(
+                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
+                        .stroke(RSMSTheme.Colors.border, lineWidth: 1)
+                )
+            }
+
+            formField(label: "Tax Rate (%)", placeholder: "18.0", text: $taxRate, icon: "percent", required: true, isValid: isTaxRateValid, errorMessage: "Invalid Rate")
                 .keyboardType(.decimalPad)
         }
     }
@@ -228,8 +320,17 @@ struct EditStoreView: View {
         }
     }
 
-    private func formField(label: String, placeholder: String, text: Binding<String>, icon: String, required: Bool) -> some View {
+    private func formField(
+        label: String,
+        placeholder: String,
+        text: Binding<String>,
+        icon: String,
+        required: Bool,
+        isValid: Bool = true,
+        errorMessage: String? = nil
+    ) -> some View {
         let isEmpty = text.wrappedValue.trimmingCharacters(in: .whitespaces).isEmpty
+        let showError = showValidationErrors && (!isValid || (required && isEmpty))
 
         return VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
             HStack(spacing: RSMSTheme.Spacing.xs) {
@@ -241,6 +342,14 @@ struct EditStoreView: View {
                 if required {
                     Text("*")
                         .font(.caption)
+                        .foregroundStyle(RSMSTheme.Colors.error)
+                }
+                
+                Spacer()
+                
+                if showError, let msg = errorMessage, !isEmpty {
+                    Text(msg)
+                        .font(.caption2)
                         .foregroundStyle(RSMSTheme.Colors.error)
                 }
             }
@@ -258,7 +367,7 @@ struct EditStoreView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
                     .stroke(
-                        showValidationErrors && required && isEmpty
+                        showError
                             ? RSMSTheme.Colors.error.opacity(0.7)
                             : RSMSTheme.Colors.border,
                         lineWidth: 1
@@ -283,6 +392,8 @@ struct EditStoreView: View {
         updatedStore.email = email.trimmingCharacters(in: .whitespaces)
         updatedStore.managerName = managerName.trimmingCharacters(in: .whitespaces)
         updatedStore.region = selectedRegion
+        updatedStore.currencyCode = selectedCurrency
+        updatedStore.isActive = isActive
         updatedStore.taxRate = Double(taxRate) ?? store.taxRate ?? 18.0
 
         Task {

@@ -13,12 +13,12 @@ struct BoutiqueManagerDashboard: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-//            BMDashboardTab()
-//                .tabItem {
-//                    Image(systemName: "chart.bar.fill")
-//                    Text("Dashboard")
-//                }
-//                .tag(0)
+            BMDashboardTab()
+                .tabItem {
+                    Image(systemName: "chart.bar.fill")
+                    Text("Dashboard")
+                }
+                .tag(0)
 
             BMInventoryTab()
                 .tabItem {
@@ -29,24 +29,25 @@ struct BoutiqueManagerDashboard: View {
 
 //            BMSalesTab()
 //                .tabItem {
-//                    Image(systemName: "cart.fill")
-//                    Text("Sales")
+//                    Image(systemName: "star.fill")
+//                    Text("VIP & Events")
 //                }
 //                .tag(2)
 
-//            BMStaffTab(boutiqueId: appState.currentStoreID ?? UUID())
-//                .tabItem {
-//                    Image(systemName: "person.3.fill")
-//                    Text("Staff")
-//                }
-//                .tag(3)
-//
-//            BMReportsTab()
-//                .tabItem {
-//                    Image(systemName: "doc.text.fill")
-//                    Text("Reports")
-//                }
-//                .tag(4)
+            BMStaffTab(boutiqueId: appState.currentStoreID ?? UUID(uuidString: "b3fd8cb6-341b-453e-9ed4-8915aa25245c")!)
+            //BMStaffTab(boutiqueId: appState.currentStoreID ?? UUID())
+                .tabItem {
+                    Image(systemName: "person.3.fill")
+                    Text("Staff")
+                }
+                .tag(3)
+            
+            BMReportsTab()
+                .tabItem {
+                    Image(systemName: "doc.text.fill")
+                    Text("Reports")
+                }
+                .tag(4)
         }
         .tint(RSMSTheme.Colors.accentGold)
         .task {

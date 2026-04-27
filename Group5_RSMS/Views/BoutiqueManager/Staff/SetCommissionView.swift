@@ -62,7 +62,7 @@ struct SetCommissionView: View {
                         DatePicker("", selection: $effectiveFrom, displayedComponents: .date)
                             .datePickerStyle(.compact)
                             .labelsHidden()
-                            .colorScheme(.dark)
+                            
                             .padding()
                             .background(RSMSTheme.Colors.backgroundDeep)
                             .cornerRadius(10)
@@ -123,7 +123,7 @@ struct SetCommissionView: View {
             .navigationTitle("Commission")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
