@@ -11,17 +11,11 @@ import SwiftUI
 enum RSMSTheme {
     // MARK: - Colors
     enum Colors {
-        // Backgrounds — Deep Brown/Espresso base
-        static let backgroundPrimary = Color(red: 0.059, green: 0.043, blue: 0.035)          // #0F0B09 (Espresso)
-        static let backgroundDeep = Color(red: 0.102, green: 0.078, blue: 0.071)             // #1A1412 (Rich Mocha)
-        static let backgroundElevated = Color(red: 0.149, green: 0.114, blue: 0.102)         // #261D1A (Warm Cocoa)
-        static let surfacePrimary = Color(red: 0.118, green: 0.094, blue: 0.086)          // Rich Mahogany Smoke
-        
         // Backgrounds — Pure black base
-//         static let backgroundPrimary = Color.black                                           // #000000
-//         static let backgroundDeep = Color(red: 0.067, green: 0.067, blue: 0.067)            // #111111
-//         static let backgroundElevated = Color(red: 0.102, green: 0.102, blue: 0.102)        // #1A1A1A
-//         static let surfacePrimary = Color(red: 0.12, green: 0.12, blue: 0.12)              // #1F1F1F
+        static let backgroundPrimary = Color.black                                           // #000000
+        static let backgroundDeep = Color(red: 0.067, green: 0.067, blue: 0.067)            // #111111
+        static let backgroundElevated = Color(red: 0.102, green: 0.102, blue: 0.102)        // #1A1A1A
+        static let surfacePrimary = Color(red: 0.12, green: 0.12, blue: 0.12)              // #1F1F1F
 
         // Accent — Gold palette
         static let accentGold = Color(red: 0.788, green: 0.663, blue: 0.431)                // #C9A96E
@@ -36,12 +30,12 @@ enum RSMSTheme {
 
         // Text
         static let textPrimary = Color.white
-        static let textSecondary = Color(red: 0.74, green: 0.69, blue: 0.65)                // Soft Taupe
-        static let textTertiary = Color(red: 0.53, green: 0.48, blue: 0.45)
+        static let textSecondary = Color(white: 0.6)                                        // #999999
+        static let textTertiary = Color(white: 0.4)
 
         // Borders
-        static let border = Color(red: 0.24, green: 0.20, blue: 0.18)
-        static let borderLight = Color(red: 0.18, green: 0.14, blue: 0.12)
+        static let border = Color(white: 0.18)
+        static let borderLight = Color(white: 0.12)
 
         // Gradients
         static let goldGradient = LinearGradient(
