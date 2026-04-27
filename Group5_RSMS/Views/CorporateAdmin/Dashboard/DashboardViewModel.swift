@@ -63,6 +63,7 @@ class DashboardViewModel {
     var errorMessage: String?
     var lastRefreshed: Date?
     private var refreshTimer: Timer?
+    private var stores: [Store] = []
 
     // ─────────────────────────────────────────────
     // MARK: - Models
@@ -480,11 +481,17 @@ class DashboardViewModel {
     private func computeCategorySales(from items: [OrderItemRow]) {
         var revByCat: [String: Double] = [:]
         var cntByCat: [String: Int] = [:]
-        let knownCategories: Set<String> = ["jewellery", "watches", "leather_goods", "couture", "accessories", "fragrances", "other"]
+        let knownCategories: Set<String> = ["jewellery", "watches", "leather_goods", "couture", "accessories", "fragrances", "eyewear", "other"]
 
         for item in items {
-            let rawCat = (item.products?.category ?? "other").lowercased()
-            let cat = knownCategories.contains(rawCat) ? rawCat : "other"
+            let raw = (item.products?.category ?? "other").lowercased().trimmingCharacters(in: .whitespaces)
+            var cat = "other"
+            
+            // Smart Mapping: Normalize database strings to UI keys
+            if raw == "fragrance" { cat = "fragrances" }
+            else if raw == "leather goods" { cat = "leather_goods" }
+            else if knownCategories.contains(raw) { cat = raw }
+            
             revByCat[cat, default: 0] += item.price_at_purchase * Double(item.quantity)
             cntByCat[cat, default: 0] += item.quantity
         }
@@ -633,12 +640,15 @@ class DashboardViewModel {
     }
 
     // ─────────────────────────────────────────────
-    // MARK: - Auto-Refresh
+    // MARK: - Auto-Refresh (30s Polling)
     // ─────────────────────────────────────────────
 
     func startAutoRefresh(stores: [Store]) {
+        self.stores = stores
         stopAutoRefresh()
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 900, repeats: true) { [weak self] _ in
+        
+        // Poll every 30 seconds for near-real-time updates
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 await self?.fetchDashboardData(stores: stores)
             }
@@ -680,7 +690,7 @@ class DashboardViewModel {
 
     static let categoryColors: [String: String] = [
         "jewellery": "💎", "watches": "⌚", "leather_goods": "👜",
-        "couture": "👗", "accessories": "🧣", "fragrances": "🌸", "other": "📦"
+        "couture": "👗", "accessories": "🧣", "fragrances": "🌸", "eyewear": "🕶️", "other": "📦"
     ]
 
     func categoryEmoji(_ cat: String) -> String {
