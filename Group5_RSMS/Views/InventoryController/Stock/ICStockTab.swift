@@ -246,44 +246,48 @@ struct ICStockTab: View {
     
     // MARK: - Stock Checks
 
-    /// Dashboard preview: ALL overdue + ALL today's checks + next 3 upcoming.
-    /// This ensures every category scheduled for today is always visible.
+    /// Dashboard preview: up to 3 checks (overdue + today first, then upcoming).
+    /// Tap the chevron in the header to see the full list.
     private var smartChecks: [StockCheck] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        // Everything past-or-today (overdue + today), sorted oldest first
+        // Past/today first (most urgent), then upcoming
         let overdueAndToday = upcomingChecks
             .filter { calendar.startOfDay(for: $0.date) <= today }
             .sorted { $0.date < $1.date }
-
-        // Future checks — show next 3 only (full list via "See All")
         let future = upcomingChecks
             .filter { calendar.startOfDay(for: $0.date) > today }
             .sorted { $0.date < $1.date }
 
-        return overdueAndToday + Array(future.prefix(3))
+        // Show at most 3 on the dashboard
+        return Array((overdueAndToday + future).prefix(3))
     }
 
     @ViewBuilder
     private var stockCheckSection: some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
             HStack {
-                Text("Scheduled Audits")
-                    .font(.headline)
-                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                Spacer()
-                // "See All" navigates to the full list
+                // Title + chevron inline — taps to full list
                 NavigationLink(destination: AllStockChecksView(
                     checks: upcomingChecks,
                     categories: allCategories,
                     categorySchedules: categorySchedules
                 )) {
-                    Text("See All")
-                        .font(.footnote)
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    HStack(spacing: 4) {
+                        Text("Scheduled Audits")
+                            .font(.headline)
+                            .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    }
                 }
-                .opacity(upcomingChecks.isEmpty ? 0 : 1)
+                .buttonStyle(.plain)
+                .opacity(upcomingChecks.isEmpty ? 0.5 : 1)
+
+                Spacer()
 
                 Button(action: { isShowingScheduleSheet = true }) {
                     HStack(spacing: 4) {
