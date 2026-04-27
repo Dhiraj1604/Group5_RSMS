@@ -150,7 +150,7 @@ struct HeatMapPDFView: View {
     
     var body: some View {
         let categories = Array(Set(heatmapData.compactMap { $0.product?.category ?? "Other" })).sorted()
-        let statuses = ["Out of Stock", "Low", "Healthy", "Overstock", "Floor", "Backroom"]
+        let statuses = ["Critical", "Low", "Healthy", "In-Stock", "Floor", "Backroom"]
         
         var matrix: [String: [String: Int]] = [:]
         for item in heatmapData {
@@ -159,9 +159,9 @@ struct HeatMapPDFView: View {
             let maxStock = item.maxStockLevel ?? 50
             
             let status: String
-            if item.stockQuantity == 0 { status = "Out of Stock" }
+            if item.stockQuantity <= 2 { status = "Critical" }
             else if item.stockQuantity < minStock { status = "Low" }
-            else if item.stockQuantity > maxStock { status = "Overstock" }
+            else if item.stockQuantity > maxStock { status = "In-Stock" }
             else { status = "Healthy" }
             
             matrix[cat, default: [:]][status] = (matrix[cat]?[status] ?? 0) + 1
