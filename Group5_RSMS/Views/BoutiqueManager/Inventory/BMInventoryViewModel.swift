@@ -45,6 +45,14 @@ final class BMInventoryViewModel: ObservableObject {
     // MARK: - Computed
 
     var alertCount: Int { alerts.count }
+    
+    var criticalAlertsCount: Int {
+        alerts.filter { $0.stockQuantity <= 2 }.count
+    }
+    
+    var warningAlertsCount: Int {
+        alerts.filter { $0.stockQuantity > 2 }.count
+    }
 
     // MARK: - Load Low Stock (Single Store)
 
