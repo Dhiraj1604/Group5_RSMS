@@ -89,7 +89,7 @@ struct BMReportsTab: View {
                                 HStack(spacing: 8) {
                                     Circle().fill(RSMSTheme.Colors.accentGold).frame(width: 8, height: 8)
                                     Text("Met").font(.caption2).foregroundColor(RSMSTheme.Colors.textSecondary)
-                                    Circle().fill(RSMSTheme.Colors.error).frame(width: 8, height: 8)
+                                    Circle().fill(RSMSTheme.Colors.textPrimary).frame(width: 8, height: 8)
                                     Text("Missed").font(.caption2).foregroundColor(RSMSTheme.Colors.textSecondary)
                                 }
                             }
@@ -300,7 +300,7 @@ struct TargetRow: View {
     let metric: TargetMetric
 
     private var barColor: Color {
-        metric.isMet ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.error
+        metric.isMet ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textPrimary
     }
 
     var body: some View {
