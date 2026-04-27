@@ -88,8 +88,8 @@ struct ProductDetailView: View {
                         image
                             .resizable()
                             .scaledToFit()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 300)
+                            .frame(height: 260)
+                            .cornerRadius(RSMSTheme.Radius.md)
                     case .failure:
                         categoryPlaceholder
                     case .empty:
@@ -102,9 +102,8 @@ struct ProductDetailView: View {
                 categoryPlaceholder
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 300)
-        .padding(RSMSTheme.Spacing.sm)
+        .fixedSize()
+        .padding(8)
         .background(RSMSTheme.Colors.backgroundDeep)
         .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
         .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)

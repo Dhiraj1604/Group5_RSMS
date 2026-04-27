@@ -44,13 +44,12 @@ struct OffersView: View {
     private var listedOffers: [Offer] {
         var base: [Offer]
         switch selectedTab {
-        case .active: 
-            base = service.activeOffers
+        case .active:
+            base = service.activeOffers  // already includes both .active and .paused
             if showPausedOnly {
                 base = base.filter { $0.computedStatus == .paused }
-            } else {
-                base = base.filter { $0.computedStatus == .active }
             }
+            // when showPausedOnly is false, show ALL (active + paused) — don't filter
         case .scheduled: base = service.scheduledOffers
         case .expired: base = service.expiredOffers
         }
@@ -362,6 +361,17 @@ struct BoutiqueCouponCard: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
+            // Dashed perforation line — full height from notch to notch
+            GeometryReader { geo in
+                Path { path in
+                    path.move(to: CGPoint(x: 80, y: 10))       // top notch bottom edge
+                    path.addLine(to: CGPoint(x: 80, y: geo.size.height - 10)) // bottom notch top edge
+                }
+                .stroke(
+                    RSMSTheme.Colors.accentGold.opacity(0.5),
+                    style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [4, 6])
+                )
+            }
             
             // 3. Coupon Content
             HStack(spacing: 0) {
@@ -384,18 +394,20 @@ struct BoutiqueCouponCard: View {
                         .tracking(3)
                 }
                 .frame(width: 80)
-                .overlay(
-                    // Highly Visible Vertical Dotted Perforation
-                    GeometryReader { geo in
-                        Path { path in
-                            path.move(to: CGPoint(x: geo.size.width, y: 12))
-                            path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height - 12))
-                        }
-                        .stroke(style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [0.1, 10]))
-                        .foregroundStyle(RSMSTheme.Colors.borderLight.opacity(0.8))
-                    },
-                    alignment: .trailing
-                )
+//                .overlay(
+//                    GeometryReader { geo in
+//                        Path { path in
+//                            // Start just below the top semicircle notch (radius = 10)
+//                            path.move(to: CGPoint(x: geo.size.width, y: 10))
+//                            path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height - 10))
+//                        }
+//                        .stroke(
+//                            RSMSTheme.Colors.accentGold.opacity(0.5),
+//                            style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [4, 6])
+//                        )
+//                    },
+//                    alignment: .trailing
+//                )
                 
                 // Right Main Body
                 VStack(alignment: .leading, spacing: 8) {

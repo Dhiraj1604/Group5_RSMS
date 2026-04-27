@@ -76,7 +76,7 @@ struct AddProductView: View {
                         craftsmanshipSection
                         heritageSection
                         
-                        saveButton
+//                        saveButton
                         
                         Spacer().frame(height: RSMSTheme.Spacing.xxl)
                     }
@@ -93,6 +93,20 @@ struct AddProductView: View {
                     Button("Cancel") { dismiss() }
                         .foregroundStyle(RSMSTheme.Colors.textSecondary)
                         .disabled(isLoading || isUploadingImage)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        saveProduct()
+                    } label: {
+                        if isLoading || isUploadingImage {
+                            ProgressView().tint(RSMSTheme.Colors.accentGold)
+                        } else {
+                            Text(isEditing ? "Save" : "Add")
+                                .fontWeight(.semibold)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                    }
+                    .disabled(isLoading || isUploadingImage)
                 }
             }
             .confirmationDialog("Product Image", isPresented: $showImageSourceDialog) {
