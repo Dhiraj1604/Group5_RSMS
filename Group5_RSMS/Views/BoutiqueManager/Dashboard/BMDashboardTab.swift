@@ -2,35 +2,108 @@
 //  BMDashboardTab.swift
 //  Group5_RSMS
 //
-//  Boutique Manager — Dashboard overview tab.
+//  Boutique Manager — Dashboard. Uses shared RSMSTheme (dark/gold).
+//  Top 3 performers shown inline; See All navigates to full list.
 //
 
 import SwiftUI
 
+// MARK: - See All Staff Performance
+struct AllStaffPerformanceView: View {
+    let entries: [StaffPerformanceEntry]
+    let teamTotal: Double
+
+    var body: some View {
+        ZStack {
+            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                        StaffPerfRow(entry: entry, rank: index + 1, teamTotal: teamTotal)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+            }
+        }
+        .navigationTitle("Staff Performance")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+    }
+}
+
+// MARK: - See All Tasks
+struct AllTasksView: View {
+    @ObservedObject var tasksVM: BMTasksViewModel
+
+    var body: some View {
+        ZStack {
+            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+            if tasksVM.tasks.isEmpty {
+                VStack(spacing: 14) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 52))
+                        .foregroundColor(RSMSTheme.Colors.success.opacity(0.5))
+                    Text("All tasks completed!")
+                        .font(.headline)
+                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(tasksVM.tasks) { task in
+                            let staffName = tasksVM.staff.first(where: { $0.id == task.assignedTo })?.name
+                            TaskRowView(task: task, onToggle: {
+                                Task { await tasksVM.toggleTaskCompletion(task) }
+                            }, staffName: staffName)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                }
+            }
+        }
+        .navigationTitle("Store Tasks")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+    }
+}
+
+// MARK: - Main Dashboard
 struct BMDashboardTab: View {
     @Environment(AppState.self) private var appState
-    @StateObject private var tasksVM = BMTasksViewModel()
+    @StateObject private var tasksVM     = BMTasksViewModel()
     @StateObject private var dashboardVM = BMDashboardViewModel()
-    
+
     @State private var showingAddTask = false
+    @State private var showingProfile = false
+
+    private var greetingText: String {
+        let h = Calendar.current.component(.hour, from: Date())
+        switch h {
+        case 5..<12:  return "Good morning"
+        case 12..<17: return "Good afternoon"
+        case 17..<21: return "Good evening"
+        default:      return "Good night"
+        }
+    }
 
     var body: some View {
         NavigationStack {
             ZStack {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-                
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 24) {
-                        // MARK: - Daily Pacing Dashboard
-                        dailyPacingSection
-                        
-                        // MARK: - Staff Performance
-                        staffPerformanceSection
-
-                        // MARK: - Pending Store Operations
-                        tasksSection
+                        pacingCard.padding(.horizontal, 20)
+                        teamMetricsRow.padding(.horizontal, 20)
+                        staffSection
+                        tasksSection.padding(.horizontal, 20)
                     }
-                    .padding()
+                    .padding(.top, 8)
+                    .padding(.bottom, 40)
                 }
             }
             .navigationTitle("Dashboard")
@@ -39,207 +112,239 @@ struct BMDashboardTab: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button(role: .destructive) {
-                            appState.signOut()
-                        } label: {
-                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                    HStack(spacing: 14) {
+                        Button { showingAddTask = true } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
                         }
-                    } label: {
-                        Image(systemName: "person.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        Button { showingProfile = true } label: {
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
                     }
                 }
-                
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingAddTask = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title3)
-                            .foregroundColor(RSMSTheme.Colors.accentGold)
+            }
+            .sheet(isPresented: $showingProfile) {
+                BMProfileView().presentationDetents([.large])
+            }
+            .sheet(isPresented: $showingAddTask) {
+                if let boutiqueId = appState.currentStoreID {
+                    AddTaskSheet(boutiqueId: boutiqueId, staff: tasksVM.staff) { newTask in
+                        Task { await tasksVM.addTask(newTask) }
                     }
                 }
             }
             .task {
-                if let boutiqueId = appState.currentStoreID {
-                    await dashboardVM.loadDailyPacing(boutiqueId: boutiqueId)
-                    await dashboardVM.loadStaffPerformance(boutiqueId: boutiqueId)
-                    await tasksVM.fetchTasksAndStaff(boutiqueId: boutiqueId)
+                if let id = appState.currentStoreID {
+                    await dashboardVM.loadDailyPacing(boutiqueId: id)
+                    await dashboardVM.loadStaffPerformance(boutiqueId: id)
+                    await tasksVM.fetchTasksAndStaff(boutiqueId: id)
                 }
             }
             .onChange(of: appState.currentStoreID) { _, newId in
-                guard let boutiqueId = newId else { return }
+                guard let id = newId else { return }
                 Task {
-                    await dashboardVM.loadDailyPacing(boutiqueId: boutiqueId)
-                    await dashboardVM.loadStaffPerformance(boutiqueId: boutiqueId)
-                    await tasksVM.fetchTasksAndStaff(boutiqueId: boutiqueId)
+                    await dashboardVM.loadDailyPacing(boutiqueId: id)
+                    await dashboardVM.loadStaffPerformance(boutiqueId: id)
+                    await tasksVM.fetchTasksAndStaff(boutiqueId: id)
                 }
             }
-            .sheet(isPresented: $showingAddTask) {
-                if let boutiqueId = appState.currentStoreID {
-                    AddTaskSheet(
-                        boutiqueId: boutiqueId,
-                        staff: tasksVM.staff,
-                        onSave: { newTask in
-                            Task {
-                                await tasksVM.addTask(newTask)
-                            }
-                        }
-                    )
-                }
-            }
-        }
-    }
-    
-    // MARK: - Subviews
-    
-    private var dailyPacingSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Daily Pacing")
-                .font(RSMSTheme.Typography.heading3)
-                .foregroundColor(RSMSTheme.Colors.textPrimary)
-            
-            HStack(spacing: 20) {
-                // Circular Progress
-                ZStack {
-                    Circle()
-                        .stroke(RSMSTheme.Colors.surfacePrimary, lineWidth: 16)
-                    
-                    Circle()
-                        .trim(from: 0, to: dashboardVM.progress)
-                        .stroke(RSMSTheme.Colors.accentGold, style: StrokeStyle(lineWidth: 16, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .animation(.easeOut(duration: 1.0), value: dashboardVM.progress)
-                    
-                    VStack {
-                        Text("\(Int(dashboardVM.progress * 100))%")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundColor(RSMSTheme.Colors.textPrimary)
-                        Text("to target")
-                            .font(RSMSTheme.Typography.caption)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
-                    }
-                }
-                .frame(width: 140, height: 140)
-                
-                VStack(alignment: .leading, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Actual Sales")
-                            .font(RSMSTheme.Typography.bodyCopy2)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
-                        Text(dashboardVM.actualSales, format: .currency(code: "INR"))
-                            .font(RSMSTheme.Typography.heading3)
-                            .foregroundColor(RSMSTheme.Colors.success)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Daily Target")
-                            .font(RSMSTheme.Typography.bodyCopy2)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
-                        Text(dashboardVM.dailyTarget, format: .currency(code: "INR"))
-                            .font(RSMSTheme.Typography.heading4)
-                            .foregroundColor(RSMSTheme.Colors.textPrimary)
-                    }
-                }
-                Spacer()
-            }
-            .padding()
-            .background(RSMSTheme.Colors.backgroundElevated)
-            .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
     }
 
-    // MARK: - Staff Performance Section
-    private var staffPerformanceSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    // MARK: - Greeting Header
+    private var greetingHeader: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(greetingText)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(RSMSTheme.Colors.textSecondary)
+            Text("Boutique Manager")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(RSMSTheme.Colors.textPrimary)
+            Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                .font(.system(size: 14))
+                .foregroundColor(RSMSTheme.Colors.textTertiary)
+        }
+    }
+
+    // MARK: - Daily Pacing Card
+    private var pacingCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Staff Performance")
-                    .font(RSMSTheme.Typography.heading3)
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                Text("DAILY PACING")
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(0.8)
+                    .foregroundColor(RSMSTheme.Colors.textSecondary)
                 Spacer()
-                Text("\(dashboardVM.staffPerformance.count) members")
-                    .font(RSMSTheme.Typography.bodyCopy2)
+                Text("\(Int(dashboardVM.progress * 100))% to target")
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(RSMSTheme.Colors.accentGold)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(RSMSTheme.Colors.accentGold.opacity(0.15))
-                    .cornerRadius(8)
+                    .clipShape(Capsule())
             }
 
-            // Team Summary Row
-            HStack(spacing: 10) {
-                TeamMetricCard(title: "Team Sales", value: "₹\(formatNumber(dashboardVM.teamTotalSales))", icon: "indianrupeesign.circle.fill")
-                TeamMetricCard(title: "This Month", value: "₹\(formatNumber(dashboardVM.teamThisMonthSales))", icon: "calendar.circle.fill")
-                TeamMetricCard(title: "Orders", value: "\(dashboardVM.teamTotalOrders)", icon: "bag.circle.fill")
+            HStack(spacing: 20) {
+                ZStack {
+                    Circle()
+                        .stroke(RSMSTheme.Colors.surfacePrimary, lineWidth: 14)
+                    Circle()
+                        .trim(from: 0, to: dashboardVM.progress)
+                        .stroke(RSMSTheme.Colors.accentGold, style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeOut(duration: 1.0), value: dashboardVM.progress)
+                    VStack(spacing: 2) {
+                        Text("\(Int(dashboardVM.progress * 100))%")
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .foregroundColor(RSMSTheme.Colors.textPrimary)
+                        Text("achieved")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    }
+                }
+                .frame(width: 115, height: 115)
+
+                VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Actual Sales")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        Text(dashboardVM.actualSales, format: .currency(code: "INR"))
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(RSMSTheme.Colors.success)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Daily Target")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        Text(dashboardVM.dailyTarget, format: .currency(code: "INR"))
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    }
+                }
+                Spacer()
             }
+        }
+        .padding(18)
+        .background(RSMSTheme.Colors.backgroundElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
+        .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+    }
+
+    // MARK: - Team Metrics Row
+    private var teamMetricsRow: some View {
+        HStack(spacing: 10) {
+            DashMetricCard(icon: "indianrupeesign.circle.fill", title: "Team Sales",  value: "₹\(fmt(dashboardVM.teamTotalSales))")
+            DashMetricCard(icon: "calendar.circle.fill",        title: "This Month",  value: "₹\(fmt(dashboardVM.teamThisMonthSales))")
+            DashMetricCard(icon: "bag.circle.fill",             title: "Orders",      value: "\(dashboardVM.teamTotalOrders)")
+        }
+    }
+
+    // MARK: - Staff Section (Top 3 + See All)
+    private var staffSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Top Performers")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                Spacer()
+                if dashboardVM.staffPerformance.count > 3 {
+                    NavigationLink(destination: AllStaffPerformanceView(
+                        entries: dashboardVM.staffPerformance,
+                        teamTotal: dashboardVM.teamTotalSales)) {
+                        HStack(spacing: 3) {
+                            Text("See All")
+                                .font(.system(size: 14, weight: .medium))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .bold))
+                        }
+                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
 
             if dashboardVM.isLoadingStaff {
                 ProgressView()
                     .tint(RSMSTheme.Colors.accentGold)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
+                    .frame(maxWidth: .infinity).padding(24)
+                    .background(RSMSTheme.Colors.backgroundElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .padding(.horizontal, 20)
             } else if dashboardVM.staffPerformance.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "person.3")
-                        .font(.system(size: 40))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.5))
-                    Text("No sales data available yet.")
-                        .font(RSMSTheme.Typography.bodyCopy1)
+                VStack(spacing: 10) {
+                    Image(systemName: "person.3.fill")
+                        .font(.system(size: 36))
+                        .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.4))
+                    Text("No sales data yet")
+                        .font(.subheadline)
                         .foregroundColor(RSMSTheme.Colors.textSecondary)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
+                .frame(maxWidth: .infinity).padding(.vertical, 28)
                 .background(RSMSTheme.Colors.backgroundElevated)
-                .cornerRadius(16)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 20)
             } else {
+                // ✅ Only top 3 on dashboard
                 VStack(spacing: 10) {
-                    ForEach(Array(dashboardVM.staffPerformance.enumerated()), id: \.element.id) { index, entry in
-                        StaffPerformanceRow(entry: entry, rank: index + 1, teamTotal: dashboardVM.teamTotalSales)
+                    ForEach(Array(dashboardVM.staffPerformance.prefix(3).enumerated()), id: \.element.id) { idx, entry in
+                        StaffPerfRow(entry: entry, rank: idx + 1, teamTotal: dashboardVM.teamTotalSales)
                     }
                 }
+                .padding(.horizontal, 20)
             }
         }
     }
-    
+
+    // MARK: - Tasks Section (Top 2 + See All)
     private var tasksSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        let pending = tasksVM.tasks.filter { !$0.isCompleted }
+        return VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Pending Store Operations")
-                    .font(RSMSTheme.Typography.heading3)
+                Text("Store Tasks")
+                    .font(.system(size: 20, weight: .bold))
                     .foregroundColor(RSMSTheme.Colors.textPrimary)
                 Spacer()
-                Text("\(tasksVM.tasks.filter { !$0.isCompleted }.count) left")
-                    .font(RSMSTheme.Typography.bodyCopy2)
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(RSMSTheme.Colors.accentGold.opacity(0.15))
-                    .cornerRadius(8)
+                if pending.count > 2 {
+                    NavigationLink(destination: AllTasksView(tasksVM: tasksVM)) {
+                        HStack(spacing: 3) {
+                            Text("See All")
+                                .font(.system(size: 14, weight: .medium))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .bold))
+                        }
+                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                    }
+                }
             }
-            
+
             if tasksVM.isLoading && tasksVM.tasks.isEmpty {
                 ProgressView()
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
-            } else if tasksVM.tasks.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "checklist")
-                        .font(.system(size: 48))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                    Text("No pending operations.")
-                        .font(RSMSTheme.Typography.bodyCopy1)
+                    .tint(RSMSTheme.Colors.accentGold)
+                    .frame(maxWidth: .infinity).padding(24)
+                    .background(RSMSTheme.Colors.backgroundElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+            } else if pending.isEmpty {
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(RSMSTheme.Colors.success.opacity(0.7))
+                    Text("All tasks completed!")
+                        .font(.subheadline)
                         .foregroundColor(RSMSTheme.Colors.textSecondary)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 32)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(18)
                 .background(RSMSTheme.Colors.backgroundElevated)
-                .cornerRadius(16)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
             } else {
-                VStack(spacing: 12) {
-                    ForEach(tasksVM.tasks) { task in
+                VStack(spacing: 10) {
+                    ForEach(pending.prefix(2)) { task in
                         let staffName = tasksVM.staff.first(where: { $0.id == task.assignedTo })?.name
                         TaskRowView(task: task, onToggle: {
                             Task { await tasksVM.toggleTaskCompletion(task) }
@@ -250,65 +355,55 @@ struct BMDashboardTab: View {
         }
     }
 
-    // MARK: - Helpers
-    private func formatNumber(_ value: Double) -> String {
-        if value >= 100_000 {
-            return String(format: "%.1fL", value / 100_000)
-        } else if value >= 1_000 {
-            return String(format: "%.1fK", value / 1_000)
-        }
-        return String(format: "%.0f", value)
+    private func fmt(_ v: Double) -> String {
+        if v >= 100_000 { return String(format: "%.1fL", v / 100_000) }
+        if v >= 1_000   { return String(format: "%.1fK", v / 1_000) }
+        return String(format: "%.0f", v)
     }
 }
 
-// MARK: - Team Metric Card
-struct TeamMetricCard: View {
+// MARK: - Dashboard Metric Card (3-up)
+struct DashMetricCard: View {
+    let icon: String
     let title: String
     let value: String
-    let icon: String
 
     var body: some View {
         VStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.title3)
+                .font(.system(size: 20, weight: .medium))
                 .foregroundColor(RSMSTheme.Colors.accentGold)
-
             Text(value)
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: 14, weight: .bold, design: .rounded))
                 .foregroundColor(RSMSTheme.Colors.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-
+                .lineLimit(1).minimumScaleFactor(0.6)
             Text(title)
-                .font(.caption2)
+                .font(.system(size: 11, weight: .medium))
                 .foregroundColor(RSMSTheme.Colors.textSecondary)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .padding(.horizontal, 6)
+        .padding(.vertical, 14)
         .background(RSMSTheme.Colors.backgroundElevated)
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
+        .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
     }
 }
 
 // MARK: - Staff Performance Row
-struct StaffPerformanceRow: View {
+struct StaffPerfRow: View {
     let entry: StaffPerformanceEntry
     let rank: Int
     let teamTotal: Double
 
-    private var contribution: Double {
-        guard teamTotal > 0 else { return 0 }
-        return entry.totalSales / teamTotal
-    }
+    private var pct: Double { teamTotal > 0 ? entry.totalSales / teamTotal : 0 }
 
-    private var rankBadgeColor: Color {
+    private var rankColor: Color {
         switch rank {
-        case 1: return .yellow
+        case 1: return Color(red: 1.0, green: 0.84, blue: 0.0)
         case 2: return Color(white: 0.75)
-        case 3: return Color(red: 0.80, green: 0.50, blue: 0.20)
+        case 3: return Color(red: 0.8, green: 0.5, blue: 0.2)
         default: return RSMSTheme.Colors.textSecondary
         }
     }
@@ -316,72 +411,59 @@ struct StaffPerformanceRow: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                // Rank badge
                 ZStack {
                     Circle()
-                        .fill(rankBadgeColor.opacity(rank <= 3 ? 0.2 : 0.1))
+                        .fill(rank <= 3 ? rankColor.opacity(0.18) : RSMSTheme.Colors.surfacePrimary)
                         .frame(width: 36, height: 36)
                     if rank <= 3 {
-                        Image(systemName: "trophy.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(rankBadgeColor)
+                        Image(systemName: "medal.fill")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(rankColor)
                     } else {
                         Text("#\(rank)")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .font(.system(size: 12, weight: .bold))
                             .foregroundColor(RSMSTheme.Colors.textSecondary)
                     }
                 }
 
-                // Name & Orders
                 VStack(alignment: .leading, spacing: 2) {
                     Text(entry.name)
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(RSMSTheme.Colors.textPrimary)
-                        .lineLimit(1)
+                        .foregroundColor(RSMSTheme.Colors.textPrimary).lineLimit(1)
                     Text("\(entry.totalOrders) orders · Avg ₹\(String(format: "%.0f", entry.avgOrderValue))")
-                        .font(.caption)
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                        .lineLimit(1)
+                        .font(.system(size: 12))
+                        .foregroundColor(RSMSTheme.Colors.textSecondary).lineLimit(1)
                 }
-
                 Spacer()
-
-                // Sales Amount
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("₹\(String(format: "%.0f", entry.totalSales))")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
-                    Text("\(Int(contribution * 100))% of team")
-                        .font(.caption2)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(rank <= 3 ? rankColor : RSMSTheme.Colors.textPrimary)
+                    Text("\(Int(pct * 100))% of team")
+                        .font(.system(size: 11))
                         .foregroundColor(RSMSTheme.Colors.textSecondary)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 14).padding(.vertical, 12)
 
-            // Sales contribution bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 2).fill(RSMSTheme.Colors.surfacePrimary).frame(height: 3)
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(RSMSTheme.Colors.surfacePrimary)
-                        .frame(height: 3)
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(RSMSTheme.Colors.accentGold)
-                        .frame(width: geo.size.width * contribution, height: 3)
-                        .animation(.easeOut(duration: 0.6), value: contribution)
+                        .fill(rank <= 3 ? rankColor : RSMSTheme.Colors.accentGold)
+                        .frame(width: geo.size.width * pct, height: 3)
+                        .animation(.easeOut(duration: 0.6), value: pct)
                 }
             }
-            .frame(height: 3)
-            .padding(.horizontal, 14)
-            .padding(.bottom, 10)
+            .frame(height: 3).padding(.horizontal, 14).padding(.bottom, 12)
         }
         .background(RSMSTheme.Colors.backgroundElevated)
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.08), radius: 4, x: 0, y: 2)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
+        .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
     }
 }
 
 #Preview {
-    BMDashboardTab()
-        .environment(AppState())
+    BMDashboardTab().environment(AppState())
 }

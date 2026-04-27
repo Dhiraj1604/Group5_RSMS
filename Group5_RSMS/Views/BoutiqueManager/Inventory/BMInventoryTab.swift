@@ -51,22 +51,8 @@ struct BMInventoryTab: View {
             .navigationTitle("Inventory")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button(role: .destructive) {
-                            appState.signOut()
-                        } label: {
-                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                        }
-                    } label: {
-                        Image(systemName: "person.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(RSMSTheme.Colors.accentGold)
-                    }
-                }
-            }
+            
+            
             .task {
                 // Wait for stores to load first if needed
                 if appState.stores.isEmpty {
@@ -138,33 +124,37 @@ struct BMInventoryTab: View {
     // MARK: - Inventory Content (after store is selected)
 
     private var inventoryContent: some View {
-        VStack(spacing: 0) {
-            // Store context header
-            storeHeader
+        // Single ScrollView for the whole screen — no fixed top section
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                // Store context header
+                storeHeader
+                    .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+                    .padding(.top, RSMSTheme.Spacing.sm)
+                    .padding(.bottom, RSMSTheme.Spacing.md)
+
+                Divider()
+
+                // Tab Picker
+                Picker("Inventory View", selection: $selectedTabSegment) {
+                    Text("Transfer").tag(0)
+                    Text("Merchandising Insights").tag(1)
+                }
+                .pickerStyle(.segmented)
                 .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-                .padding(.top, RSMSTheme.Spacing.sm)
-                .padding(.bottom, RSMSTheme.Spacing.md)
+                .padding(.vertical, RSMSTheme.Spacing.md)
 
-            Divider()
-                .background(Color.white.opacity(0.06))
-                
-            // Tab Picker
-            Picker("Inventory View", selection: $selectedTabSegment) {
-                Text("Transfer").tag(0)
-                Text("Merchandising Insights").tag(1)
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-            .padding(.top, RSMSTheme.Spacing.md)
-            .padding(.bottom, RSMSTheme.Spacing.sm)
-
-            // Content
-            ZStack {
+                // Content (non-scrolling inner views)
                 if selectedTabSegment == 0 {
                     transferSegment
                 } else {
                     merchandisingSegment
                 }
+            }
+        }
+        .refreshable {
+            if let storeId = appState.currentStoreID {
+                await viewModel.loadAlerts(forStore: storeId)
             }
         }
     }
@@ -445,47 +435,40 @@ struct BMInventoryTab: View {
         .cornerRadius(12)
     }
 
-    // MARK: - Transfer Segment
+    // MARK: - Transfer Segment (non-scrolling, embedded in parent ScrollView)
 
     private var transferSegment: some View {
         VStack(spacing: 0) {
-            // Cards top section
+            // Quick action cards
             HStack(spacing: 16) {
-                // Incoming Requests Card
-                Button {
-                    isShowingIncomingRequests = true
-                } label: {
-                    transferCard(
-                        title: "Incoming Requests",
-                        icon: "tray.fill",
-                        hasNotification: viewModel.incomingRequests.count > 0
-                    )
+                Button { isShowingIncomingRequests = true } label: {
+                    transferCard(title: "Incoming Requests", icon: "tray.fill",
+                                 hasNotification: viewModel.incomingRequests.count > 0)
                 }
-                
-                // My Requests Card
-                Button {
-                    isShowingMyRequests = true
-                } label: {
-                    transferCard(
-                        title: "My Requests",
-                        icon: "paperplane.fill",
-                        hasNotification: false
-                    )
+                Button { isShowingMyRequests = true } label: {
+                    transferCard(title: "My Requests", icon: "paperplane.fill",
+                                 hasNotification: false)
                 }
             }
             .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-            .padding(.top, RSMSTheme.Spacing.sm)
             .padding(.bottom, RSMSTheme.Spacing.md)
-            
-            Divider()
-                .background(Color.white.opacity(0.06))
-            
+
             if viewModel.isLoading {
                 loadingState
             } else if viewModel.alerts.isEmpty {
                 emptyState
             } else {
-                inventoryList
+                // List items laid out in VStack so parent ScrollView controls all scrolling
+                LazyVStack(spacing: 14) {
+                    ForEach(Array(viewModel.alerts.enumerated()), id: \.element.id) { index, alert in
+                        inventoryItemCard(alert)
+                            .opacity(animateIn ? 1 : 0)
+                            .offset(y: animateIn ? 0 : 20)
+                            .animation(.easeOut(duration: 0.4).delay(Double(index) * 0.07), value: animateIn)
+                    }
+                }
+                .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+                .padding(.bottom, 40)
             }
         }
     }
@@ -501,32 +484,25 @@ struct BMInventoryTab: View {
                         .font(.system(size: 20))
                         .foregroundStyle(RSMSTheme.Colors.goldGradient)
                 }
-                
                 if hasNotification {
                     Circle()
                         .fill(RSMSTheme.Colors.error)
                         .frame(width: 14, height: 14)
-                        .overlay(
-                            Circle().stroke(RSMSTheme.Colors.backgroundDeep, lineWidth: 2)
-                        )
+                        .overlay(Circle().stroke(RSMSTheme.Colors.backgroundDeep, lineWidth: 2))
                         .offset(x: 4, y: -4)
                 }
             }
-
             Text(title)
                 .font(.system(size: 13, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(RSMSTheme.Colors.textPrimary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 20)
         .padding(.horizontal, 10)
         .background(RSMSTheme.Colors.backgroundElevated)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
-        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
     }
 
     // MARK: - Store Header

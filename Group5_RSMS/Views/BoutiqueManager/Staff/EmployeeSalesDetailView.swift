@@ -236,7 +236,7 @@ struct EmployeeSalesDetailView: View {
         .navigationTitle(employee.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {

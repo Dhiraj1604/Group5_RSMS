@@ -166,7 +166,7 @@ struct AddEmployeeView: View {
                                 .padding()
                                 .background(RSMSTheme.Colors.backgroundDeep)
                                 .cornerRadius(12)
-                                .colorScheme(.dark)
+                                
                         }
 
                         if let error = staffVM.errorMessage {
@@ -185,7 +185,7 @@ struct AddEmployeeView: View {
             .navigationTitle("Add Employee")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
