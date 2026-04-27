@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import MessageUI
 
 struct ManageShiftView: View {
     @Environment(\.dismiss) private var dismiss
@@ -20,6 +21,12 @@ struct ManageShiftView: View {
     @State private var endTime: Date
     @State private var errorMessage: String?
     @State private var showConflictAlert = false
+    
+    // SMS integration
+    @State private var showSMSComposer = false
+    @State private var showSimulatorAlert = false
+    @State private var smsRecipients: [String] = []
+    @State private var smsBodyText: String = ""
     
     init(shiftVM: ShiftViewModel, boutiqueId: UUID, employees: [Employee], existingShift: Shift?, selectedDate: Date = Date()) {
         self.shiftVM = shiftVM
@@ -169,6 +176,18 @@ struct ManageShiftView: View {
                     selectedEmployeeId = firstEmp.id
                 }
             }
+            .sheet(isPresented: $showSMSComposer, onDismiss: {
+                // Dismiss the shift view only AFTER the message composer is closed
+                dismiss()
+            }) {
+                MessageComposeView(recipients: smsRecipients, bodyText: smsBodyText)
+                    .ignoresSafeArea()
+            }
+            .alert("Simulator Notice", isPresented: $showSimulatorAlert) {
+                Button("OK") { dismiss() }
+            } message: {
+                Text("The iOS Simulator cannot send iMessage or SMS. On a real device, a message composer would open pre-filled for \(smsRecipients.first ?? "the user").")
+            }
         }
     }
     
@@ -205,6 +224,30 @@ struct ManageShiftView: View {
         }
 
         if success {
+            if let emp = employees.first(where: { $0.id == empId }) {
+                var targets: [String] = []
+                if let phone = emp.phone, !phone.isEmpty { targets.append(phone) }
+                else if let email = emp.email, !email.isEmpty { targets.append(email) }
+                
+                if !targets.isEmpty {
+                    self.smsRecipients = targets
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "MMM d, h:mm a"
+                    let startStr = formatter.string(from: startTime)
+                    let endStr = formatter.string(from: endTime)
+                    
+                    self.smsBodyText = "Hi \(emp.name),\nYour boutique shift has been scheduled from \(startStr) to \(endStr)."
+                    
+                    if MFMessageComposeViewController.canSendText() {
+                        self.showSMSComposer = true
+                        return // Wait for composer to dismiss
+                    } else {
+                        // iOS Simulator cannot send texts
+                        self.showSimulatorAlert = true
+                        return
+                    }
+                }
+            }
             dismiss()
         } else {
             errorMessage = shiftVM.errorMessage
