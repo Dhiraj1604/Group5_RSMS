@@ -46,10 +46,9 @@ class CustomerShipmentService {
         func updateOrderStatus(orderId: UUID, newStatus: String) async throws {
             struct UpdateStatus: Encodable {
                 let status: String
-                let updated_at: String
             }
             
-            let payload = UpdateStatus(status: newStatus, updated_at: Date().ISO8601Format())
+            let payload = UpdateStatus(status: newStatus)
             
             try await client
                 .from("customer_orders")
