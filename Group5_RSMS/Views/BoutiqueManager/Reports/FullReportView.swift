@@ -121,7 +121,7 @@ struct FullReportView: View {
             .navigationTitle("Weekly Report")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button { dismiss() } label: {

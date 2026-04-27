@@ -200,7 +200,7 @@ struct BMReportsTab: View {
             .navigationTitle("Reports")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
