@@ -57,6 +57,9 @@ struct DiscrepancyReportView: View {
                                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                                             vm.dismissDiscrepancy(id: d.id)
                                         }
+                                    },
+                                    onAskAI: {
+                                        Task { await vm.requestAIDiagnosis(for: d.id) }
                                     }
                                 )
                             }
@@ -173,6 +176,7 @@ struct DiscrepancyCard: View {
     let fix: SuggestedFix?
     let onApprove: () -> Void
     let onDismiss: () -> Void
+    let onAskAI: () -> Void
 
     @State private var isExpanded = true
 
@@ -323,14 +327,18 @@ struct DiscrepancyCard: View {
     // MARK: Fix Panel
 
     private func fixPanel(_ fix: SuggestedFix) -> some View {
-        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
+        let isAI = fix.isAIDiagnosis
+        let isAnalyzing = fix.isAnalyzing
+        
+        return VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
             HStack {
-                Image(systemName: "wand.and.stars")
+                Image(systemName: isAI ? "sparkles" : (isAnalyzing ? "brain.head.profile" : "wand.and.stars"))
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(RSMSTheme.Colors.accentGold)
-                Text("Suggested Fix")
+                    .foregroundStyle(isAI ? .purple : RSMSTheme.Colors.accentGold)
+                Text(isAI ? "AI Deep Audit Diagnosis" : "Suggested Fix")
                     .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    .foregroundStyle(isAI ? .purple : RSMSTheme.Colors.accentGold)
+                
                 Spacer()
 
                 // Confidence badge
@@ -350,39 +358,99 @@ struct DiscrepancyCard: View {
                 )
             }
 
-            Divider().background(RSMSTheme.Colors.accentGoldDark.opacity(0.3))
+            Divider().background((isAI ? Color.purple : RSMSTheme.Colors.accentGoldDark).opacity(0.3))
 
-            // Reason
+            // Reason Text with premium styling
             HStack(alignment: .top, spacing: RSMSTheme.Spacing.sm) {
-                Image(systemName: "lightbulb.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(RSMSTheme.Colors.warning)
-                    .padding(.top, 1)
+                Image(systemName: isAI ? "brain.head.profile" : "lightbulb.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(isAI ? .purple.opacity(0.8) : RSMSTheme.Colors.warning)
+                    .padding(.top, 2)
+                
                 Text(fix.reasonCode)
-                    .font(.system(size: 13, weight: .regular, design: .rounded))
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    .font(.system(size: 13, weight: isAI ? .medium : .regular, design: .rounded))
+                    .foregroundStyle(isAI ? .white : RSMSTheme.Colors.textSecondary)
+                    .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(.vertical, 4)
 
             // Recommended target
             HStack {
                 Text("Recommended adjustment:")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(isAI ? .white.opacity(0.7) : RSMSTheme.Colors.textSecondary)
                 Spacer()
                 Text("Set to \(fix.recommendedAdjustment) units")
                     .font(.system(size: 13, weight: .bold, design: .monospaced))
-                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                    .foregroundStyle(isAI ? .white : RSMSTheme.Colors.textPrimary)
+            }
+            .padding(.top, 2)
+            
+            // Ask AI Button (only if not already an AI diagnosis)
+            if !isAI {
+                Button {
+                    onAskAI()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles")
+                        Text(isAnalyzing ? "Analyzing..." : "Ask AI Deep Audit")
+                        Spacer()
+                        if !isAnalyzing {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10))
+                        } else {
+                            ProgressView().tint(.white).scaleEffect(0.7)
+                        }
+                    }
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(
+                        LinearGradient(colors: [Color.purple, Color.blue], startPoint: .leading, endPoint: .trailing)
+                            .opacity(isAnalyzing ? 0.4 : 0.9)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .shadow(color: .purple.opacity(0.3), radius: 4, y: 2)
+                }
+                .padding(.top, 6)
+                .disabled(isAnalyzing)
+            } else {
+                // AI Source Badge
+                HStack(spacing: 4) {
+                    Spacer()
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 10))
+                    Text("Verified by Gemini 1.5 Flash")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                }
+                .foregroundStyle(.purple.opacity(0.8))
+                .padding(.top, 4)
             }
         }
         .padding(RSMSTheme.Spacing.md)
         .background(
-            RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                .fill(RSMSTheme.Colors.accentGold.opacity(0.05))
-                .overlay(
+            ZStack {
+                if isAI {
+                    // Premium AI Glassmorphism Background
                     RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                        .stroke(RSMSTheme.Colors.accentGoldDark.opacity(0.3), lineWidth: 1)
-                )
+                        .fill(Color.purple.opacity(0.12))
+                    
+                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                        .stroke(
+                            LinearGradient(colors: [.purple.opacity(0.5), .blue.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                            lineWidth: 1.5
+                        )
+                } else {
+                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                        .fill(RSMSTheme.Colors.accentGold.opacity(0.05))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                                .stroke(RSMSTheme.Colors.accentGoldDark.opacity(0.3), lineWidth: 1)
+                        )
+                }
+            }
         )
     }
 

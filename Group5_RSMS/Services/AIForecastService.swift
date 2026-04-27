@@ -12,7 +12,7 @@ class AIForecastService {
     
     // TODO: Securely inject this via an environment variable or Supabase Edge Function.
     // For now, replace with your actual Google Gemini API key.
-    private let geminiKey = "YOUR_GEMINI_API_KEY"
+    private let geminiKey = "AIzaSyCjdPPAD1O7tZF3PIbyfMg54TPh6d6yS6E"
     
     struct GeminiResponse: Decodable {
         let candidates: [Candidate]?
@@ -160,5 +160,49 @@ class AIForecastService {
                     suggestion: "Maintain current strategy.",
                     detailed: "Analysis generated but failed to parse into detailed view.")
         }
+    }
+
+    /// Uses Gemini to analyze audit history and provide a forensic diagnosis for a discrepancy.
+    func fetchAuditDiagnosis(sku: String, productName: String, expected: Int, actual: Int, historyLogs: [String]) async throws -> String {
+        guard geminiKey != "YOUR_GEMINI_API_KEY" && !geminiKey.isEmpty else {
+            throw URLError(.userAuthenticationRequired)
+        }
+
+        let modelName = try await getValidModelName()
+        let endpoint = "https://generativelanguage.googleapis.com/v1beta/\(modelName):generateContent?key=\(geminiKey)"
+        guard let url = URL(string: endpoint) else { throw URLError(.badURL) }
+
+        let historyString = historyLogs.joined(separator: "\n")
+        let prompt = """
+        You are a forensic retail auditor.
+        A discrepancy has been found for:
+        Product: \(productName) (SKU: \(sku))
+        Expected Stock: \(expected)
+        Actual Physical Count: \(actual)
+        Difference: \(actual - expected)
+
+        Here is the recent audit history for this item:
+        \(historyString)
+
+        Based ONLY on the database history records provided below, identify the pattern and provide a BRIEF fix (max 20 words).
+        Format: [Simple cause based on database records]. Tap "[Button Name]" to fix it.
+        Example: 'Three previous receiving errors found. Tap "Approve Fix" to sync.'
+        """
+
+        let requestBody: [String: Any] = [
+            "contents": [["parts": [["text": prompt]]]],
+            "generationConfig": ["temperature": 0.4]
+        ]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else { return "Failed to reach AI diagnostic engine." }
+
+        let decoded = try JSONDecoder().decode(GeminiResponse.self, from: data)
+        return decoded.candidates?.first?.content.parts.first?.text ?? "Unable to generate diagnosis."
     }
 }
