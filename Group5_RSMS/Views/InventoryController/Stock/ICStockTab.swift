@@ -62,6 +62,9 @@ struct ICStockTab: View {
                     .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                     .padding(.top, RSMSTheme.Spacing.md)
                 }
+                .refreshable {
+                    await refreshData()
+                }
             }
             .navigationTitle(appState.stores.first(where: { $0.id == appState.currentStoreID })?.name ?? "Stock")
             .navigationBarTitleDisplayMode(.large)
@@ -133,18 +136,24 @@ struct ICStockTab: View {
             .buttonStyle(.plain)
         }
         .task {
-            if appState.stores.isEmpty {
-                await appState.loadStores()
+            // Only load initially if we don't have local inventory or products yet
+            if localInventory.isEmpty || appState.products.isEmpty {
+                await refreshData()
             }
-            await appState.fetchProducts()
-            await appState.fetchTotalInventoryCount(storeId: appState.assignedStoreId)
-            await fetchLowStock()
-            await fetchLocalProductsCount()
-            await fetchPendingRepairs()
-            await fetchCategories()
-            await fetchUpcomingChecks()
-            
         }
+    }
+
+    private func refreshData() async {
+        if appState.stores.isEmpty {
+            await appState.loadStores()
+        }
+        await appState.fetchProducts()
+        await appState.fetchTotalInventoryCount(storeId: appState.assignedStoreId)
+        await fetchLowStock()
+        await fetchLocalProductsCount()
+        await fetchPendingRepairs()
+        await fetchCategories()
+        await fetchUpcomingChecks()
     }
     
     private func fetchLowStock() async {
@@ -158,7 +167,9 @@ struct ICStockTab: View {
             }
             lowStockCount = alerts.count
         } catch {
-            print("Failed to fetch low stock alerts: \(error)")
+            if !(error is CancellationError) {
+                print("Failed to fetch low stock alerts: \(error)")
+            }
         }
         isLoadingLowStock = false
     }
@@ -268,35 +279,25 @@ struct ICStockTab: View {
     private var stockCheckSection: some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
             HStack {
-                // Title + chevron inline — taps to full list
-                NavigationLink(destination: AllStockChecksView(
-                    checks: upcomingChecks,
-                    categories: allCategories,
-                    categorySchedules: categorySchedules
-                )) {
-                    HStack(spacing: 4) {
-                        Text("Scheduled Audits")
-                            .font(.headline)
-                            .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                    }
-                }
-                .buttonStyle(.plain)
-                .opacity(upcomingChecks.isEmpty ? 0.5 : 1)
+                Text("Scheduled Audits")
+                    .font(.headline)
+                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
 
                 Spacer()
-
-                Button(action: { isShowingScheduleSheet = true }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "plus.circle.fill")
-                        Text("Schedule")
+                
+                HStack(spacing: 16) {
+                    if !upcomingChecks.isEmpty {
+                        NavigationLink(destination: AllStockChecksView(
+                            checks: upcomingChecks,
+                            categories: allCategories,
+                            categorySchedules: categorySchedules,
+                            isShowingScheduleSheet: $isShowingScheduleSheet
+                        )) {
+                            Text("See All")
+                                .font(.footnote)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
                     }
-                    .font(.footnote)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(RSMSTheme.Colors.accentGold)
                 }
             }
 
@@ -336,7 +337,8 @@ struct ICStockTab: View {
                             NavigationLink(destination: AllStockChecksView(
                                 checks: upcomingChecks,
                                 categories: allCategories,
-                                categorySchedules: categorySchedules
+                                categorySchedules: categorySchedules,
+                                isShowingScheduleSheet: $isShowingScheduleSheet
                             )) {
                                 stockCheckRow(for: check)
                             }
@@ -532,7 +534,9 @@ struct ICStockTab: View {
             totalCategoriesCount = records.count
             
         } catch {
-            print("Failed to fetch categories: \(error)")
+            if !(error is CancellationError) {
+                print("Failed to fetch categories: \(error)")
+            }
         }
         isLoadingCategories = false
     }
@@ -550,7 +554,9 @@ struct ICStockTab: View {
             categorySchedules = try await StockCheckService.shared.fetchSchedules(forStore: storeId)
             print("🔍 StockCheck Debug: Successfully fetched \(upcomingChecks.count) checks, last audit date & \(categorySchedules.count) schedules")
         } catch {
-            print("❌ StockCheck Debug: Fetch Failed! Error: \(error)")
+            if !(error is CancellationError) {
+                print("❌ StockCheck Debug: Fetch Failed! Error: \(error)")
+            }
         }
         isLoadingChecks = false
     }
@@ -566,7 +572,9 @@ struct ICStockTab: View {
             
             pendingRepairs = records
         } catch {
-            print("Failed to fetch pending repairs: \(error)")
+            if !(error is CancellationError) {
+                print("Failed to fetch pending repairs: \(error)")
+            }
         }
     }
     
@@ -578,7 +586,7 @@ struct ICStockTab: View {
                     .from("inventory")
                     .select("product_id, stock_quantity")
                     .eq("store_id", value: storeId)
-                    .order("stock_quantity", ascending: false)
+                    .order("stock_quantity", ascending: true)
                     .execute()
                     .value
                 
@@ -589,7 +597,9 @@ struct ICStockTab: View {
                 localInventory = []
             }
         } catch {
-            print("Failed to fetch local inventory count: \(error)")
+            if !(error is CancellationError) {
+                print("Failed to fetch local inventory count: \(error)")
+            }
         }
         isLoadingLocalProducts = false
     }
@@ -705,6 +715,7 @@ struct AllStockChecksView: View {
     var checks: [StockCheck]
     var categories: [Category]
     var categorySchedules: [StockCheckSchedule]
+    @Binding var isShowingScheduleSheet: Bool
 
     @State private var searchText = ""
 
@@ -753,6 +764,18 @@ struct AllStockChecksView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { isShowingScheduleSheet = true }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        .frame(width: 28, height: 28)
+                        .background(RSMSTheme.Colors.accentGold.opacity(0.1))
+                        .clipShape(Circle())
+                }
+            }
+        }
         .searchable(text: $searchText, prompt: "Search by category or status")
     }
 
