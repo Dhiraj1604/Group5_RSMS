@@ -53,8 +53,10 @@ struct StoreDetailView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Edit") {
+                Button {
                     showEditStore = true
+                } label: {
+                    Image(systemName: "pencil")
                 }
                 .foregroundStyle(RSMSTheme.Colors.accentGold)
             }

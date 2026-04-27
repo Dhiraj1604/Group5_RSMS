@@ -30,7 +30,6 @@ struct ProductDetailView: View {
                 VStack(spacing: RSMSTheme.Spacing.xl) {
                     productHeroImage
                     productInfoCard
-                    activeStatusSection
                     priceSection
                     statusCard
                     craftsmanshipCard
@@ -142,42 +141,6 @@ struct ProductDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
         .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
             .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
-    }
-
-    // MARK: - Active Status Section
-    private var activeStatusSection: some View {
-        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-            Label("Global Visibility", systemImage: "globe")
-                .font(.headline)
-                .foregroundStyle(RSMSTheme.Colors.textPrimary)
-
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Active Status")
-                        .font(.subheadline).fontWeight(.semibold)
-                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                    Text(currentProduct.isActive ? "Available across all boutiques" : "Hidden from staff and customers")
-                        .font(.caption)
-                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                }
-                Spacer()
-                Toggle("", isOn: Binding(
-                    get: { currentProduct.isActive },
-                    set: { newValue in
-                        Task { await updateActiveStatus(newState: newValue) }
-                    }
-                ))
-                .labelsHidden()
-                .tint(RSMSTheme.Colors.accentGold)
-            }
-            .padding(RSMSTheme.Spacing.lg)
-            .background(RSMSTheme.Colors.backgroundDeep)
-            .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
-            .overlay(
-                RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
-                    .stroke(currentProduct.isActive ? RSMSTheme.Colors.borderLight : RSMSTheme.Colors.warning.opacity(0.3), lineWidth: 1)
-            )
-        }
     }
 
     // MARK: - Price Section
@@ -368,43 +331,7 @@ struct ProductDetailView: View {
         }
         .padding(.vertical, RSMSTheme.Spacing.md)
     }
-
-    // MARK: - Active Status Update
-    // Uses AppState so the computed currentProduct auto-refreshes via @Observable
-    @MainActor
-    private func updateActiveStatus(newState: Bool) async {
-        do {
-            try await SupabaseManager.shared.client
-                .from("products")
-                .update(["is_active": newState])
-                .eq("id", value: currentProduct.id)
-                .execute()
-
-            print("✅ Active status updated")
-
-            // Audit log
-            ActivityLogService.shared.log(
-                userEmail: appState.userEmail,
-                action: newState ? .activated : .deactivated,
-                entity: .product,
-                entityName: currentProduct.name,
-                entityId: currentProduct.id.uuidString,
-                details: "Product \(newState ? "activated" : "deactivated")"
-            )
-
-            // Refresh AppState so currentProduct computed var picks up new value
-            await appState.fetchProducts()
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                onPriceUpdated?()
-            }
-        } catch {
-            print("❌ Failed to update active status: \(error)")
-            updateError = error.localizedDescription
-        }
-    }
 }
-
 #Preview {
     NavigationStack {
         ProductDetailView(product: Product.sample)
