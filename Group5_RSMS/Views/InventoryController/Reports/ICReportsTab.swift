@@ -17,9 +17,6 @@ struct ICReportsTab: View {
     @State private var heatmapData: [InventoryItem] = []
     @State private var isLoading = true
     @State private var fetchError: String? = nil
-    @Environment(\.horizontalSizeClass) private var sizeClass
-    
-    private var isIPad: Bool { sizeClass == .regular }
     
     private let service = ICReportsService()
     
@@ -52,12 +49,12 @@ struct ICReportsTab: View {
                     .padding()
                 } else {
                     ScrollView {
-                        VStack(spacing: isIPad ? 48 : 36) {
+                        VStack(spacing: 36) {
                             varianceReportSection
                             inventoryHeatMapSection
                         }
-                        .padding(.vertical, isIPad ? 40 : 24)
-                        .padding(.horizontal, isIPad ? 40 : RSMSTheme.Spacing.horizontalMargin)
+                        .padding(.vertical, 24)
+                        .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                     }
                 }
             }
@@ -92,10 +89,10 @@ struct ICReportsTab: View {
 
     // MARK: - Variance Section
     private var varianceReportSection: some View {
-        VStack(alignment: .leading, spacing: isIPad ? 24 : 16) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Variance Report")
-                    .font(.system(size: isIPad ? 28 : 20, weight: .bold))
+                    .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.white)
                 
                 Spacer()
@@ -118,19 +115,17 @@ struct ICReportsTab: View {
             }
             
             Text("Latest inventory discrepancies from routine stock checks.")
-                .font(.system(size: isIPad ? 16 : 13))
+                .font(.system(size: 13))
                 .foregroundColor(RSMSTheme.Colors.textSecondary)
             
-            let columns = isIPad ? [GridItem(.flexible()), GridItem(.flexible())] : [GridItem(.flexible())]
-            
-            LazyVGrid(columns: columns, spacing: 16) {
+            VStack(spacing: 12) {
                 if varianceData.isEmpty {
                     Text("No discrepancies found.")
                         .foregroundColor(RSMSTheme.Colors.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding()
                 } else {
-                    ForEach(varianceData.prefix(isIPad ? 6 : 5)) { item in
+                    ForEach(varianceData.prefix(5)) { item in
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(item.product?.name ?? "Unknown Product")
@@ -170,26 +165,24 @@ struct ICReportsTab: View {
                                 .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
                         )
                     }
+                    if varianceData.count > 5 {
+                        Text("Showing 5 of \(varianceData.count) records")
+                            .font(.system(size: 12))
+                            .foregroundColor(RSMSTheme.Colors.textTertiary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, 8)
                     }
                 }
-            }
-            
-            if varianceData.count > (isIPad ? 6 : 5) {
-                Text("Showing \(isIPad ? 6 : 5) of \(varianceData.count) records")
-                    .font(.system(size: 12))
-                    .foregroundColor(RSMSTheme.Colors.textTertiary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 8)
             }
         }
     }
 
     // MARK: - Heat Map Section
     private var inventoryHeatMapSection: some View {
-        VStack(alignment: .leading, spacing: isIPad ? 24 : 16) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Inventory Heat Map")
-                    .font(.system(size: isIPad ? 28 : 20, weight: .bold))
+                    .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.white)
                 
                 Spacer()
@@ -212,23 +205,16 @@ struct ICReportsTab: View {
             }
             
             Text("Product distribution by Category vs. Stock Health.")
-                .font(.system(size: isIPad ? 16 : 13))
+                .font(.system(size: 13))
                 .foregroundColor(RSMSTheme.Colors.textSecondary)
             
             heatMapGrid
         }
     }
     
+    private var heatMapGrid: some View {
         let categories = Array(Set(heatmapData.compactMap { $0.product?.category ?? "Other" })).sorted()
         let statuses = ["Out of Stock", "Low", "Healthy", "Overstock", "Floor", "Backroom"]
-        
-        // Configuration for iPad vs iPhone
-        let categoryWidth: CGFloat = isIPad ? 180 : 100
-        let statusWidth: CGFloat = isIPad ? 110 : 70
-        let cellHeight: CGFloat = isIPad ? 60 : 40
-        let headerHeight: CGFloat = isIPad ? 44 : 30
-        let fontSize: CGFloat = isIPad ? 14 : 12
-        let subFontSize: CGFloat = isIPad ? 13 : 11
         
         // Matrix maps Category -> Status -> Product Count
         var matrix: [String: [String: Int]] = [:]
@@ -260,32 +246,32 @@ struct ICReportsTab: View {
         let maxCount = matrix.values.flatMap { $0.values }.max() ?? 1
         let safeMax = maxCount > 0 ? maxCount : 1
         
-        return ScrollView(.horizontal, showsIndicators: true) {
-            Grid(alignment: .leading, horizontalSpacing: 4, verticalSpacing: 4) {
+        return ScrollView(.horizontal, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 4) {
                 // Header row
-                GridRow {
+                HStack(spacing: 4) {
                     Text("Category")
-                        .font(.system(size: fontSize, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundColor(RSMSTheme.Colors.textSecondary)
-                        .frame(width: categoryWidth, alignment: .leading)
+                        .frame(width: 100, alignment: .leading)
                     
                     ForEach(statuses, id: \.self) { status in
                         Text(status)
-                            .font(.system(size: subFontSize, weight: .bold))
+                            .font(.system(size: 11, weight: .bold))
                             .foregroundColor(RSMSTheme.Colors.textSecondary)
-                            .frame(width: statusWidth, height: headerHeight)
-                            .multilineTextAlignment(.center)
+                            .frame(width: 70, height: 30)
+                            .lineLimit(1)
                     }
                 }
                 
                 // Data rows
                 ForEach(categories, id: \.self) { category in
-                    GridRow {
+                    HStack(spacing: 4) {
                         Text(category)
-                            .font(.system(size: fontSize, weight: .medium))
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.white)
-                            .frame(width: categoryWidth, alignment: .leading)
-                            .lineLimit(2)
+                            .frame(width: 100, alignment: .leading)
+                            .lineLimit(1)
                         
                         ForEach(statuses, id: \.self) { status in
                             let val = matrix[category]?[status] ?? 0
@@ -297,20 +283,20 @@ struct ICReportsTab: View {
                                     .fill(val == 0 ? RSMSTheme.Colors.backgroundElevated : cellColor)
                                 
                                 Text("\(val)")
-                                    .font(.system(size: fontSize, weight: val > 0 ? .bold : .regular))
+                                    .font(.system(size: 12, weight: val > 0 ? .bold : .regular))
                                     .foregroundColor(val == 0 ? RSMSTheme.Colors.textTertiary : (intensity > 0.5 ? .black : .white))
                             }
-                            .frame(width: statusWidth, height: cellHeight)
-                            .cornerRadius(isIPad ? 8 : 4)
+                            .frame(width: 70, height: 40)
+                            .cornerRadius(4)
                         }
                     }
                 }
             }
-            .padding(isIPad ? 24 : 16)
+            .padding(16)
             .background(RSMSTheme.Colors.backgroundElevated)
-            .cornerRadius(isIPad ? 20 : 16)
+            .cornerRadius(16)
             .overlay(
-                RoundedRectangle(cornerRadius: isIPad ? 20 : 16)
+                RoundedRectangle(cornerRadius: 16)
                     .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
             )
         }
