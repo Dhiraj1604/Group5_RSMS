@@ -166,16 +166,6 @@ struct EditStoreView: View {
                         .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(RSMSTheme.Colors.textTertiary)
                 }
-                Spacer()
-                
-                // Active Toggle
-                Toggle("", isOn: $isActive)
-                    .tint(RSMSTheme.Colors.accentGold)
-                    .labelsHidden()
-                Text(isActive ? "ACTIVE" : "INACTIVE")
-                    .font(.caption)
-                    .fontWeight(.bold)
-                    .foregroundStyle(isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.error)
             }
             .padding(.bottom, RSMSTheme.Spacing.sm)
 
@@ -354,9 +344,6 @@ struct EditStoreView: View {
                 }
             }
             HStack(spacing: RSMSTheme.Spacing.sm) {
-                Image(systemName: icon)
-                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7))
-                    .frame(width: 20)
                 TextField("", text: text, prompt: Text(placeholder).foregroundStyle(RSMSTheme.Colors.textTertiary))
                     .foregroundStyle(RSMSTheme.Colors.textPrimary)
                     .autocorrectionDisabled()

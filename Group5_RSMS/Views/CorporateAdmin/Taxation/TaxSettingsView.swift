@@ -162,9 +162,7 @@ struct TaxSettingsView: View {
         let ratePercent = String(format: "%.1f", rule.rate * 100)
 
         return Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                viewModel.setActiveRule(rule)
-            }
+            editingRule = rule
         } label: {
             HStack(spacing: 0) {
                 // Left accent bar
