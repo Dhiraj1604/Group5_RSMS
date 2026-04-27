@@ -1,0 +1,484 @@
+1: 0 | //
+2: 0 | //  DiscrepancyReportView.swift
+3: 0 | //  Group5_RSMS
+4: 0 | //
+5: 0 | //  Inventory Controller — Discrepancy Report & Fix Approval Screen
+6: 0 | //
+7: 0 | //  Shown after a stock check is run. Lists every discrepancy with:
+8: 0 | //    • Quantity difference (shortage / surplus)
+9: 0 | //    • AI-generated suggested fix with confidence badge
+10: 0 | //    • One-tap "Approve" to commit the adjustment to Supabase
+11: 0 | //
+12: 0 | 
+13: 0 | import SwiftUI
+14: 0 | 
+15: 0 | // MARK: - Discrepancy Report
+16: 0 | 
+17: 1 | struct DiscrepancyReportView: View {
+18: 1 | @ObservedObject var vm: StockCheckViewModel
+19: 1 | @Environment(\.dismiss) private var dismiss
+20: 1 | 
+21: 1 | // segment: 0 = pending, 1 = resolved
+22: 1 | @State private var segment = 0
+23: 1 | 
+24: 1 | private var pending:  [StockDiscrepancy] { vm.discrepancies.filter { !$0.isApproved } }
+25: 1 | private var resolved: [StockDiscrepancy] { vm.discrepancies.filter {  $0.isApproved } }
+26: 1 | private var displayed: [StockDiscrepancy] { segment == 0 ? pending : resolved }
+27: 1 | 
+28: 2 | var body: some View {
+29: 3 | ZStack {
+30: 3 | AeonTheme.backgroundGradient.ignoresSafeArea()
+31: 3 | 
+32: 3 | // Liquid Metal Glows
+33: 4 | GeometryReader { _ in
+34: 4 | Circle().fill(AeonTheme.metalPrimary).frame(width: 600, height: 600).blur(radius: 120).offset(x: -200, y: -100)
+35: 4 | Circle().fill(AeonTheme.metalSecondary).frame(width: 700, height: 700).blur(radius: 150).offset(x: 100, y: 300)
+36: 3 | }.ignoresSafeArea()
+37: 3 | 
+38: 4 | VStack(alignment: .leading, spacing: 0) {
+39: 4 | // Editorial Header
+40: 5 | HStack(alignment: .top) {
+41: 6 | VStack(alignment: .leading, spacing: 8) {
+42: 6 | Text("ADJUSTMENTS")
+43: 6 | .font(.system(size: 11, weight: .heavy))
+44: 6 | .tracking(6)
+45: 6 | .foregroundStyle(Color.white.opacity(0.5))
+46: 6 | 
+47: 6 | Text("Discrepancy")
+48: 6 | .font(.system(size: 40, weight: .ultraLight, design: .serif))
+49: 6 | .foregroundStyle(.white)
+50: 5 | }
+51: 5 | Spacer()
+52: 5 | 
+53: 6 | Button {
+54: 6 | dismiss()
+55: 6 | } label: {
+56: 6 | Image(systemName: "xmark.circle.fill")
+57: 6 | .font(.system(size: 28))
+58: 6 | .foregroundStyle(.white.opacity(0.6))
+59: 5 | }
+60: 4 | }
+61: 4 | .padding(.horizontal, 24)
+62: 4 | .padding(.top, 20)
+63: 4 | // Segment picker
+64: 4 | segmentPicker
+65: 4 | .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+66: 4 | .padding(.vertical, RSMSTheme.Spacing.md)
+67: 4 | 
+68: 4 | // Summary bar
+69: 4 | summaryBar
+70: 4 | .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+71: 4 | .padding(.bottom, RSMSTheme.Spacing.md)
+72: 4 | 
+73: 4 | // List
+74: 5 | if displayed.isEmpty {
+75: 5 | emptyState
+76: 5 | } else {
+77: 6 | ScrollView {
+78: 7 | LazyVStack(spacing: RSMSTheme.Spacing.md) {
+79: 8 | ForEach(displayed) { d in
+80: 8 | DiscrepancyCard(
+81: 8 | discrepancy: d,
+82: 8 | fix: vm.fixes[d.id],
+83: 9 | onApprove: {
+84: 9 | Task { await vm.approveFix(discrepancyId: d.id) }
+85: 8 | },
+86: 9 | onDismiss: {
+87: 10 | withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+88: 10 | vm.dismissDiscrepancy(id: d.id)
+89: 9 | }
+90: 8 | }
+91: 8 | )
+92: 7 | }
+93: 6 | }
+94: 6 | .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+95: 6 | .padding(.bottom, RSMSTheme.Spacing.xxxl)
+96: 5 | }
+97: 4 | }
+98: 3 | }
+99: 2 | }
+100: 2 | .navigationBarHidden(true)
+101: 3 | .toolbar {
+102: 4 | ToolbarItem(placement: .topBarTrailing) {
+103: 5 | if pending.isEmpty {
+104: 5 | Label("All Clear", systemImage: "checkmark.seal.fill")
+105: 5 | .font(.caption)
+106: 5 | .foregroundStyle(.green)
+107: 4 | }
+108: 3 | }
+109: 2 | }
+110: 1 | }
+111: 1 | 
+112: 1 | // MARK: - Segment Picker
+113: 1 | 
+114: 2 | private var segmentPicker: some View {
+115: 3 | HStack(spacing: 0) {
+116: 3 | segmentButton(label: "Pending (\(pending.count))",  tag: 0)
+117: 3 | segmentButton(label: "Resolved (\(resolved.count))", tag: 1)
+118: 2 | }
+119: 2 | .background(
+120: 2 | AeonGlassBackground(cornerRadius: 16)
+121: 2 | )
+122: 1 | }
+123: 1 | 
+124: 2 | private func segmentButton(label: String, tag: Int) -> some View {
+125: 3 | Button {
+126: 3 | withAnimation(.easeInOut(duration: 0.2)) { segment = tag }
+127: 3 | } label: {
+128: 3 | Text(label.uppercased())
+129: 3 | .font(.system(size: 10, weight: .heavy))
+130: 3 | .tracking(2)
+131: 3 | .foregroundStyle(segment == tag ? .black : .white.opacity(0.6))
+132: 3 | .frame(maxWidth: .infinity)
+133: 3 | .frame(height: 44)
+134: 3 | .background(
+135: 3 | segment == tag
+136: 3 | ? Color.white
+137: 3 | : Color.clear
+138: 3 | )
+139: 3 | .clipShape(RoundedRectangle(cornerRadius: 12))
+140: 2 | }
+141: 1 | }
+142: 1 | 
+143: 1 | // MARK: - Summary Bar
+144: 1 | 
+145: 2 | private var summaryBar: some View {
+146: 3 | HStack(spacing: RSMSTheme.Spacing.sm) {
+147: 3 | summaryPill(label: "Total", value: "\(vm.discrepancies.count)", color: RSMSTheme.Colors.accentGold)
+148: 3 | summaryPill(label: "Pending", value: "\(pending.count)", color: RSMSTheme.Colors.error)
+149: 3 | summaryPill(label: "Approved", value: "\(resolved.count)", color: RSMSTheme.Colors.success)
+150: 2 | }
+151: 1 | }
+152: 1 | 
+153: 2 | private func summaryPill(label: String, value: String, color: Color) -> some View {
+154: 3 | HStack(spacing: 4) {
+155: 3 | Text(value)
+156: 3 | .font(.system(size: 16, weight: .light, design: .serif))
+157: 3 | .foregroundStyle(.white)
+158: 3 | Text(label.uppercased())
+159: 3 | .font(.system(size: 8, weight: .heavy))
+160: 3 | .tracking(1)
+161: 3 | .foregroundStyle(Color.white.opacity(0.5))
+162: 2 | }
+163: 2 | .padding(.horizontal, 16)
+164: 2 | .padding(.vertical, 8)
+165: 2 | .background(
+166: 2 | AeonGlassBackground(cornerRadius: 12)
+167: 2 | )
+168: 1 | }
+169: 1 | 
+170: 1 | // MARK: - Empty State
+171: 1 | 
+172: 2 | private var emptyState: some View {
+173: 3 | VStack(spacing: RSMSTheme.Spacing.lg) {
+174: 3 | Spacer()
+175: 4 | ZStack {
+176: 4 | Circle()
+177: 4 | .fill(RSMSTheme.Colors.success.opacity(0.1))
+178: 4 | .frame(width: 80, height: 80)
+179: 4 | Image(systemName: segment == 0 ? "checkmark.seal.fill" : "tray.fill")
+180: 4 | .font(.system(size: 34))
+181: 4 | .foregroundStyle(segment == 0 ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
+182: 3 | }
+183: 3 | Text(segment == 0
+184: 3 | ? "ALL DISCREPANCIES RESOLVED"
+185: 3 | : "NO RESOLVED ITEMS")
+186: 3 | .font(.system(size: 11, weight: .heavy))
+187: 3 | .tracking(4)
+188: 3 | .foregroundStyle(Color.white.opacity(0.4))
+189: 3 | Spacer()
+190: 2 | }
+191: 1 | }
+192: 0 | }
+193: 0 | 
+194: 0 | // MARK: - Discrepancy Card
+195: 0 | 
+196: 1 | struct DiscrepancyCard: View {
+197: 1 | let discrepancy: StockDiscrepancy
+198: 1 | let fix: SuggestedFix?
+199: 1 | let onApprove: () -> Void
+200: 1 | let onDismiss: () -> Void
+201: 1 | 
+202: 1 | @State private var isExpanded = true
+203: 1 | 
+204: 2 | private var diffLabel: String {
+205: 2 | let d = discrepancy.difference
+206: 2 | return d > 0 ? "+\(d) surplus" : "\(d) shortage"
+207: 1 | }
+208: 2 | private var diffColor: Color {
+209: 2 | discrepancy.difference > 0 ? RSMSTheme.Colors.warning : RSMSTheme.Colors.error
+210: 1 | }
+211: 2 | private var diffIcon: String {
+212: 2 | discrepancy.difference > 0 ? "arrow.up.circle.fill" : "arrow.down.circle.fill"
+213: 1 | }
+214: 1 | 
+215: 2 | var body: some View {
+216: 3 | VStack(spacing: 0) {
+217: 3 | 
+218: 3 | // MARK: Card Header
+219: 4 | Button {
+220: 4 | withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) { isExpanded.toggle() }
+221: 4 | } label: {
+222: 5 | HStack(spacing: RSMSTheme.Spacing.md) {
+223: 5 | 
+224: 5 | // Status circle
+225: 6 | ZStack {
+226: 6 | Circle()
+227: 6 | .fill(discrepancy.isApproved
+228: 6 | ? RSMSTheme.Colors.success.opacity(0.15)
+229: 6 | : diffColor.opacity(0.15))
+230: 6 | .frame(width: 44, height: 44)
+231: 6 | Image(systemName: discrepancy.isApproved ? "checkmark.circle.fill" : diffIcon)
+232: 6 | .font(.system(size: 20, weight: .semibold))
+233: 6 | .foregroundStyle(discrepancy.isApproved ? RSMSTheme.Colors.success : diffColor)
+234: 5 | }
+235: 5 | 
+236: 6 | VStack(alignment: .leading, spacing: 3) {
+237: 6 | Text(discrepancy.productName)
+238: 6 | .font(.system(size: 18, weight: .light, design: .serif))
+239: 6 | .foregroundStyle(.white)
+240: 6 | .lineLimit(1)
+241: 6 | Text(discrepancy.sku.uppercased())
+242: 6 | .font(.system(size: 9, weight: .heavy))
+243: 6 | .tracking(2)
+244: 6 | .foregroundStyle(Color.white.opacity(0.4))
+245: 5 | }
+246: 5 | 
+247: 5 | Spacer()
+248: 5 | 
+249: 5 | // Diff badge
+250: 5 | Text(discrepancy.isApproved ? "Fixed" : diffLabel)
+251: 5 | .font(.system(size: 12, weight: .bold, design: .rounded))
+252: 5 | .foregroundStyle(discrepancy.isApproved ? RSMSTheme.Colors.success : diffColor)
+253: 5 | .padding(.horizontal, RSMSTheme.Spacing.sm)
+254: 5 | .padding(.vertical, 4)
+255: 5 | .background(
+256: 5 | Capsule()
+257: 5 | .fill((discrepancy.isApproved
+258: 5 | ? RSMSTheme.Colors.success
+259: 5 | : diffColor).opacity(0.15))
+260: 5 | )
+261: 5 | 
+262: 5 | Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+263: 5 | .font(.caption)
+264: 5 | .foregroundStyle(RSMSTheme.Colors.textTertiary)
+265: 4 | }
+266: 4 | .padding(RSMSTheme.Spacing.lg)
+267: 3 | }
+268: 3 | .buttonStyle(.plain)
+269: 3 | 
+270: 3 | // MARK: Expanded Detail
+271: 4 | if isExpanded {
+272: 5 | VStack(spacing: RSMSTheme.Spacing.md) {
+273: 5 | Divider().background(RSMSTheme.Colors.borderLight)
+274: 5 | 
+275: 5 | // Quantity comparison grid
+276: 5 | quantityComparison
+277: 5 | 
+278: 5 | // Suggested Fix panel
+279: 6 | if let fix = fix {
+280: 6 | fixPanel(fix)
+281: 5 | }
+282: 5 | 
+283: 5 | // Action buttons
+284: 6 | if !discrepancy.isApproved {
+285: 6 | actionButtons
+286: 6 | } else {
+287: 6 | approvedBadge
+288: 5 | }
+289: 4 | }
+290: 4 | .padding(.horizontal, RSMSTheme.Spacing.lg)
+291: 4 | .padding(.bottom, RSMSTheme.Spacing.lg)
+292: 4 | .transition(.opacity.combined(with: .move(edge: .top)))
+293: 3 | }
+294: 2 | }
+295: 2 | .aeonMonolithStyle()
+296: 1 | }
+297: 1 | 
+298: 1 | // MARK: Quantity Comparison Grid
+299: 1 | 
+300: 2 | private var quantityComparison: some View {
+301: 3 | HStack(spacing: 0) {
+302: 3 | qtyBox(label: "Expected", value: discrepancy.expectedQty, color: RSMSTheme.Colors.accentGold)
+303: 3 | 
+304: 3 | // Arrow with diff
+305: 4 | VStack(spacing: 2) {
+306: 4 | Image(systemName: discrepancy.difference >= 0 ? "arrow.up" : "arrow.down")
+307: 4 | .font(.system(size: 10, weight: .bold))
+308: 4 | .foregroundStyle(diffColor)
+309: 4 | Text(diffLabel)
+310: 4 | .font(.system(size: 10, weight: .bold, design: .monospaced))
+311: 4 | .foregroundStyle(diffColor)
+312: 3 | }
+313: 3 | .frame(maxWidth: .infinity)
+314: 3 | 
+315: 3 | qtyBox(label: "Actual", value: discrepancy.scannedQty, color: diffColor)
+316: 2 | }
+317: 2 | .padding(RSMSTheme.Spacing.md)
+318: 2 | .background(
+319: 2 | RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+320: 2 | .fill(RSMSTheme.Colors.backgroundElevated)
+321: 2 | )
+322: 1 | }
+323: 1 | 
+324: 2 | private func qtyBox(label: String, value: Int, color: Color) -> some View {
+325: 3 | VStack(spacing: 4) {
+326: 3 | Text("\(value)")
+327: 3 | .font(.system(size: 40, weight: .ultraLight, design: .serif))
+328: 3 | .foregroundStyle(.white)
+329: 3 | Text(label.uppercased())
+330: 3 | .font(.system(size: 8, weight: .heavy))
+331: 3 | .tracking(2)
+332: 3 | .foregroundStyle(Color.white.opacity(0.5))
+333: 2 | }
+334: 2 | .frame(maxWidth: .infinity)
+335: 1 | }
+336: 1 | 
+337: 1 | // MARK: Fix Panel
+338: 1 | 
+339: 2 | private func fixPanel(_ fix: SuggestedFix) -> some View {
+340: 3 | VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
+341: 4 | HStack {
+342: 4 | Image(systemName: "wand.and.stars")
+343: 4 | .font(.system(size: 13, weight: .semibold))
+344: 4 | .foregroundStyle(RSMSTheme.Colors.accentGold)
+345: 4 | Text("Suggested Fix")
+346: 4 | .font(.system(size: 13, weight: .bold, design: .rounded))
+347: 4 | .foregroundStyle(RSMSTheme.Colors.accentGold)
+348: 4 | Spacer()
+349: 4 | 
+350: 4 | // Confidence badge
+351: 5 | HStack(spacing: 4) {
+352: 5 | Image(systemName: fix.confidence.icon)
+353: 5 | .font(.system(size: 10, weight: .bold))
+354: 5 | Text(fix.confidence.label)
+355: 5 | .font(.system(size: 10, weight: .bold, design: .rounded))
+356: 4 | }
+357: 4 | .foregroundStyle(fix.confidence.color)
+358: 4 | .padding(.horizontal, 8)
+359: 4 | .padding(.vertical, 4)
+360: 4 | .background(
+361: 4 | Capsule()
+362: 4 | .fill(fix.confidence.color.opacity(0.12))
+363: 4 | .overlay(Capsule().stroke(fix.confidence.color.opacity(0.3), lineWidth: 1))
+364: 4 | )
+365: 3 | }
+366: 3 | 
+367: 3 | Divider().background(RSMSTheme.Colors.accentGoldDark.opacity(0.3))
+368: 3 | 
+369: 3 | // Reason
+370: 4 | HStack(alignment: .top, spacing: RSMSTheme.Spacing.sm) {
+371: 4 | Image(systemName: "lightbulb.fill")
+372: 4 | .font(.system(size: 11))
+373: 4 | .foregroundStyle(RSMSTheme.Colors.warning)
+374: 4 | .padding(.top, 1)
+375: 4 | Text(fix.reasonCode)
+376: 4 | .font(.system(size: 13, weight: .regular, design: .rounded))
+377: 4 | .foregroundStyle(RSMSTheme.Colors.textSecondary)
+378: 4 | .fixedSize(horizontal: false, vertical: true)
+379: 3 | }
+380: 3 | 
+381: 3 | // Recommended target
+382: 4 | HStack {
+383: 4 | Text("Recommended adjustment:")
+384: 4 | .font(.system(size: 13, weight: .medium, design: .rounded))
+385: 4 | .foregroundStyle(RSMSTheme.Colors.textSecondary)
+386: 4 | Spacer()
+387: 4 | Text("Set to \(fix.recommendedAdjustment) units")
+388: 4 | .font(.system(size: 13, weight: .bold, design: .monospaced))
+389: 4 | .foregroundStyle(RSMSTheme.Colors.textPrimary)
+390: 3 | }
+391: 2 | }
+392: 2 | .padding(24)
+393: 2 | .background(
+394: 2 | AeonGlassBackground(cornerRadius: 24)
+395: 2 | )
+396: 1 | }
+397: 1 | 
+398: 1 | // MARK: Action Buttons
+399: 1 | 
+400: 2 | private var actionButtons: some View {
+401: 3 | HStack(spacing: RSMSTheme.Spacing.md) {
+402: 3 | // Dismiss
+403: 4 | Button {
+404: 4 | onDismiss()
+405: 4 | } label: {
+406: 5 | HStack(spacing: 5) {
+407: 5 | Image(systemName: "xmark")
+408: 5 | .font(.system(size: 10, weight: .bold))
+409: 5 | Text("DISMISS")
+410: 5 | .font(.system(size: 10, weight: .black))
+411: 5 | .tracking(1)
+412: 4 | }
+413: 4 | .foregroundStyle(.white.opacity(0.6))
+414: 4 | .frame(maxWidth: .infinity)
+415: 4 | .frame(height: 48)
+416: 4 | .background(
+417: 4 | AeonGlassBackground(cornerRadius: 24)
+418: 4 | )
+419: 3 | }
+420: 3 | 
+421: 3 | // Approve
+422: 4 | Button {
+423: 4 | onApprove()
+424: 4 | } label: {
+425: 5 | ZStack {
+426: 6 | if discrepancy.isApplying {
+427: 6 | ProgressView()
+428: 6 | .tint(.black)
+429: 6 | } else {
+430: 7 | HStack(spacing: 5) {
+431: 7 | Image(systemName: "checkmark")
+432: 7 | .font(.system(size: 10, weight: .bold))
+433: 7 | Text("APPROVE FIX")
+434: 7 | .font(.system(size: 11, weight: .black))
+435: 7 | .tracking(1)
+436: 6 | }
+437: 6 | .foregroundStyle(.black)
+438: 5 | }
+439: 4 | }
+440: 4 | .frame(maxWidth: .infinity)
+441: 4 | .frame(height: 48)
+442: 4 | .background(Color.white)
+443: 4 | .clipShape(RoundedRectangle(cornerRadius: 24))
+444: 4 | .shadow(color: .black.opacity(0.3), radius: 10, y: 5)
+445: 3 | }
+446: 3 | .disabled(discrepancy.isApplying)
+447: 2 | }
+448: 1 | }
+449: 1 | 
+450: 1 | // MARK: Approved Badge
+451: 1 | 
+452: 2 | private var approvedBadge: some View {
+453: 3 | HStack(spacing: RSMSTheme.Spacing.sm) {
+454: 3 | Image(systemName: "checkmark.seal.fill")
+455: 3 | .font(.system(size: 16, weight: .semibold))
+456: 3 | .foregroundStyle(RSMSTheme.Colors.success)
+457: 3 | Text("Adjustment applied & logged")
+458: 3 | .font(.system(size: 13, weight: .semibold, design: .rounded))
+459: 3 | .foregroundStyle(RSMSTheme.Colors.success)
+460: 2 | }
+461: 2 | .frame(maxWidth: .infinity)
+462: 2 | .padding(.vertical, RSMSTheme.Spacing.sm)
+463: 2 | .background(
+464: 2 | RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+465: 2 | .fill(RSMSTheme.Colors.success.opacity(0.1))
+466: 2 | .overlay(
+467: 2 | RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+468: 2 | .stroke(RSMSTheme.Colors.success.opacity(0.3), lineWidth: 1)
+469: 2 | )
+470: 2 | )
+471: 1 | }
+472: 0 | }
+473: 0 | 
+474: 0 | // MARK: - Preview
+475: 0 | 
+476: 1 | #Preview {
+477: 2 | NavigationStack {
+478: 3 | DiscrepancyReportView(vm: {
+479: 3 | let vm = StockCheckViewModel()
+480: 3 | return vm
+481: 2 | }())
+482: 1 | }
+483: 1 | .environment(AppState())
+484: 0 | }

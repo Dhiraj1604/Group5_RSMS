@@ -15,7 +15,7 @@ struct InventoryControllerDashboard: View {
         TabView(selection: $selectedTab) {
             ICStockTab()
                 .tabItem {
-                    Image(systemName: "shippingbox.fill")
+                    Image(systemName: "archivebox.fill")
                     Text("Stock")
                 }
                 .tag(0)
@@ -27,32 +27,33 @@ struct InventoryControllerDashboard: View {
                 }
                 .tag(1)
 
-//            ICShipmentsTab()
-//                .tabItem {
-//                    Image(systemName: "shippingbox.fill")
-//                    Text("Shipments") // Shipments icon was the same as Stock, we might want to differentiate, but keeping it
-//                }
-//                .tag(2)
-
-            ICAlertsTab()
+            ICShipmentsTab()
                 .tabItem {
-                    Image(systemName: "bell.badge.fill")
-                    Text("Alerts")
+                    Image(systemName: "shippingbox.fill")
+                    Text("Shipments")
+                }
+                .tag(2)
+
+            StockCheckView()
+                .tabItem {
+                    Image(systemName: "checklist.checked")
+                    Text("Audit")
                 }
                 .tag(3)
 
-//            ICReportsTab()
-//                .tabItem {
-//                    Image(systemName: "doc.text.fill")
-//                    Text("Reports")
-//                }
-//                .tag(4)
+            ICReportsTab()
+                .tabItem {
+                    Image(systemName: "doc.text.fill")
+                    Text("Reports")
+                }
+                .tag(4)
         }
         .tint(RSMSTheme.Colors.accentGold)
         .task {
+            async let storesLoad: () = appState.loadStores()
             async let productsLoad: () = appState.fetchProducts()
             async let inventoryLoad: () = appState.fetchTotalInventoryCount()
-            _ = await (productsLoad, inventoryLoad)
+            _ = await (storesLoad, productsLoad, inventoryLoad)
         }
     }
 }

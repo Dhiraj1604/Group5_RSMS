@@ -17,6 +17,12 @@ enum RSMSTheme {
         static let backgroundElevated = Color(red: 0.149, green: 0.114, blue: 0.102)         // #261D1A (Warm Cocoa)
         static let surfacePrimary = Color(red: 0.118, green: 0.094, blue: 0.086)          // Rich Mahogany Smoke
         
+        // Backgrounds — Pure black base
+//         static let backgroundPrimary = Color.black                                           // #000000
+//         static let backgroundDeep = Color(red: 0.067, green: 0.067, blue: 0.067)            // #111111
+//         static let backgroundElevated = Color(red: 0.102, green: 0.102, blue: 0.102)        // #1A1A1A
+//         static let surfacePrimary = Color(red: 0.12, green: 0.12, blue: 0.12)              // #1F1F1F
+
         // Accent — Gold palette
         static let accentGold = Color(red: 0.788, green: 0.663, blue: 0.431)                // #C9A96E
         static let accentGoldLight = Color(red: 0.910, green: 0.835, blue: 0.639)           // #E8D5A3
@@ -55,6 +61,19 @@ enum RSMSTheme {
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
+    }
+
+    // MARK: - Typography
+    enum Typography {
+        static let heading1 = Font.system(size: 34, weight: .bold, design: .rounded)
+        static let heading2 = Font.system(size: 28, weight: .bold, design: .rounded)
+        static let heading3 = Font.system(size: 22, weight: .semibold, design: .rounded)
+        static let heading4 = Font.system(size: 18, weight: .semibold, design: .rounded)
+        
+        static let bodyCopy1 = Font.system(size: 16, weight: .regular, design: .default)
+        static let bodyCopy2 = Font.system(size: 14, weight: .regular, design: .default)
+        static let caption = Font.system(size: 12, weight: .medium, design: .default)
+        static let button = Font.system(size: 16, weight: .bold, design: .default)
     }
 
     // MARK: - Spacing

@@ -70,10 +70,8 @@ struct BarcodeScannerView: View {
     // MARK: - Scan Overlay
 
     private var scanOverlay: some View {
-        VStack {
-            Spacer()
-
-            // Viewfinder frame
+        ZStack {
+            // Viewfinder frame - Centered via ZStack
             ZStack {
                 RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
                     .stroke(RSMSTheme.Colors.accentGold, lineWidth: 2)
@@ -86,24 +84,24 @@ struct BarcodeScannerView: View {
                     .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
             }
 
-            Spacer().frame(height: RSMSTheme.Spacing.xxl)
-
-            // Instruction label
-            Text("Align barcode within the frame")
-                .font(.system(size: 15, weight: .medium, design: .rounded))
-                .foregroundColor(RSMSTheme.Colors.accentGoldLight)
-                .padding(.horizontal, RSMSTheme.Spacing.xl)
-                .padding(.vertical, 10)
-                .background(
-                    Capsule()
-                        .fill(RSMSTheme.Colors.backgroundDeep.opacity(0.85))
-                        .overlay(
-                            Capsule()
-                                .stroke(RSMSTheme.Colors.accentGoldDark.opacity(0.4), lineWidth: 0.5)
-                        )
-                )
-
-            Spacer().frame(height: 60)
+            // Instruction label - Positioned at bottom without affecting viewfinder center
+            VStack {
+                Spacer()
+                Text("Align barcode within the frame")
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundColor(RSMSTheme.Colors.accentGoldLight)
+                    .padding(.horizontal, RSMSTheme.Spacing.xl)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule()
+                            .fill(RSMSTheme.Colors.backgroundDeep.opacity(0.85))
+                            .overlay(
+                                Capsule()
+                                    .stroke(RSMSTheme.Colors.accentGoldDark.opacity(0.4), lineWidth: 0.5)
+                            )
+                    )
+                    .padding(.bottom, 140) // Balanced position for one-handed operation
+            }
         }
     }
 
