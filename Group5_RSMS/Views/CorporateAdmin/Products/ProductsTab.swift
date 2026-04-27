@@ -46,11 +46,11 @@ struct ProductsTab: View {
                         VStack(spacing: RSMSTheme.Spacing.md) {
                             categoryFilterRow
                             
-                            // Amazon-style Grid
-                            LazyVGrid(columns: columns, spacing: 20) {
+                            // Cinematic Square Boutique Grid
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 20)], spacing: 24) {
                                 ForEach(filteredProducts) { product in
                                     NavigationLink(value: product) {
-                                        ShopProductCard(product: product, baseURL: supabaseURL, bucket: bucketName)
+                                        BoutiqueSquareProductCard(product: product, baseURL: supabaseURL, bucket: bucketName)
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -66,23 +66,37 @@ struct ProductsTab: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showAddProduct = true } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    HStack(spacing: 20) {
+                        Button { Task { await appState.fetchProducts() } } label: {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.headline)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                        
+                        Button { showAddProduct = true } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
                     }
                 }
             }
             .searchable(text: $searchText, prompt: "Search products...")
             .task {
-                if appState.products.isEmpty {
-                    await appState.fetchProducts()
-                }
+                await appState.fetchProducts()
             }
             .refreshable { await appState.fetchProducts() }
             .sheet(isPresented: $showAddProduct) { AddProductView() }
             .navigationDestination(for: Product.self) { product in
                 ProductDetailView(product: product)
+            }
+            .alert("Product Update", isPresented: Binding<Bool>(
+                get: { appState.productError != nil },
+                set: { if !$0 { appState.productError = nil } }
+            )) {
+                Button("OK") { }
+            } message: {
+                Text(appState.productError ?? "Unknown error")
             }
         }
     }
@@ -140,8 +154,8 @@ struct ProductsTab: View {
         }
     }
     
-    // MARK: - Amazon-Style Shop Card
-    struct ShopProductCard: View {
+    // MARK: - Cinematic Boutique Product Tile
+    struct BoutiqueSquareProductCard: View {
         let product: Product
         let baseURL: String
         let bucket: String
@@ -156,86 +170,141 @@ struct ProductsTab: View {
         }
         
         var body: some View {
-            VStack(alignment: .leading, spacing: 0) {
-                // 1. Image — fixed height, contained in bounds
-                ZStack(alignment: .topTrailing) {
-                    RSMSTheme.Colors.backgroundDeep
-                    
+            ZStack(alignment: .bottomLeading) {
+                // 1. Full-Bleed Background Image (Fixed Height, Flexible Width)
+                ZStack {
                     if let url = imageURL {
                         AsyncImage(url: url) { phase in
                             switch phase {
                             case .success(let image):
                                 image
                                     .resizable()
-                                    .scaledToFit()
+                                    .scaledToFill()
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            case .failure:
-                                imagePlaceholder
-                            case .empty:
-                                ProgressView().tint(RSMSTheme.Colors.accentGold)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .clipped()
+                            case .empty, .failure:
+                                RSMSTheme.Colors.backgroundDeep
+                                    .overlay(
+                                        ProgressView()
+                                            .tint(RSMSTheme.Colors.accentGold.opacity(0.3))
+                                    )
                             @unknown default:
-                                EmptyView()
+                                RSMSTheme.Colors.backgroundDeep
                             }
                         }
-                        .id(url)
                     } else {
-                        imagePlaceholder
-                    }
-                    
-                    // Inactive badge
-                    if !product.isActive {
-                        Text("OUT OF STOCK")
-                            .font(.system(size: 8, weight: .bold))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(.black.opacity(0.75))
-                            .foregroundStyle(.white)
-                            .cornerRadius(4)
-                            .padding(8)
+                        RSMSTheme.Colors.backgroundDeep
                     }
                 }
-                .frame(height: 180)
+                .frame(height: 280)
                 .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
                 .clipped()
                 
-                // 2. Product Details
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("RSMS LUXE")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                // 2. Luxurious Overlays
+                ZStack {
+                    // Overall dark atmospheric overlay
+                    Color.black.opacity(0.5)
                     
-                    Text(product.name)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                        .lineLimit(1)
-                    
-                    HStack(spacing: 2) {
-                        Text("₹")
-                            .font(.system(size: 12, weight: .bold))
-                        Text(product.basePrice > 0 ? String(format: "%.0f", product.basePrice) : "Price on Request")
-                            .font(.system(size: 16, weight: .bold))
+                    // The Signature Golden floor-glow
+                    VStack {
+                        Spacer()
+                        LinearGradient(
+                            colors: [RSMSTheme.Colors.accentGold.opacity(0.4), .clear],
+                            startPoint: .bottom,
+                            endPoint: .center
+                        )
+                        .frame(height: 120)
                     }
-                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                    .padding(.top, 2)
+                    
+                    // 'Guilloché' Dot Matrix Texture
+                    Canvas { context, size in
+                        let spacing: CGFloat = 12
+                        let dotSize: CGFloat = 1.0
+                        for y in stride(from: spacing/2, through: size.height, by: spacing) {
+                            for x in stride(from: spacing/2, through: size.width, by: spacing) {
+                                let rect = CGRect(x: x, y: y, width: dotSize, height: dotSize)
+                                context.fill(Path(ellipseIn: rect), with: .color(.white.opacity(0.15)))
+                            }
+                        }
+                    }
+                    .blendMode(.plusLighter)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 10)
+                
+                // 3. Editorial Typography Layout
+                // Use a single overlay for all text to ensure consistent coordinate space
+                VStack(spacing: 0) {
+                    // Top Row: Category & Name
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(product.category.rawValue.uppercased())
+                                .font(.custom("HelveticaNeue-Bold", size: 10))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                                .tracking(2)
+                                .shadow(color: .black.opacity(0.8), radius: 2)
+                            
+                            Text(product.name)
+                                .font(.custom("HelveticaNeue-Bold", size: 22))
+                                .foregroundStyle(.white)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                                .shadow(color: .black.opacity(0.8), radius: 4)
+                        }
+                        Spacer()
+                    }
+                    
+                    Spacer()
+                    
+                    // Bottom Row: Price Hero
+                    HStack(alignment: .bottom) {
+                        Spacer()
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text("₹")
+                                .font(.custom("HelveticaNeue", size: 16))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                            
+                            Text(product.basePrice > 0 ? (Self.indianFormatter.string(from: NSNumber(value: product.basePrice)) ?? "0") : "On Request")
+                                .font(.custom("HelveticaNeue-Bold", size: 28))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                        .shadow(color: .black.opacity(0.8), radius: 3)
+                    }
+                }
+                .padding(24) // Luxury padding
             }
-            .background(RSMSTheme.Colors.backgroundDeep)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .frame(height: 280)
+            .clipShape(RoundedRectangle(cornerRadius: 24))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.2), .clear, RSMSTheme.Colors.accentGold.opacity(0.3)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
             )
+            .shadow(color: .black.opacity(0.5), radius: 15, x: 0, y: 10)
         }
         
+        private static let indianFormatter: NumberFormatter = {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.locale = Locale(identifier: "en_IN")
+            return formatter
+        }()
+        
         private var imagePlaceholder: some View {
-            Image(systemName: product.category.icon)
-                .font(.largeTitle)
-                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.2))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            VStack(spacing: 12) {
+                Image(systemName: product.category.icon)
+                    .font(.system(size: 36))
+                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.25))
+                Text(product.category.rawValue.uppercased())
+                    .font(.custom("HelveticaNeue-Bold", size: 9))
+                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                    .tracking(2)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }

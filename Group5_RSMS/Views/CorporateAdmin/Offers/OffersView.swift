@@ -129,24 +129,26 @@ struct OffersView: View {
                         if listedOffers.isEmpty {
                             emptyRow
                         } else {
-                            LazyVStack(spacing: RSMSTheme.Spacing.md) {
+                            // ── Cinematic Multi-Row Offers Grid ──────────────────────────
+                            LazyVGrid(columns: [
+                                GridItem(.flexible(), spacing: 20),
+                                GridItem(.flexible(), spacing: 20),
+                                GridItem(.flexible(), spacing: 20)
+                            ], spacing: 24) {
                                 ForEach(listedOffers) { offer in
-                                    SwipeToDeleteWrapper(action: {
-                                        service.softDeleteOffer(offer)
-                                    }) {
-                                        OfferRow(offer: offer)
-                                            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-                                            .onTapGesture {
-                                                offerForDetail = offer
-                                            }
-                                    }
+                                    BoutiqueCouponCard(offer: offer)
+                                        .onTapGesture {
+                                            offerForDetail = offer
+                                        }
                                 }
                             }
+                            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+                            .padding(.vertical, 10)
                         }
                     }
                 }
             }
-            .padding(.bottom, 100) // Padding for tab bar
+            .padding(.bottom, 60)
         }
         .scrollContentBackground(.hidden)
         .background(RSMSTheme.Colors.backgroundPrimary)
@@ -166,7 +168,6 @@ struct OffersView: View {
             }
         }
         .sheet(isPresented: $showCreate) {
-            // Refresh after creation sheet is dismissed
             service.fetchOffers()
         } content: {
             CreateOfferView(service: service)
@@ -198,17 +199,7 @@ struct OffersView: View {
         }
     }
 
-    // MARK: - Swipe to delete
-
-    private func deleteOffers(at offsets: IndexSet) {
-        for index in offsets {
-            let offer = listedOffers[index]
-            service.softDeleteOffer(offer)
-        }
-    }
-
     // MARK: - Stats row
-
     private var statsRow: some View {
         HStack(spacing: RSMSTheme.Spacing.sm) {
             StatCell(
@@ -230,7 +221,7 @@ struct OffersView: View {
             StatCell(
                 value: "\(service.expiredOffers.count)",
                 label: "Expired",
-                color: Color(red: 1.0, green: 0.5, blue: 0.31), // Coral
+                color: Color(red: 1.0, green: 0.5, blue: 0.31),
                 iconName: "clock.fill",
                 isSelected: selectedTab == .expired
             ) { selectedTab = .expired }
@@ -238,12 +229,9 @@ struct OffersView: View {
         .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
     }
 
-    // MARK: - Sort & Filter Row
-    
     private var sortAndFilterRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: RSMSTheme.Spacing.md) {
-                // Paused Checkbox First
                 if selectedTab == .active {
                     Button(action: { showPausedOnly.toggle() }) {
                         HStack {
@@ -327,8 +315,6 @@ struct OffersView: View {
         }
     }
 
-    // MARK: - Empty state row
-
     private var emptyRow: some View {
         VStack(spacing: RSMSTheme.Spacing.sm) {
             Image(systemName: selectedTab == .active ? "tag.slash" : (selectedTab == .scheduled ? "clock.badge.xmark" : "archivebox"))
@@ -343,8 +329,151 @@ struct OffersView: View {
     }
 }
 
-// MARK: - StatCell
+// MARK: - BoutiqueCouponCard
+struct BoutiqueCouponCard: View {
+    let offer: Offer
+    
+    private static let dateFormatter: DateFormatter = {
+        let df = DateFormatter()
+        df.dateFormat = "d MMM yyyy"
+        return df
+    }()
+    
+    var body: some View {
+        ZStack {
+            // 1. Base Paper
+            RSMSTheme.Colors.backgroundElevated
+                .clipShape(CouponShape())
+            
+            // 2. Luxurious Texture & Glow
+            Canvas { context, size in
+                let dotSize: CGFloat = 1.0
+                let spacing: CGFloat = 8.0
+                for x in stride(from: spacing, to: size.width, by: spacing) {
+                    for y in stride(from: spacing, to: size.height, by: spacing) {
+                        context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: dotSize, height: dotSize)), with: .color(RSMSTheme.Colors.accentGold.opacity(0.15)))
+                    }
+                }
+            }
+            .blendMode(.plusLighter)
+            
+            LinearGradient(
+                colors: [RSMSTheme.Colors.accentGold.opacity(0.08), .clear],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            
+            // 3. Coupon Content
+            HStack(spacing: 0) {
+                // Left Stub (Discount)
+                VStack(spacing: 4) {
+                    Text("VALUED AT")
+                        .font(.custom("HelveticaNeue-Bold", size: 8))
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        .tracking(1.5)
+                    
+                    Text(offer.discountLabel.replacingOccurrences(of: " OFF", with: ""))
+                        .font(.custom("HelveticaNeue-Bold", size: 32))
+                        .foregroundStyle(.white)
+                        .minimumScaleFactor(0.5)
+                        .lineLimit(1)
+                    
+                    Text("OFF")
+                        .font(.custom("HelveticaNeue-Bold", size: 12))
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        .tracking(3)
+                }
+                .frame(width: 80)
+                .overlay(
+                    // Highly Visible Vertical Dotted Perforation
+                    GeometryReader { geo in
+                        Path { path in
+                            path.move(to: CGPoint(x: geo.size.width, y: 12))
+                            path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height - 12))
+                        }
+                        .stroke(style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [0.1, 10]))
+                        .foregroundStyle(RSMSTheme.Colors.borderLight.opacity(0.8))
+                    },
+                    alignment: .trailing
+                )
+                
+                // Right Main Body
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .top) {
+                        Text(offer.name)
+                            .font(.custom("HelveticaNeue-Bold", size: 16))
+                            .foregroundStyle(.white)
+                            .lineLimit(2) // Support wrapping
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer()
+                        OfferStatusPill(status: offer.computedStatus)
+                    }
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "tag.fill")
+                            .font(.system(size: 9))
+                        Text(offer.applicableTo?.uppercased() ?? "ALL COLLECTIONS")
+                            .font(.custom("HelveticaNeue-Bold", size: 9))
+                            .tracking(1.0)
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("VALID UNTIL")
+                            .font(.custom("HelveticaNeue-Bold", size: 8))
+                            .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                        
+                        Text(Self.dateFormatter.string(from: offer.endDate).uppercased())
+                            .font(.custom("HelveticaNeue-Bold", size: 10))
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    }
+                }
+                .padding(.leading, 16)
+                .padding(.trailing, 12)
+                .padding(.vertical, 20)
+            }
+        }
+        .frame(height: 180)
+        .frame(maxWidth: .infinity)
+        .overlay(
+            CouponShape(stubWidth: 80)
+                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 5)
+    }
+}
 
+// MARK: - CouponShape
+struct CouponShape: Shape {
+    var stubWidth: CGFloat = 80
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let notchRadius: CGFloat = 10
+        let stubX: CGFloat = stubWidth
+        
+        path.move(to: CGPoint(x: 0, y: 0))
+        
+        path.addLine(to: CGPoint(x: stubX - notchRadius, y: 0))
+        path.addArc(center: CGPoint(x: stubX, y: 0), radius: notchRadius, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: true)
+        path.addLine(to: CGPoint(x: rect.width, y: 0))
+        
+        path.addLine(to: CGPoint(x: rect.width, y: rect.height))
+        
+        path.addLine(to: CGPoint(x: stubX + notchRadius, y: rect.height))
+        path.addArc(center: CGPoint(x: stubX, y: rect.height), radius: notchRadius, startAngle: .degrees(0), endAngle: .degrees(180), clockwise: true)
+        path.addLine(to: CGPoint(x: 0, y: rect.height))
+        
+        path.closeSubpath()
+        
+        return path
+    }
+}
+
+// MARK: - StatCell
 struct StatCell: View {
     let value: String
     let label: String

@@ -346,19 +346,26 @@ class AppState {
     func deleteProduct(_ product: Product) async {
         do {
             try await SupabaseManager.shared.client
-                .from("products").delete().eq("id", value: product.id).execute()
-            products.removeAll { $0.id == product.id }
+                .from("products")
+                .delete()
+                .eq("id", value: product.id)
+                .execute()
+
+            products.removeAll { $0.id == product.id }  // instant UI update
+            productError = nil
+
             auditLog.log(
                 action: .deleted, entity: .product,
                 entityName: product.name, entityId: product.id.uuidString,
                 details: "Product deleted (SKU: \(product.sku))",
                 before: product
             )
+
         } catch {
             productError = "Failed to delete product: \(error.localizedDescription)"
         }
     }
-
+    
     func submitRepair(for product: Product, issueDescription: String, repairCost: Double) async -> Bool {
         do {
             let payload = RepairInsertPayload(

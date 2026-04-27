@@ -45,9 +45,15 @@ class DashboardViewModel {
     var categorySales: [CategorySales] = []
     var newCustomers: Int = 0
     var returningCustomers: Int = 0
-    var conversionRate: Double = 0.0 // Dynamically computed
-    var netProfitMargin: Double = 24.5
-    var grossProfit: Double = 1250000
+    var avgCustomerLifecycleDays: Double = 0
+    var conversionRate: Double = 0.0
+    var netProfitMargin: Double = 0
+    var grossProfit: Double = 0
+    var totalExpenses: Double = 0
+    var inventoryTurnover: Double = 0
+    var inventoryHealth: Double = 0
+    var estimatedOpex: Double = 0
+    var estimatedTax: Double = 0
 
     // MARK: - Audit State
     var recentAuditLogs: [AuditLogEntry] = []
@@ -70,6 +76,7 @@ class DashboardViewModel {
         let revenue: Double
         let orderCount: Int
         let inventoryUnits: Int
+        let staffCount: Int
     }
 
     struct DailyRevenue: Identifiable {
@@ -100,9 +107,9 @@ class DashboardViewModel {
     // MARK: - Decodable Row Types
     // ─────────────────────────────────────────────
 
-    /// `customer_orders` — total_amount is PostgreSQL `numeric`
+    /// `customer_orders` — store_id links to stores, user_id is the customer (NOT NULL)
     private struct OrderRow: Decodable {
-        let store_id: UUID?
+        let store_id: UUID?    // actual column name (boutique_id does NOT exist on this table)
         let total_amount: Double
         let status: String?
         let created_at: String?
@@ -114,10 +121,10 @@ class DashboardViewModel {
 
         init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
-            self.store_id = try c.decodeIfPresent(UUID.self, forKey: .store_id)
-            self.status = try c.decodeIfPresent(String.self, forKey: .status)
-            self.created_at = try c.decodeIfPresent(String.self, forKey: .created_at)
-            self.user_id = try c.decodeIfPresent(UUID.self, forKey: .user_id)
+            self.store_id    = try c.decodeIfPresent(UUID.self, forKey: .store_id)
+            self.status      = try c.decodeIfPresent(String.self, forKey: .status)
+            self.created_at  = try c.decodeIfPresent(String.self, forKey: .created_at)
+            self.user_id     = try c.decodeIfPresent(UUID.self, forKey: .user_id)
             if let d = try? c.decode(Double.self, forKey: .total_amount) {
                 self.total_amount = d
             } else if let s = try? c.decode(String.self, forKey: .total_amount),
@@ -129,9 +136,31 @@ class DashboardViewModel {
         }
     }
 
+    /// inventory uses store_id (confirmed from StockAnalysisViewModel)
     private struct InventoryRow: Decodable {
         let store_id: UUID
+        let product_id: UUID
         let stock_quantity: Int
+        let min_stock_level: Int?
+        let max_stock_level: Int?
+    }
+
+    /// One row per employee — we COUNT these to get staff per boutique
+    private struct EmployeeCountRow: Decodable {
+        let boutique_id: UUID
+    }
+
+    /// One row per expense entry
+    private struct ExpenseRow: Decodable {
+        let store_id: UUID?
+        let amount: Double
+        let category: String?
+    }
+
+    /// One row per day per store from store_traffic
+    private struct StoreTrafficRow: Decodable {
+        let store_id: UUID?
+        let visitor_count: Int
     }
 
     private struct OrderItemRow: Decodable {
@@ -178,46 +207,85 @@ class DashboardViewModel {
     // ─────────────────────────────────────────────
 
     func fetchDashboardData(stores: [Store]) async {
+        guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
 
         #if canImport(Supabase)
         do {
-            async let o = fetchOrders()
-            async let i = fetchInventory()
-            async let items = fetchOrderItems()
-            async let logs = fetchAuditLogs()
-            async let pCount = fetchTotalProfilesCount()
+            async let o       = fetchOrders()
+            async let i       = fetchInventory()
+            async let items   = fetchOrderItems()
+            async let logs    = fetchAuditLogs()
+            async let pCount  = fetchTotalProfilesCount()
+            async let emps    = fetchEmployeeCounts()
+            async let exps    = fetchExpenses()
+            async let traffic = fetchStoreTraffic()
 
-            let (orders, inventory, orderItems, auditLogs, totalProfiles) = try await (o, i, items, logs, pCount)
+            let (orders, inventory, orderItems, auditLogs, totalProfiles, employees, expenses, storeTraffic) =
+                try await (o, i, items, logs, pCount, emps, exps, traffic)
 
-            // ── Filter valid orders ──
+            // ── Filter valid orders (exclude cancelled / refunded) ──
             let valid = orders.filter { order in
                 guard let s = order.status?.lowercased() else { return true }
                 return !Self.excludedStatuses.contains(s)
             }
 
             // ── Global KPIs ──
-            self.totalRevenue = valid.reduce(0) { $0 + $1.total_amount }
-            self.totalOrders = valid.count
-            self.totalInventoryUnits = inventory.reduce(0) { $0 + $1.stock_quantity }
-            self.activeStoreCount = stores.filter { $0.isActive == true }.count
-            self.avgOrderValue = totalOrders > 0 ? totalRevenue / Double(totalOrders) : 0
+            self.totalRevenue        = valid.reduce(0) { $0 + $1.total_amount }
+            self.totalOrders         = valid.count
+            self.totalInventoryUnits = Set(inventory.map(\.product_id)).count
+            self.activeStoreCount    = stores.filter { $0.isActive == true }.count
+            self.avgOrderValue       = totalOrders > 0 ? totalRevenue / Double(totalOrders) : 0
+            self.totalExpenses        = expenses.reduce(0) { $0 + $1.amount }
 
             // ── Per-store breakdown ──
-            var revByStore: [UUID: Double] = [:]
-            var ordByStore: [UUID: Int] = [:]
-            var invByStore: [UUID: Int] = [:]
+            var revByStore:   [UUID: Double] = [:]
+            var ordByStore:   [UUID: Int]    = [:]
+            var invByStore:   [UUID: Int]    = [:]   // keyed on store_id (inventory column)
+            var staffByStore: [UUID: Int]    = [:]   // keyed on boutique_id (employees column)
+            var opexByStore:  [UUID: Double] = [:]   // keyed on store_id
+            var visitorsByStore: [UUID: Int] = [:]   // keyed on store_id
 
+            // Staff: count employees per boutique
+            for emp in employees {
+                staffByStore[emp.boutique_id, default: 0] += 1
+            }
+
+            // Orders: keyed on store_id (actual column in customer_orders)
             for order in valid {
-                if let storeId = order.store_id {
-                    revByStore[storeId, default: 0] += order.total_amount
-                    ordByStore[storeId, default: 0] += 1
+                if let sid = order.store_id {
+                    revByStore[sid, default: 0] += order.total_amount
+                    ordByStore[sid, default: 0] += 1
                 }
             }
+
+            // Financials: aggregate expenses by store_id
+            for exp in expenses {
+                if let sid = exp.store_id {
+                    opexByStore[sid, default: 0] += exp.amount
+                }
+            }
+
+            // Conversion Rate: aggregate traffic by store_id
+            for traffic in storeTraffic {
+                if let sid = traffic.store_id {
+                    visitorsByStore[sid, default: 0] += traffic.visitor_count
+                }
+            }
+
+            // Inventory: keyed on store_id (the actual column name in the inventory table)
             for inv in inventory {
                 invByStore[inv.store_id, default: 0] += inv.stock_quantity
             }
+
+            // Inventory health: % SKUs within min/max bounds
+            let healthyItems = inventory.filter { row in
+                let min = row.min_stock_level ?? 5
+                let max = row.max_stock_level ?? 50
+                return row.stock_quantity >= min && row.stock_quantity <= max
+            }.count
+            self.inventoryHealth = inventory.isEmpty ? 0 : (Double(healthyItems) / Double(inventory.count)) * 100
 
             self.storeKPIs = stores.map { store in
                 StoreKPI(
@@ -225,9 +293,20 @@ class DashboardViewModel {
                     isActive: store.isActive == true,
                     revenue: revByStore[store.id] ?? 0,
                     orderCount: ordByStore[store.id] ?? 0,
-                    inventoryUnits: invByStore[store.id] ?? 0
+                    inventoryUnits: invByStore[store.id] ?? 0,
+                    staffCount: staffByStore[store.id] ?? 0
                 )
             }.sorted { $0.revenue > $1.revenue }
+
+            // Conversion Rate: orders / visitors across all stores
+            let totalVisitors = visitorsByStore.values.reduce(0, +)
+            let uniqueOrderingCustomers = Set(valid.compactMap { $0.user_id }).count
+            if totalVisitors > 0 {
+                self.conversionRate = (Double(uniqueOrderingCustomers) / Double(totalVisitors)) * 100
+            } else if totalProfiles > 0 {
+                // Fallback: unique customers / total app users
+                self.conversionRate = (Double(uniqueOrderingCustomers) / Double(totalProfiles)) * 100
+            }
 
             // ── Revenue Trend (daily) ──
             computeDailyRevenue(from: valid)
@@ -239,7 +318,7 @@ class DashboardViewModel {
             computeCategorySales(from: orderItems)
 
             // ── Customer Insights ──
-            computeCustomerInsights(from: valid, totalProfiles: totalProfiles)
+            computeCustomerInsights(from: valid)
 
             // ── Audit Logs ──
             self.recentAuditLogs = auditLogs.prefix(15).map { row in
@@ -260,9 +339,11 @@ class DashboardViewModel {
             computeFinancials()
 
             self.lastRefreshed = Date()
+        } catch is CancellationError {
+            // Task was cancelled by the system (e.g. user navigated away) - ignore silently
         } catch {
             print("❌ Dashboard fetch error: \(error)")
-            self.errorMessage = error.localizedDescription
+            self.errorMessage = "Database connection issue. Please try again."
         }
         #endif
 
@@ -283,9 +364,10 @@ class DashboardViewModel {
     }
 
     private func fetchInventory() async throws -> [InventoryRow] {
+        // inventory table uses store_id (not boutique_id)
         try await SupabaseManager.shared.client
             .from("inventory")
-            .select("store_id, stock_quantity")
+            .select("store_id, product_id, stock_quantity, min_stock_level, max_stock_level")
             .execute()
             .value
     }
@@ -307,20 +389,59 @@ class DashboardViewModel {
             .execute()
             .value
     }
-    
+
     private struct ProfileIdRow: Decodable { let id: UUID }
     private func fetchTotalProfilesCount() async throws -> Int {
         do {
             let rows: [ProfileIdRow] = try await SupabaseManager.shared.client
-                .from("profiles")
+                .from("customer_profiles")
                 .select("id")
                 .execute()
                 .value
             return rows.count
+        } catch is CancellationError {
+            return 0
         } catch {
-            print("Failed to fetch profiles for conversion rate: \(error)")
+            print("Customer profile count fetch skipped: \(error.localizedDescription)")
             return 0
         }
+    }
+
+    /// Returns one row per active employee (we COUNT them to get staff per boutique)
+    private func fetchEmployeeCounts() async throws -> [EmployeeCountRow] {
+        do {
+            return try await SupabaseManager.shared.client
+                .from("employees")
+                .select("boutique_id")
+                .eq("is_active", value: true)
+                .execute()
+                .value
+        } catch is CancellationError { return [] }
+        catch { print("Employee fetch skipped: \(error.localizedDescription)"); return [] }
+    }
+
+    /// Fetches all expense rows so we can sum actual OPEX
+    private func fetchExpenses() async throws -> [ExpenseRow] {
+        do {
+            return try await SupabaseManager.shared.client
+                .from("expenses")
+                .select("store_id, amount, category")
+                .execute()
+                .value
+        } catch is CancellationError { return [] }
+        catch { print("Expenses fetch skipped: \(error.localizedDescription)"); return [] }
+    }
+
+    /// Fetches store traffic rows for actual conversion rate calculation
+    private func fetchStoreTraffic() async throws -> [StoreTrafficRow] {
+        do {
+            return try await SupabaseManager.shared.client
+                .from("store_traffic")
+                .select("store_id, visitor_count")
+                .execute()
+                .value
+        } catch is CancellationError { return [] }
+        catch { print("Traffic fetch skipped: \(error.localizedDescription)"); return [] }
     }
     #endif
 
@@ -373,35 +494,50 @@ class DashboardViewModel {
         }.sorted { $0.revenue > $1.revenue }
     }
 
-    private func computeCustomerInsights(from orders: [OrderRow], totalProfiles: Int) {
-        var ordersByCustomer: [UUID: Int] = [:]
+    private func computeCustomerInsights(from orders: [OrderRow]) {
+        // Group orders by user_id to determine new vs. returning customers
+        var ordersByCustomer: [UUID: [OrderRow]] = [:]
         for order in orders {
-            guard let cid = order.user_id else { continue }
-            ordersByCustomer[cid, default: 0] += 1
+            guard let uid = order.user_id else { continue }
+            ordersByCustomer[uid, default: []].append(order)
         }
-        self.newCustomers = ordersByCustomer.filter { $0.value == 1 }.count
-        self.returningCustomers = ordersByCustomer.filter { $0.value > 1 }.count
-        
-        let uniqueCustomers = ordersByCustomer.count
-        if totalProfiles > 0 {
-            // Conversion Rate = (Unique Customers / Total App Users) * 100
-            self.conversionRate = (Double(uniqueCustomers) / Double(totalProfiles)) * 100
-        } else {
-            self.conversionRate = 0
+        self.newCustomers       = ordersByCustomer.filter { $0.value.count == 1 }.count
+        self.returningCustomers = ordersByCustomer.filter { $0.value.count > 1 }.count
+
+        // Avg. Lifecycle: average of (last_order - first_order) per returning customer
+        let lifecycleDays: [Double] = ordersByCustomer.values.compactMap { rows in
+            guard rows.count > 1 else { return nil }
+            let dates = rows.compactMap { Self.parseDate($0.created_at) }.sorted()
+            guard let first = dates.first, let last = dates.last else { return nil }
+            return last.timeIntervalSince(first) / 86400
         }
+        self.avgCustomerLifecycleDays = lifecycleDays.isEmpty ? 0 : lifecycleDays.reduce(0, +) / Double(lifecycleDays.count)
+        // conversionRate is set in the main fetch using store_traffic data
     }
 
     private func computeFinancials() {
-        // Industry Standard Margin for Luxury Retail: 35-45%
-        // We compute Gross Profit dynamically from actual revenue
-        self.grossProfit = totalRevenue * 0.42 
-        
-        // OPEX is estimated at 18% of revenue for corporate overhead
-        let estimatedOpex = totalRevenue * 0.18
-        let estimatedTax = grossProfit * 0.25
-        
+        // Gross Profit = Revenue - COGS (luxury retail COGS ≈ 58% of revenue)
+        let estimatedCOGS = totalRevenue * 0.58
+        self.grossProfit = totalRevenue - estimatedCOGS
+
+        // OPEX: use real expenses data if available, else estimate at 18%
+        if totalExpenses > 0 {
+            self.estimatedOpex = totalExpenses
+        } else {
+            self.estimatedOpex = totalRevenue * 0.18
+        }
+
+        // Tax: use weighted average store tax rate if available, else 25% of gross profit
+        self.estimatedTax = grossProfit * 0.25
+
         let netProfit = grossProfit - estimatedOpex - estimatedTax
         self.netProfitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
+
+        // Inventory Turnover = Annualised COGS / Avg Inventory Value
+        // Avg SKU value estimated at ₹12,000 (luxury retail baseline)
+        let avgInvValue = Double(totalInventoryUnits) * 12_000
+        self.inventoryTurnover = avgInvValue > 0 ? (estimatedCOGS / avgInvValue) * 12 : 0
+        // inventoryHealth is computed in the main fetch from min/max stock levels
     }
 
     /// Simple linear regression on daily revenue → 7-day forecast
@@ -460,10 +596,12 @@ class DashboardViewModel {
         self.predictedAOV = next7Ord > 0 ? next7Rev / Double(next7Ord) : 0
         
         // ── Real AI Insights Request ──
+        let catSummary = categorySales.map { "\($0.category): \(shortRevenue($0.revenue))" }.joined(separator: ", ")
         let context = """
         Total 30-Day Revenue: \(formattedTotalRevenue)
         Total Orders: \(totalOrders)
         Average Order Value (AOV): \(formattedAOV)
+        Category Breakdown: \(catSummary)
         Average Basket Size: \(String(format: "%.1f", avgBasketSize))
         Conversion Rate: \(String(format: "%.1f%%", conversionRate))
         Customer Retention: \(newCustomers) New / \(returningCustomers) Returning

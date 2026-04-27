@@ -1,15 +1,9 @@
-//
-//  AIForecastService.swift
-//  Group5_RSMS
-//
-//  Handles requests to external AI APIs (Google Gemini) to generate
-//  predictive insights based on dashboard context.
-//
 
 import Foundation
 
 class AIForecastService {
     
+//     private let geminiKey = "api"
     // TODO: Securely inject this via an environment variable or Supabase Edge Function.
     // For now, replace with your actual Google Gemini API key.
     private let geminiKey = "AIzaSyCjdPPAD1O7tZF3PIbyfMg54TPh6d6yS6E"
@@ -78,20 +72,21 @@ class AIForecastService {
         let systemPrompt = """
         You are an elite retail analytics AI.
         Analyze the provided dashboard metrics.
+        CRITICAL: Be extremely concise. Avoid wordy explanations. Use punchy, actionable language.
         Return strictly a JSON object with these keys:
-        1. "predictions": An array of 3 highly detailed, data-driven revenue or behavior predictions. Include specific percentages or volumes based on the data.
-        2. "suggestions": An array of 3 highly actionable, strategic suggestions to improve specific KPIs.
-        3. "best_performing_category": The name of the category expected to lead growth in the next 30 days.
-        4. "suggested_action": A single primary strategic action for the week.
-        5. "detailed_analysis": A single comprehensive paragraph (3-4 sentences) explaining the reasoning behind the forecast.
+        1. "predictions": Array of 3 ultra-short, data-driven bullets (max 12 words each).
+        2. "suggestions": Array of 3 concise, actionable tactics (max 10 words each).
+        3. "best_performing_category": Name of the leading category.
+        4. "suggested_action": A single punchy tactical move (max 10 words).
+        5. "detailed_analysis": A single, powerful summary sentence (max 20 words).
         
         Example:
         {
-          "predictions": ["Revenue is projected to rise by 12.4% over the next 14 days.", "Luxury watches will likely see a 20% volume surge.", "Customer retention rate is trending towards a 5% improvement."],
-          "suggestions": ["Immediate restock of high-demand watch models is critical.", "Target high-AOV customers with a premium loyalty campaign.", "Optimize inventory for the upcoming revenue peak on Tuesday."],
+          "predictions": ["Revenue likely up 12% following recent traffic surge.", "Watch volume to increase 20% by Tuesday.", "Retention rate stabilized at 85%."],
+          "suggestions": ["Restock luxury watches immediately.", "Email high-AOV customers a private offer.", "Shift inventory to New Delhi boutique."],
           "best_performing_category": "Luxury Watches",
-          "suggested_action": "Restock premium watches and run a targeted VIP promotion.",
-          "detailed_analysis": "The upcoming 30 days show a strong upward trend in revenue driven primarily by the luxury watches segment..."
+          "suggested_action": "Restock premium watches and blast VIP offers.",
+          "detailed_analysis": "Rising high-end traffic confirms a strong 30-day growth trend for luxury accessories."
         }
         
         Here is the current dashboard data context:

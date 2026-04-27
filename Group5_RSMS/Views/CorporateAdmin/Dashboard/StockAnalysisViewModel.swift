@@ -33,6 +33,7 @@ class StockAnalysisViewModel: ObservableObject {
         let category: String
         let stockQuantity: Int
         let basePrice: Double
+        let imageUrl: String?
 
         var id: String { "\(productId)-\(storeId)" }
 
@@ -121,6 +122,7 @@ class StockAnalysisViewModel: ObservableObject {
             let sku: String
             let category: String?
             let base_price: Double
+            let image_url: String?
         }
     }
 
@@ -131,7 +133,7 @@ class StockAnalysisViewModel: ObservableObject {
         do {
             let rows: [InventoryRow] = try await client
                 .from("inventory")
-                .select("product_id, store_id, stock_quantity, products(name, sku, category, base_price)")
+                .select("product_id, store_id, stock_quantity, products(name, sku, category, base_price, image_url)")
                 .eq("store_id", value: storeId)
                 .order("stock_quantity", ascending: true)
                 .execute()
@@ -145,7 +147,8 @@ class StockAnalysisViewModel: ObservableObject {
                     sku: row.products.sku,
                     category: row.products.category ?? "Other",
                     stockQuantity: row.stock_quantity,
-                    basePrice: row.products.base_price
+                    basePrice: row.products.base_price,
+                    imageUrl: row.products.image_url
                 )
             }
         } catch {
