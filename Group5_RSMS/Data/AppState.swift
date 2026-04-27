@@ -385,24 +385,49 @@ class AppState {
 
     func deleteProduct(_ product: Product) async {
         do {
+            // 1. Attempt Hard Delete
             try await SupabaseManager.shared.client
                 .from("products")
                 .delete()
                 .eq("id", value: product.id)
                 .execute()
+            
+            print("✅ Product permanently deleted.")
             products.removeAll { $0.id == product.id }
-            auditLog.log(
-                userEmail: userEmail,
-                action: .deleted,
-                entity: .product,
-                entityName: product.name,
-                entityId: product.id.uuidString,
-                details: "Product deleted (SKU: \(product.sku))",
-                before: product
-            )
+            productError = nil
+            
+            // Sync with server to confirm removal
+            await fetchProducts()
+            
         } catch {
-            print("❌ Failed to delete product: \(error)")
-            productError = "Failed to delete product: \(error.localizedDescription)"
+            print("❌ Delete failed: \(error)")
+            let errorString = "\(error)"
+            
+            // Check for Foreign Key Constraint (Code 23503)
+            if errorString.contains("23503") || errorString.contains("foreign key constraint") {
+                print("⚠️ Product has sales history. Switching to Archival (Soft Delete).")
+                
+                do {
+                    // Fallback: Deactivate and hide from active catalogue
+                    try await SupabaseManager.shared.client
+                        .from("products")
+                        .update(["is_active": false])
+                        .eq("id", value: product.id)
+                        .execute()
+                    
+                    // Local removal
+                    products.removeAll { $0.id == product.id }
+                    productError = "Product has order history and cannot be deleted. It has been safely archived and hidden from the catalogue."
+                    
+                    // Force re-fetch to ensure hidden state
+                    await fetchProducts()
+                    
+                } catch {
+                    productError = "Failed to archive product: \(error.localizedDescription)"
+                }
+            } else {
+                productError = "Failed to delete product: \(error.localizedDescription)"
+            }
         }
     }
 
