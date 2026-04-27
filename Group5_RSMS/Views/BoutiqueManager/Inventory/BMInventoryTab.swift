@@ -21,7 +21,7 @@ struct BMInventoryTab: View {
     @State private var isShowingMyRequests = false
     @State private var productToMove: FastMovingProduct? = nil
 
-    /// Resolved current store from AppState
+    // Resolved current store from AppState
 
     private var currentStore: Store? {
         guard let storeId = appState.currentStoreID else { return nil }
@@ -162,37 +162,29 @@ struct BMInventoryTab: View {
     // MARK: - Merchandising Segment
 
     private var merchandisingSegment: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 24) {
-                // Header
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Floor Merchandising")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(RSMSTheme.Colors.textPrimary)
-                    Text("Real-time local boutique floor velocity and trends.")
-                        .font(.system(size: 14))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-                .padding(.top, RSMSTheme.Spacing.md)
-
-                if let error = viewModel.insightsError {
-                    errorState(error)
-                }
-                
-                fastMoversSection
-                
-                Spacer(minLength: 40)
+        VStack(spacing: 24) {
+            // Header
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Floor Merchandising")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                Text("Real-time local boutique floor velocity and trends.")
+                    .font(.system(size: 14))
+                    .foregroundColor(RSMSTheme.Colors.textSecondary)
             }
-        }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+            .padding(.top, RSMSTheme.Spacing.md)
 
+            if let error = viewModel.insightsError {
+                errorState(error)
+            }
+            
+            fastMoversSection
+            
+            Spacer(minLength: 40)
+        }
         .task {
-            if let storeId = appState.currentStoreID {
-                await viewModel.loadMerchandisingInsights(forStore: storeId)
-            }
-        }
-        .refreshable {
             if let storeId = appState.currentStoreID {
                 await viewModel.loadMerchandisingInsights(forStore: storeId)
             }
@@ -523,9 +515,6 @@ struct BMInventoryTab: View {
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(RSMSTheme.Colors.textPrimary)
                     .lineLimit(1)
-                Text("Low Stock Items")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
             }
 
             Spacer()

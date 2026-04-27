@@ -54,6 +54,7 @@ final class BMInventoryViewModel: ObservableObject {
         do {
             self.alerts = try await LowStockService.shared.fetchLowStockAlerts(forStore: storeId)
         } catch {
+            if error is CancellationError { return }
             self.errorMessage = "Failed to load inventory: \(error.localizedDescription)"
             print("❌ [BMInventoryVM] \(error)")
         }
@@ -79,6 +80,7 @@ final class BMInventoryViewModel: ObservableObject {
                 excluding: storeId
             )
         } catch {
+            if error is CancellationError { return }
             self.transferError = "Failed to find transfer sources: \(error.localizedDescription)"
             print("❌ [BMInventoryVM] \(error)")
         }
@@ -110,6 +112,7 @@ final class BMInventoryViewModel: ObservableObject {
             )
             transferSuccess = true
         } catch {
+            if error is CancellationError { return }
             self.transferError = error.localizedDescription
             print("❌ [BMInventoryVM] Transfer failed: \(error)")
         }
@@ -136,6 +139,7 @@ final class BMInventoryViewModel: ObservableObject {
             )
             transferSuccess = true
         } catch {
+            if error is CancellationError { return }
             self.transferError = error.localizedDescription
             print("❌ [BMInventoryVM] Request failed: \(error)")
         }
@@ -150,6 +154,7 @@ final class BMInventoryViewModel: ObservableObject {
         do {
             self.incomingRequests = try await LowStockService.shared.fetchIncomingRequests(forStore: storeId)
         } catch {
+            if error is CancellationError { return }
             self.errorMessage = "Failed to load incoming requests: \(error.localizedDescription)"
             print("❌ [BMInventoryVM] \(error)")
         }
@@ -164,6 +169,7 @@ final class BMInventoryViewModel: ObservableObject {
         do {
             self.myRequests = try await LowStockService.shared.fetchMyRequests(forStore: storeId)
         } catch {
+            if error is CancellationError { return }
             self.errorMessage = "Failed to load outbound requests: \(error.localizedDescription)"
             print("❌ [BMInventoryVM] \(error)")
         }
@@ -196,6 +202,7 @@ final class BMInventoryViewModel: ObservableObject {
                 self.incomingRequests.removeAll { $0.id == request.id }
             }
         } catch {
+            if error is CancellationError { return }
             self.transferError = error.localizedDescription
             print("❌ [BMInventoryVM] Fulfillment failed: \(error)")
         }
@@ -222,6 +229,7 @@ final class BMInventoryViewModel: ObservableObject {
             self.fastMovingProducts = fastMoverResult
             
         } catch {
+            if error is CancellationError { return }
             self.insightsError = "Failed to load insights: \(error.localizedDescription)"
             print("❌ [BMInventoryVM] Insights error: \(error)")
         }
@@ -242,6 +250,7 @@ final class BMInventoryViewModel: ObservableObject {
             )
             await loadMerchandisingInsights(forStore: storeId)
         } catch {
+            if error is CancellationError { return }
             self.insightsError = "Failed to update floor display: \(error.localizedDescription)"
             print("❌ [BMInventoryVM] Floor update error: \(error)")
         }

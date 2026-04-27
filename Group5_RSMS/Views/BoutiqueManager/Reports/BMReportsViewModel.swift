@@ -35,6 +35,11 @@ final class BMReportsViewModel: ObservableObject {
     @Published var footfall: Int = 0
     @Published var dormantEmployees: Int = 0
     
+    // New detailed reporting data
+    @Published var soldProducts: [SoldProduct] = []
+    @Published var unsoldProducts: [InventoryProduct] = []
+    @Published var dormantStaffDetails: [Employee] = []
+    
     @Published var targetMetrics: [TargetMetric] = []
     @Published var dailySalesData: [DailySalesPoint] = []
     
@@ -46,39 +51,45 @@ final class BMReportsViewModel: ObservableObject {
         
         let calendar = Calendar.current
         let today = Date()
-        let currentMonth = calendar.component(.month, from: today)
-        let currentYear  = calendar.component(.year,  from: today)
+        let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: today) ?? today
         
         async let payoutsFetch   = SupabaseSyncManager.shared.fetchAllPayouts(boutiqueId: boutiqueId)
         async let employeesFetch = SupabaseSyncManager.shared.fetchEmployees(boutiqueId: boutiqueId)
+        async let soldProductsFetch = MerchandisingService.shared.fetchSoldProducts(forStore: boutiqueId)
+        async let fallbackFetch = MerchandisingService.shared.fetchFallbackItems(forStore: boutiqueId)
         
         let payouts   = (try? await payoutsFetch)   ?? []
         let employees = (try? await employeesFetch) ?? []
+        let soldItems = (try? await soldProductsFetch) ?? []
+        let slowItems = (try? await fallbackFetch) ?? []
         
-        print("Reports → payouts: \(payouts.count), employees: \(employees.count)")
+        print("Reports → payouts: \(payouts.count), employees: \(employees.count), sold: \(soldItems.count), slow: \(slowItems.count)")
         
-        // --- Filter this month's payouts ---
-        let monthPayouts = payouts.filter {
-            calendar.component(.month, from: $0.periodEnd) == currentMonth &&
-            calendar.component(.year,  from: $0.periodEnd) == currentYear
-        }
-        
-        self.totalSales   = monthPayouts.reduce(0.0) { $0 + $1.totalSalesAmount }
+        // --- Total Sales (Sold in last 30 days) ---
+        // Payouts might be monthly, but let's filter by date for the 30-day window
+        let recentPayouts = payouts.filter { $0.periodEnd >= thirtyDaysAgo }
+        self.totalSales = recentPayouts.reduce(0.0) { $0 + $1.totalSalesAmount }
         self.totalRevenue = self.totalSales * 0.72
-        self.totalOrders  = monthPayouts.count
-        self.footfall     = monthPayouts.count
+        self.totalOrders = recentPayouts.count
         
-        // --- Dormant employees (active but no payout this month) ---
-        let activeEmployeeIds = Set(monthPayouts.map { $0.employeeId })
-        let activeEmployees   = employees.filter { $0.isActive ?? true }
-        self.dormantEmployees = activeEmployees.filter {
-            !activeEmployeeIds.contains($0.id)
-        }.count
+        self.soldProducts = soldItems
+        
+        // --- Footfall (Items in stock > 30 days) ---
+        self.footfall = slowItems.count
+        self.unsoldProducts = slowItems
+        
+        // --- Dormant employees (active but no payout in last 30 days) ---
+        let recentEmployeeIds = Set(recentPayouts.map { $0.employeeId })
+        let activeEmployees = employees.filter { $0.isActive ?? true }
+        self.dormantStaffDetails = activeEmployees.filter {
+            !recentEmployeeIds.contains($0.id)
+        }
+        self.dormantEmployees = self.dormantStaffDetails.count
         
         // --- Targets vs Actual ---
         self.targetMetrics = [
             TargetMetric(label: "Sales",    target: 500000, actual: self.totalSales),
-            TargetMetric(label: "Footfall", target: 150,    actual: Double(self.footfall)),
+            TargetMetric(label: "Slow Items", target: 50,    actual: Double(self.footfall)), // "Footfall" in UI
             TargetMetric(label: "Revenue",  target: 350000, actual: self.totalRevenue)
         ]
         

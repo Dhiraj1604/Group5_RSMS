@@ -27,12 +27,12 @@ struct BoutiqueManagerDashboard: View {
                 }
                 .tag(1)
 
-            BMSalesTab()
-                .tabItem {
-                    Image(systemName: "star.fill")
-                    Text("VIP & Events")
-                }
-                .tag(2)
+//            BMSalesTab()
+//                .tabItem {
+//                    Image(systemName: "star.fill")
+//                    Text("VIP & Events")
+//                }
+//                .tag(2)
 
             BMStaffTab(boutiqueId: appState.currentStoreID ?? UUID(uuidString: "b3fd8cb6-341b-453e-9ed4-8915aa25245c")!)
             //BMStaffTab(boutiqueId: appState.currentStoreID ?? UUID())
