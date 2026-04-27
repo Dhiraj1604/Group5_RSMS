@@ -329,8 +329,8 @@ struct ProductDetailView: View {
                                 isPresented: $showDeleteConfirm, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) {
                     Task {
-                        await appState.deleteProduct(currentProduct)
-                        dismiss()
+                        dismiss()  // dismiss instantly
+                        await appState.deleteProduct(currentProduct)  // runs in background
                     }
                 }
             } message: {
