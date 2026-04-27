@@ -72,24 +72,36 @@ struct DashboardTab: View {
                 if let error = viewModel.errorMessage { errorBanner(error) }
                 
                 // Main Analytics Dashboard
-                HStack(alignment: .top, spacing: 24) {
-                    // Left Column: Strategic Insights & Retention
+                if isWide {
+                    HStack(alignment: .top, spacing: 24) {
+                        // Left Column: Strategic Insights & Retention
+                        VStack(spacing: 24) {
+                            aiForecastSection
+                            customerInsightsSection
+                        }
+                        .frame(maxWidth: .infinity)
+                        
+                        // Right Column: Operational Metrics & Profitability
+                        VStack(spacing: 24) {
+                            categorySalesSection
+                            orderStatsSection
+                            inventoryHealthSection
+                            profitabilitySection
+                        }
+                        .frame(width: 420)
+                    }
+                    .padding(.vertical, 8)
+                } else {
                     VStack(spacing: 24) {
                         aiForecastSection
                         customerInsightsSection
-                    }
-                    .frame(maxWidth: .infinity)
-                    
-                    // Right Column: Operational Metrics & Profitability
-                    VStack(spacing: 24) {
                         categorySalesSection
                         orderStatsSection
                         inventoryHealthSection
                         profitabilitySection
                     }
-                    .frame(width: 420)
+                    .padding(.vertical, 8)
                 }
-                .padding(.vertical, 8)
                 
                 if !viewModel.storeKPIs.isEmpty { storePerformanceSection }
                 quickActionsSection
@@ -121,7 +133,10 @@ struct DashboardTab: View {
     private var refreshHeader: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Performance Overview").font(.system(size: 15, weight: .bold)).foregroundStyle(RSMSTheme.Colors.accentGold).textCase(.uppercase).tracking(1.2)
+                Text("Performance Overview")
+                    .font(.custom("Helvetica-Bold", size: 24))
+                    .foregroundStyle(.white)
+                    .tracking(1.5)
                 Text("Updated \(viewModel.lastRefreshedText)").font(.system(size: 13)).foregroundStyle(RSMSTheme.Colors.textTertiary)
             }
             Spacer()
@@ -141,7 +156,7 @@ struct DashboardTab: View {
         LazyVGrid(columns: kpiColumns, spacing: RSMSTheme.Spacing.md) {
             kpiCard(title: "Total Revenue", value: viewModel.formattedTotalRevenue, icon: "indianrupeesign.circle.fill", color: RSMSTheme.Colors.success)
             kpiCard(title: "Total Orders", value: "\(viewModel.totalOrders)", icon: "bag.fill", color: RSMSTheme.Colors.accentGold)
-            kpiCard(title: "SKU Units", value: "\(viewModel.totalInventoryUnits)", icon: "shippingbox.fill", color: RSMSTheme.Colors.accentGoldDark)
+            kpiCard(title: "Unique SKUs", value: "\(viewModel.totalInventoryUnits)", icon: "shippingbox.fill", color: RSMSTheme.Colors.accentGoldDark)
             kpiCard(title: "Active Stores", value: "\(viewModel.activeStoreCount)", icon: "building.2.fill", color: RSMSTheme.Colors.accentGoldLight)
         }
     }
@@ -225,7 +240,7 @@ struct DashboardTab: View {
                             
                             HStack(spacing: 4) {
                                 Image(systemName: percentChange >= 0 ? "arrow.up.right" : "arrow.down.right")
-                                Text(String(format: "%.1f%% Growth", abs(percentChange)))
+                                Text(String(format: "%.1f%% %@", abs(percentChange), percentChange >= 0 ? "Growth" : "Decline"))
                             }
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(percentChange >= 0 ? RSMSTheme.Colors.success : Color.orange)
@@ -360,10 +375,20 @@ struct DashboardTab: View {
             Text("Order Analytics")
                 .font(.custom("Helvetica-Bold", size: 18))
                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
-            HStack(spacing: RSMSTheme.Spacing.md) {
-                statBox(title: "Avg Order Value", value: viewModel.formattedAOV, icon: "cart.fill", color: .blue)
-                statBox(title: "Avg Basket Size", value: String(format: "%.1f", viewModel.avgBasketSize), icon: "bag.fill.badge.plus", color: .purple)
-                statBox(title: "Conversion Rate", value: String(format: "%.1f%%", viewModel.conversionRate), icon: "arrow.triangle.2.circlepath.circle.fill", color: RSMSTheme.Colors.accentGold)
+            let statColumns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+            
+            if isWide {
+                HStack(spacing: RSMSTheme.Spacing.md) {
+                    statBox(title: "Avg Order Value", value: viewModel.formattedAOV, icon: "cart.fill", color: .blue)
+                    statBox(title: "Avg Basket Size", value: String(format: "%.1f", viewModel.avgBasketSize), icon: "bag.fill.badge.plus", color: .purple)
+                    statBox(title: "Conversion Rate", value: String(format: "%.1f%%", viewModel.conversionRate), icon: "arrow.triangle.2.circlepath.circle.fill", color: RSMSTheme.Colors.accentGold)
+                }
+            } else {
+                LazyVGrid(columns: statColumns, spacing: 12) {
+                    statBox(title: "Avg AOV", value: viewModel.formattedAOV, icon: "cart.fill", color: .blue)
+                    statBox(title: "Basket", value: String(format: "%.1f", viewModel.avgBasketSize), icon: "bag.fill.badge.plus", color: .purple)
+                    statBox(title: "Conversion", value: String(format: "%.1f%%", viewModel.conversionRate), icon: "arrow.triangle.2.circlepath.circle.fill", color: RSMSTheme.Colors.accentGold)
+                }
             }
         }
     }
@@ -393,7 +418,8 @@ struct DashboardTab: View {
             if viewModel.categorySales.isEmpty {
                 Text("No data").foregroundStyle(RSMSTheme.Colors.textSecondary).frame(height: 150)
             } else {
-                HStack {
+                let layout = isWide ? AnyLayout(HStackLayout(spacing: 20)) : AnyLayout(VStackLayout(spacing: 20))
+                layout {
                     Chart(viewModel.categorySales) { item in
                         SectorMark(angle: .value("Revenue", item.revenue), innerRadius: .ratio(0.6), angularInset: 1.5)
                             .cornerRadius(4)
@@ -402,12 +428,12 @@ struct DashboardTab: View {
                     }
                     .chartForegroundStyleScale([
                         "jewellery": RSMSTheme.Colors.accentGold, 
-                        "watches": Color(red: 0/255, green: 180/255, blue: 216/255), // Cyan
-                        "leather_goods": Color(red: 220/255, green: 20/255, blue: 60/255), // Crimson
-                        "couture": Color(red: 0/255, green: 200/255, blue: 120/255), // Emerald
-                        "accessories": Color(red: 140/255, green: 70/255, blue: 210/255), // Purple
-                        "fragrances": Color(red: 255/255, green: 140/255, blue: 0/255), // Sunset Orange
-                        "other": Color(red: 0/255, green: 150/255, blue: 180/255) // Teal
+                        "watches": RSMSTheme.Colors.accentGoldLight, 
+                        "leather_goods": Color(red: 0.55, green: 0.45, blue: 0.35), // Burnished Copper
+                        "couture": Color(red: 0.85, green: 0.75, blue: 0.65),       // Warm Ivory
+                        "accessories": Color(red: 0.40, green: 0.30, blue: 0.20),   // Rich Umber
+                        "fragrances": Color(red: 0.70, green: 0.60, blue: 0.40),    // Satin Bronze
+                        "other": RSMSTheme.Colors.textSecondary                    // Soft Taupe
                     ])
                     .chartLegend(.hidden)
                     .chartAngleSelection(value: $selectedAngle)
@@ -440,9 +466,10 @@ struct DashboardTab: View {
                             }
                         }
                     }
-                    .padding(.leading, RSMSTheme.Spacing.md)
+                    .padding(.leading, isWide ? RSMSTheme.Spacing.md : 0)
+                    .frame(maxWidth: isWide ? 200 : .infinity, alignment: .leading)
                 }
-                .frame(height: 200).padding().background(RSMSTheme.Colors.backgroundDeep).cornerRadius(RSMSTheme.Radius.lg).overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
+                .padding().background(RSMSTheme.Colors.backgroundDeep).cornerRadius(RSMSTheme.Radius.lg).overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
             }
         }
     }
@@ -450,124 +477,136 @@ struct DashboardTab: View {
     private func categoryColor(for category: String) -> Color {
         switch category.lowercased() {
             case "jewellery": return RSMSTheme.Colors.accentGold
-            case "watches": return Color(red: 0/255, green: 180/255, blue: 216/255)
-            case "leather_goods": return Color(red: 220/255, green: 20/255, blue: 60/255)
-            case "couture": return Color(red: 0/255, green: 200/255, blue: 120/255)
-            case "accessories": return Color(red: 140/255, green: 70/255, blue: 210/255)
-            case "fragrances": return Color(red: 255/255, green: 140/255, blue: 0/255)
-            default: return Color(red: 0/255, green: 150/255, blue: 180/255)
+            case "watches": return RSMSTheme.Colors.accentGoldLight
+            case "leather_goods": return Color(red: 0.55, green: 0.45, blue: 0.35)
+            case "couture": return Color(red: 0.85, green: 0.75, blue: 0.65)
+            case "accessories": return Color(red: 0.40, green: 0.30, blue: 0.20)
+            case "fragrances": return Color(red: 0.70, green: 0.60, blue: 0.40)
+            default: return RSMSTheme.Colors.textSecondary
         }
     }
 
-    // MARK: - Customer Insights
+    // MARK: - Customer Insights (Luxury Redesign)
     private var customerInsightsSection: some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-            Text("Retention Analytics")
-                .font(.custom("Helvetica-Bold", size: 20))
-                .foregroundStyle(RSMSTheme.Colors.textPrimary)
+            HStack {
+                Text("Retention Analytics")
+                    .font(.custom("Helvetica-Bold", size: 24))
+                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                Spacer()
+            }
             
             VStack(spacing: 24) {
                 let total = Double(viewModel.newCustomers + viewModel.returningCustomers)
                 let returningRatio = total > 0 ? Double(viewModel.returningCustomers) / total : 0
                 
-                HStack(alignment: .top, spacing: 20) {
-                    // Left: Visual Ring
-                    VStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .stroke(RSMSTheme.Colors.success.opacity(0.1), lineWidth: 10)
-                            Circle()
-                                .trim(from: 0, to: returningRatio)
-                                .stroke(
-                                    LinearGradient(colors: [RSMSTheme.Colors.accentGold, .orange], startPoint: .top, endPoint: .bottom),
-                                    style: StrokeStyle(lineWidth: 10, lineCap: .round)
-                                )
-                                .rotationEffect(.degrees(-90))
-                            
-                            VStack(spacing: -2) {
-                                Text(String(format: "%.0f%%", returningRatio * 100))
-                                    .font(.custom("Helvetica-Bold", size: 26))
-                                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                                Text("RETURNING")
-                                    .font(.custom("Helvetica-Bold", size: 8))
-                                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                            }
+                let innerLayout = isWide ? AnyLayout(HStackLayout(alignment: .center, spacing: 30)) : AnyLayout(VStackLayout(alignment: .leading, spacing: 30))
+                
+                innerLayout {
+                    // Left: Dynamic Loyalty Gauge
+                    ZStack {
+                        // Outer Glow
+                        Circle().stroke(RSMSTheme.Colors.accentGold.opacity(0.05), lineWidth: 20).blur(radius: 10)
+                        
+                        // Background Track
+                        Circle().stroke(Color.white.opacity(0.05), lineWidth: 12)
+                        
+                        // Progress Track
+                        Circle()
+                            .trim(from: 0, to: returningRatio)
+                            .stroke(
+                                LinearGradient(colors: [RSMSTheme.Colors.accentGold, .orange], startPoint: .top, endPoint: .bottom),
+                                style: StrokeStyle(lineWidth: 12, lineCap: .round)
+                            )
+                            .rotationEffect(.degrees(-90))
+                            .shadow(color: RSMSTheme.Colors.accentGold.opacity(0.3), radius: 10)
+                        
+                        VStack(spacing: 0) {
+                            Text(String(format: "%.0f%%", returningRatio * 100))
+                                .font(.custom("Helvetica-Bold", size: 38))
+                                .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                            Text("RETURNING")
+                                .font(.custom("Helvetica-Bold", size: 9))
+                                .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                                .kerning(1.2)
                         }
-                        .frame(width: 90, height: 90)
-                        
-                        Text("Loyalty Index")
-                            .font(.custom("Helvetica-Bold", size: 10))
-                            .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                            .textCase(.uppercase)
                     }
-                    .padding(.trailing, 10)
+                    .frame(width: 120, height: 120)
+                    .padding(.leading, isWide ? 10 : 0)
                     
-                    // Middle: Core Metrics
-                    VStack(alignment: .leading, spacing: 20) {
-                        metricRow(title: "New Customers", value: "\(viewModel.newCustomers)", color: RSMSTheme.Colors.success, trend: "+12%")
-                        metricRow(title: "Returning", value: "\(viewModel.returningCustomers)", color: RSMSTheme.Colors.accentGold, trend: "+5%")
+                    // Middle: Strategic Metrics Grid
+                    VStack(alignment: .leading, spacing: 16) {
+                        retentionMetricPill(title: "New Users", value: "\(viewModel.newCustomers)", trend: "+12%", color: RSMSTheme.Colors.success, icon: "person.badge.plus.fill")
+                        retentionMetricPill(title: "Returning", value: "\(viewModel.returningCustomers)", trend: "+5%", color: RSMSTheme.Colors.accentGold, icon: "person.2.fill")
+                    }
+                    .frame(maxWidth: .infinity)
+                    
+                    if isWide {
+                        Divider().frame(height: 100).background(RSMSTheme.Colors.borderLight.opacity(0.2))
                     }
                     
-                    Spacer()
-                    
-                    // Right: Secondary Metric (CLV or Avg. Visit)
-                    VStack(alignment: .trailing, spacing: 8) {
-                        Text("Avg. Lifecycle")
-                            .font(.custom("Helvetica-Bold", size: 10))
-                            .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                            .textCase(.uppercase)
-                        Text("4.2 Months")
-                            .font(.custom("Helvetica-Bold", size: 18))
-                            .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                        
-                        Spacer().frame(height: 10)
-                        
-                        Text("Repeat Rate")
-                            .font(.custom("Helvetica-Bold", size: 10))
-                            .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                            .textCase(.uppercase)
-                        Text("High")
-                            .font(.custom("Helvetica-Bold", size: 18))
-                            .foregroundStyle(RSMSTheme.Colors.success)
+                    // Right: Lifecycle Insights
+                    VStack(alignment: isWide ? .trailing : .leading, spacing: 12) {
+                        lifecycleItem(label: "Avg. Lifecycle", value: "4.2 Months", icon: "calendar.badge.clock")
+                        lifecycleItem(label: "Repeat Rate", value: "High", icon: "arrow.clockwise.heart.fill", valueColor: RSMSTheme.Colors.success)
                     }
                 }
                 
                 Divider().background(RSMSTheme.Colors.borderLight.opacity(0.3))
                 
-                HStack {
-                    Image(systemName: "sparkles")
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
-                        .font(.system(size: 14))
-                    Text("Customer Loyalty is up 4% vs last month. High retention in Watches.")
-                        .font(.custom("Helvetica", size: 13))
-                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                    Spacer()
+                // Bottom Insight Banner
+                let insightLayout = isWide ? AnyLayout(HStackLayout(spacing: 12)) : AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+                
+                insightLayout {
+                    insightPill(text: "Loyalty up 4% vs last month", icon: "arrow.up.heart.fill", color: RSMSTheme.Colors.accentGold)
+                    insightPill(text: "High retention in Watches", icon: "sparkles", color: .purple)
                 }
             }
-            .padding(24)
-            .background(RSMSTheme.Colors.backgroundDeep)
-            .cornerRadius(RSMSTheme.Radius.lg)
-            .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
+            .padding(28)
+            .background(
+                ZStack {
+                    RSMSTheme.Colors.backgroundDeep
+                    LinearGradient(colors: [RSMSTheme.Colors.accentGold.opacity(0.03), .clear], startPoint: .topLeading, endPoint: .bottomTrailing)
+                }
+            )
+            .cornerRadius(24)
+            .overlay(RoundedRectangle(cornerRadius: 24).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
         }
     }
     
-    private func metricRow(title: String, value: String, color: Color, trend: String) -> some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 3).fill(color).frame(width: 4, height: 32)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(title)
-                    .font(.custom("Helvetica-Bold", size: 12))
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(value)
-                        .font(.custom("Helvetica-Bold", size: 28))
-                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                    Text(trend)
-                        .font(.custom("Helvetica-Bold", size: 10))
-                        .foregroundStyle(RSMSTheme.Colors.success)
-                }
+    private func retentionMetricPill(title: String, value: String, trend: String, color: Color, icon: String) -> some View {
+        HStack {
+            Image(systemName: icon).font(.system(size: 16)).foregroundStyle(color).frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.custom("Helvetica-Bold", size: 12)).foregroundStyle(RSMSTheme.Colors.textTertiary).textCase(.uppercase)
+                Text(value).font(.custom("Helvetica-Bold", size: 26)).foregroundStyle(RSMSTheme.Colors.textPrimary)
             }
+            Spacer()
+            Text(trend).font(.custom("Helvetica-Bold", size: 12)).foregroundStyle(color).padding(.horizontal, 8).padding(.vertical, 4).background(color.opacity(0.1)).cornerRadius(6)
         }
+    }
+    
+    private func lifecycleItem(label: String, value: String, icon: String, valueColor: Color = RSMSTheme.Colors.textPrimary) -> some View {
+        VStack(alignment: isWide ? .trailing : .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                if !isWide { Image(systemName: icon).font(.system(size: 12)).foregroundStyle(RSMSTheme.Colors.textTertiary) }
+                Text(label).font(.custom("Helvetica-Bold", size: 12)).foregroundStyle(RSMSTheme.Colors.textTertiary).textCase(.uppercase)
+                if isWide { Image(systemName: icon).font(.system(size: 12)).foregroundStyle(RSMSTheme.Colors.textTertiary) }
+            }
+            Text(value).font(.custom("Helvetica-Bold", size: 22)).foregroundStyle(valueColor)
+        }
+    }
+    
+    private func insightPill(text: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon).font(.system(size: 12, weight: .bold)).foregroundStyle(color)
+            Text(text).font(.custom("Helvetica", size: 14)).foregroundStyle(RSMSTheme.Colors.textSecondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(color.opacity(0.08))
+        .cornerRadius(10)
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(color.opacity(0.15), lineWidth: 1))
     }
 
     // MARK: - Store Performance
@@ -590,12 +629,9 @@ struct DashboardTab: View {
                 }
             }
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: RSMSTheme.Spacing.md) {
-                    ForEach(Array(viewModel.storeKPIs.prefix(3).enumerated()), id: \.element.id) { index, storeKPI in
-                        PremiumStoreCard(storeKPI: storeKPI, viewModel: viewModel, rank: index + 1)
-                            .frame(width: 320, height: 380)
-                    }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 20)], spacing: 24) {
+                ForEach(Array(viewModel.storeKPIs.prefix(3).enumerated()), id: \.element.id) { index, storeKPI in
+                    PremiumStoreCard(storeKPI: storeKPI, viewModel: viewModel, rank: index + 1)
                 }
             }
             // Add negative horizontal padding to let scroll view bleed to edges if desired
@@ -633,9 +669,9 @@ struct DashboardTab: View {
                 
                 // Detailed Breakdown
                 HStack(spacing: 0) {
-                    breakdownItem(label: "COGS", value: "₹2.8Cr", color: .red.opacity(0.8))
-                    breakdownItem(label: "OPEX", value: "₹0.9Cr", color: .orange.opacity(0.8))
-                    breakdownItem(label: "TAX", value: "₹0.4Cr", color: .blue.opacity(0.8))
+                    breakdownItem(label: "GROSS PROFIT", value: viewModel.shortRevenue(viewModel.grossProfit), color: RSMSTheme.Colors.accentGold.opacity(0.8))
+                    breakdownItem(label: "EST. OPEX", value: viewModel.shortRevenue(viewModel.estimatedOpex), color: .orange.opacity(0.8))
+                    breakdownItem(label: "EST. TAX", value: viewModel.shortRevenue(viewModel.estimatedTax), color: .blue.opacity(0.8))
                 }
                 .clipShape(Capsule())
                 
@@ -677,7 +713,7 @@ struct DashboardTab: View {
                         Image(systemName: "arrow.2.squarepath").foregroundStyle(RSMSTheme.Colors.accentGold)
                         Text("Turnover Ratio").font(.custom("Helvetica-Bold", size: 12)).foregroundStyle(RSMSTheme.Colors.textSecondary)
                     }
-                    Text("5.4x")
+                    Text(String(format: "%.1fx", viewModel.inventoryTurnover))
                         .font(.custom("Helvetica-Bold", size: 28))
                         .foregroundStyle(RSMSTheme.Colors.textPrimary)
                     Text("Ideal Range: 4x - 6x").font(.custom("Helvetica", size: 10)).foregroundStyle(RSMSTheme.Colors.success)
@@ -693,10 +729,10 @@ struct DashboardTab: View {
                         Image(systemName: "exclamationmark.shield.fill").foregroundStyle(RSMSTheme.Colors.warning)
                         Text("Inventory Health").font(.custom("Helvetica-Bold", size: 12)).foregroundStyle(RSMSTheme.Colors.textSecondary)
                     }
-                    Text("92%")
+                    Text(String(format: "%.0f%%", viewModel.inventoryHealth))
                         .font(.custom("Helvetica-Bold", size: 28))
                         .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                    Text("8% Overstock Risk").font(.custom("Helvetica", size: 10)).foregroundStyle(RSMSTheme.Colors.warning)
+                    Text("\(Int(100 - viewModel.inventoryHealth))% Stock Risk").font(.custom("Helvetica", size: 10)).foregroundStyle(RSMSTheme.Colors.warning)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(20)
@@ -786,7 +822,9 @@ struct DashboardTab: View {
                 .font(.custom("Helvetica-Bold", size: 22))
                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
             
-            HStack(spacing: 25) {
+            let layout = isWide ? AnyLayout(HStackLayout(spacing: 25)) : AnyLayout(VStackLayout(spacing: 20))
+            
+            layout {
                 NavigationLink { StockAnalysisStorePickerView() } label: {
                     actionCard(icon: "chart.bar.fill", title: "Stock Analysis", subtitle: "SKU Intelligence", color: .blue)
                 }

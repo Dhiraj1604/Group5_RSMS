@@ -172,16 +172,16 @@ struct Product: Identifiable, Codable, Equatable, Hashable {
 
     // MARK: - Sample Data
     static let sample = Product(
-        sku: "JWL-RNG-001",
-        name: "Maharaja Diamond Ring",
+        sku: "JWL-PN-002",
+        name: "Imperial Emerald Pendant",
         category: .jewellery,
-        basePrice: 485000,
-        material: "18K Yellow Gold, VS1 Diamonds (2.4ct total)",
-        originCountry: "India",
-        craftsmanshipLevel: .handcrafted,
-        craftsmanshipNotes: "Hand-set diamonds by master craftsmen in Jaipur with 40+ years of heritage.",
-        collectionName: "Maharaja Heritage 2025",
-        artisanStudio: "Atelier Jaipur"
+        basePrice: 620000,
+        material: "18K White Gold, Colombian Emerald (3.2ct)",
+        originCountry: "Colombia",
+        craftsmanshipLevel: .maison,
+        craftsmanshipNotes: "A masterpiece of gem-setting and engraving.",
+        collectionName: "Emerald Heritage",
+        artisanStudio: "Atelier Paris"
     )
 
     static let samples: [Product] = [
@@ -201,14 +201,6 @@ struct Product: Identifiable, Codable, Equatable, Hashable {
             craftsmanshipLevel: .handFinished,
             craftsmanshipNotes: "Vegetable-tanned in Tuscany, hand-stitched using saddle stitch.",
             collectionName: "Notte Collection", artisanStudio: "Pelletteria Firenze"
-        ),
-        Product(
-            sku: "COU-GWN-007", name: "Evening Cascade Gown", category: .couture,
-            isActive: false, isGloballyListed: false, basePrice: 320000,
-            material: "Duchess Silk Satin, Swarovski Embellishments", originCountry: "France",
-            craftsmanshipLevel: .bespoke,
-            craftsmanshipNotes: "300+ hours of hand embroidery by Paris couture house.",
-            collectionName: "Lumière Autumn/Winter", artisanStudio: "Maison de Couture Paris"
         )
     ]
 }
