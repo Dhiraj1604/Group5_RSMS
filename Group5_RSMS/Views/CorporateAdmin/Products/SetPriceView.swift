@@ -48,7 +48,6 @@ struct SetPriceView: View {
                         priceInputSection
                         noteSection
                         auditNotice
-                        confirmButton
                         Spacer().frame(height: RSMSTheme.Spacing.xxl)
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.lg)
@@ -61,9 +60,24 @@ struct SetPriceView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                        .disabled(isLoading)
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                    }
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    .disabled(isLoading)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { submitPrice() } label: {
+                        if isLoading {
+                            ProgressView().tint(RSMSTheme.Colors.accentGold)
+                        } else {
+                            Image(systemName: "checkmark")
+                                .font(.body.weight(.semibold))
+                        }
+                    }
+                    .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    .disabled(!isValidPrice || isLoading)
                 }
             }
             .alert("Error", isPresented: Binding<Bool>(
@@ -227,26 +241,6 @@ struct SetPriceView: View {
             RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
                 .stroke(RSMSTheme.Colors.accentGold.opacity(0.15), lineWidth: 1)
         )
-    }
-
-    // MARK: - Confirm Button
-
-    private var confirmButton: some View {
-        Button { submitPrice() } label: {
-            HStack(spacing: RSMSTheme.Spacing.sm) {
-                if isLoading {
-                    ProgressView()
-                        .tint(.black)
-                        .padding(.trailing, 4)
-                } else {
-                    Image(systemName: "checkmark.circle.fill")
-                }
-                Text(isLoading ? "Saving..." : (product.basePrice > 0 ? "Update Retail Price" : "Set Retail Price"))
-            }
-        }
-        .buttonStyle(GoldButtonStyle())
-        .disabled(!isValidPrice || isLoading)
-        .opacity(isValidPrice && !isLoading ? 1.0 : 0.5)
     }
 
     // MARK: - Submit Logic
