@@ -35,7 +35,6 @@ final class ICScanViewModel: ObservableObject {
     // MARK: - Global Taxation Engine
     @Published private(set) var currentProduct: Product?
     @Published private(set) var currentTaxRule: TaxRule?
-    @Published private(set) var regionalRate: Double = 0.0 // Base regional tax (e.g. GST/VAT)
     @Published private(set) var currentBreakdown: PricingBreakdown?
     
     // MARK: - Inventory Management
@@ -85,7 +84,6 @@ final class ICScanViewModel: ObservableObject {
                     self.currentTaxRule = additionalRule
                     self.currentBreakdown = PricingService.calculate(
                         product: product,
-                        regionalRate: self.regionalRate,
                         additionalTaxRule: additionalRule
                     )
                 }
@@ -188,24 +186,12 @@ final class ICScanViewModel: ObservableObject {
             
             self.currentProduct = foundProduct
             
-            // 2. Validate current store context and load regional tax
+            // 2. Validate current store context
             guard let storeId = storeId else {
                 showTemporaryError("No active store assigned.")
                 isSearching = false
                 return
             }
-
-            // Fetch store's regional tax rate
-            let storeResult = try await SupabaseManager.shared.client
-                .from("stores")
-                .select("taxRate")
-                .eq("id", value: storeId)
-                .execute()
-            
-            struct StoreTax: Decodable { let taxRate: Double? }
-            let storeData = try decoder.decode([StoreTax].self, from: storeResult.data)
-            let regionalRatePercent = storeData.first?.taxRate ?? 18.0
-            self.regionalRate = regionalRatePercent / 100.0
 
             // 3. Find additional tax rule for THIS category
             // (Ensure rules are fetched in TaxSettingsViewModel)
@@ -217,7 +203,6 @@ final class ICScanViewModel: ObservableObject {
             
             self.currentBreakdown = PricingService.calculate(
                 product: foundProduct, 
-                regionalRate: self.regionalRate, 
                 additionalTaxRule: additionalRule
             )
 

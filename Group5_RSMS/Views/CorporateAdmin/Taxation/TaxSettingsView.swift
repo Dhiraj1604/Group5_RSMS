@@ -40,8 +40,8 @@ struct TaxSettingsView: View {
                     emptyState
                         .padding(.top, 100)
                 } else {
-                    // Summary Header
-                    summaryHeader
+                    // Category Filter Bar
+                    filterBar
                     
                     // Rules List
                     let columns = horizontalSizeClass == .regular
@@ -87,9 +87,13 @@ struct TaxSettingsView: View {
         }
         .sheet(isPresented: $showAddSheet) {
             AddEditTaxView(viewModel: viewModel)
+                .presentationDetents([.height(480)])
+                .presentationDragIndicator(.visible)
         }
         .sheet(item: $editingRule) { rule in
             AddEditTaxView(viewModel: viewModel, existingRule: rule)
+                .presentationDetents([.height(480)])
+                .presentationDragIndicator(.visible)
         }
         .task {
             if viewModel.taxRules.isEmpty {
@@ -98,84 +102,56 @@ struct TaxSettingsView: View {
         }
     }
 
-    // MARK: - Summary Header
+    // MARK: - Filter Bar
     
-    private var summaryHeader: some View {
-        HStack(spacing: 12) {
-            // Total Rules
-            summaryCard(
-                value: "\(viewModel.taxRules.count)",
-                label: "BY CATEGORY",
-                icon: "doc.text.fill",
-                color: .white,
-                filter: .all
-            )
-            
-            // Inclusive Count
-            summaryCard(
-                value: "\(viewModel.taxRules.filter { $0.isInclusive }.count)",
-                label: "INCLUSIVE",
-                icon: "checkmark.circle.fill",
-                color: Color(red: 0.2, green: 0.8, blue: 0.3),
-                filter: .inclusive
-            )
-            
-            // Exclusive Count
-            summaryCard(
-                value: "\(viewModel.taxRules.filter { !$0.isInclusive }.count)",
-                label: "EXCLUSIVE",
-                icon: "plus.circle.fill",
-                color: Color.orange,
-                filter: .exclusive
-            )
+    private var filterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                // "All" Filter
+                filterCapsule(label: "All", filter: .all)
+                
+                // Category Filters
+                ForEach(ProductCategory.allCases) { category in
+                    filterCapsule(
+                        label: category.rawValue,
+                        icon: category.icon,
+                        filter: .category(category)
+                    )
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 8)
         }
     }
 
-    private func summaryCard(value: String, label: String, icon: String, color: Color, filter: TaxSettingsViewModel.TaxFilter) -> some View {
+    private func filterCapsule(label: String, icon: String? = nil, filter: TaxSettingsViewModel.TaxFilter) -> some View {
         let isSelected = viewModel.selectedFilter == filter
         
         return Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 viewModel.selectedFilter = filter
             }
         } label: {
-            VStack(spacing: RSMSTheme.Spacing.xs) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(isSelected ? color : color.opacity(0.6))
-                    .padding(.bottom, 2)
+            HStack(spacing: 8) {
+                if let icon = icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .bold))
+                }
                 
-                Text(value)
-                    .font(.custom("HelveticaNeue-Bold", size: 32))
-                    .foregroundStyle(isSelected ? color : color.opacity(0.8))
-                    .shadow(color: isSelected ? color.opacity(0.4) : .clear, radius: 4, x: 0, y: 2)
-                
-                Text(label.uppercased())
-                    .font(.custom("HelveticaNeue-Bold", size: 9))
-                    .tracking(1.2)
-                    .foregroundStyle(isSelected ? color : color.opacity(0.6))
+                Text(label)
+                    .font(.custom("HelveticaNeue-Bold", size: 13))
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 24)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
             .background(
-                LinearGradient(
-                    colors: isSelected 
-                        ? [RSMSTheme.Colors.backgroundElevated, RSMSTheme.Colors.backgroundElevated.opacity(0.8)]
-                        : [RSMSTheme.Colors.backgroundDeep, RSMSTheme.Colors.backgroundDeep.opacity(0.5)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+                Capsule()
+                    .fill(isSelected ? RSMSTheme.Colors.accentGold : Color.white.opacity(0.05))
             )
-            .cornerRadius(16)
+            .foregroundStyle(isSelected ? .black : RSMSTheme.Colors.textSecondary)
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(
-                        isSelected ? color.opacity(0.5) : RSMSTheme.Colors.borderLight,
-                        lineWidth: isSelected ? 1.5 : 1
-                    )
+                Capsule()
+                    .stroke(isSelected ? .clear : Color.white.opacity(0.1), lineWidth: 1)
             )
-            .shadow(color: isSelected ? color.opacity(0.15) : Color.black.opacity(0.2), radius: 6, x: 0, y: 4)
-            .scaleEffect(isSelected ? 1.02 : 1.0)
         }
         .buttonStyle(.plain)
     }
@@ -186,7 +162,7 @@ struct TaxSettingsView: View {
         let isActive = viewModel.activeRuleId == rule.id
         let categoryName = rule.category.rawValue
         let ratePercent = String(format: "%.1f", rule.rate * 100)
-        let accentColor = rule.isInclusive ? Color(red: 0.2, green: 0.8, blue: 0.3) : Color.orange
+        let accentColor = RSMSTheme.Colors.accentGold
 
         return Button {
             editingRule = rule

@@ -213,21 +213,18 @@ struct TaxRule: Identifiable, Codable, Equatable, Hashable {
     let id: UUID
     var name: String
     var rate: Double
-    var isInclusive: Bool
     var category: ProductCategory
 
     enum CodingKeys: String, CodingKey {
         case id
         case name
         case rate
-        case isInclusive = "is_inclusive"
         case category
     }
 
     struct DBPayload: Encodable {
         let name: String
         let rate: Double
-        let is_inclusive: Bool
         let category: String
     }
 
@@ -235,7 +232,6 @@ struct TaxRule: Identifiable, Codable, Equatable, Hashable {
         DBPayload(
             name: name,
             rate: rate,
-            is_inclusive: isInclusive,
             category: category.rawValue
         )
     }
@@ -244,13 +240,11 @@ struct TaxRule: Identifiable, Codable, Equatable, Hashable {
         id: UUID = UUID(),
         name: String,
         rate: Double,
-        isInclusive: Bool,
         category: ProductCategory = .other
     ) {
         self.id = id
         self.name = name
         self.rate = rate
-        self.isInclusive = isInclusive
         self.category = category
     }
 }
@@ -260,16 +254,14 @@ struct TaxRule: Identifiable, Codable, Equatable, Hashable {
 /// The result format of a pricing calculation.
 struct PricingBreakdown: Equatable, Hashable {
     let subtotal: Double
-    let regionalTaxAmount: Double
     let additionalTaxAmount: Double
     let taxAmount: Double
     let total: Double
 
-    init(subtotal: Double, regionalTaxAmount: Double, additionalTaxAmount: Double, total: Double) {
+    init(subtotal: Double, additionalTaxAmount: Double, total: Double) {
         self.subtotal = subtotal
-        self.regionalTaxAmount = regionalTaxAmount
         self.additionalTaxAmount = additionalTaxAmount
-        self.taxAmount = regionalTaxAmount + additionalTaxAmount
+        self.taxAmount = additionalTaxAmount
         self.total = total
     }
 }

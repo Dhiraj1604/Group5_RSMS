@@ -25,11 +25,17 @@ final class TaxSettingsViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
     @Published var selectedFilter: TaxFilter = .all
-
-    enum TaxFilter: String, CaseIterable {
-        case all = "All"
-        case inclusive = "Inclusive"
-        case exclusive = "Exclusive"
+    
+    enum TaxFilter: Equatable, Hashable {
+        case all
+        case category(ProductCategory)
+        
+        var displayName: String {
+            switch self {
+            case .all: return "All"
+            case .category(let cat): return cat.rawValue
+            }
+        }
     }
 
     var activeRule: TaxRule? {
@@ -39,9 +45,10 @@ final class TaxSettingsViewModel: ObservableObject {
 
     var filteredRules: [TaxRule] {
         switch selectedFilter {
-        case .all: return taxRules
-        case .inclusive: return taxRules.filter { $0.isInclusive }
-        case .exclusive: return taxRules.filter { !$0.isInclusive }
+        case .all:
+            return taxRules
+        case .category(let category):
+            return taxRules.filter { $0.category == category }
         }
     }
 
