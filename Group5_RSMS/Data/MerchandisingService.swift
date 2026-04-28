@@ -160,6 +160,62 @@ final class MerchandisingService {
         }.sorted(by: { $0.date < $1.date })
     }
     
+    // MARK: - Yearly Performance
+    
+    /// Fetches a summary of yearly sales and monthly trend from customer_orders.
+    func fetchYearlyPerformance(forStore storeId: UUID) async throws -> (totalSales: Double, totalOrders: Int, monthlyTrend: [SalesTrendData]) {
+        let calendar = Calendar.current
+        let now = Date()
+        guard let startOfYear = calendar.date(from: calendar.dateComponents([.year], from: now)) else {
+            return (0, 0, [])
+        }
+        
+        let formatter = ISO8601DateFormatter()
+        let dateString = formatter.string(from: startOfYear)
+        
+        struct OrderRevenue: Decodable {
+            let total_amount: Double
+            let created_at: Date
+            let status: String
+        }
+        
+        let response = try await client
+            .from("customer_orders")
+            .select("total_amount, created_at, status")
+            .eq("store_id", value: storeId)
+            .neq("status", value: "cancelled")
+            .gte("created_at", value: dateString)
+            .execute()
+            
+        let orders = try decoder.decode([OrderRevenue].self, from: response.data)
+        
+        let totalSales = orders.reduce(0.0) { $0 + $1.total_amount }
+        let totalOrders = orders.count
+            
+        // Initialize monthlyTotals for all 12 months
+        var monthlyTotals: [Int: Double] = [:]
+        for i in 1...12 {
+            monthlyTotals[i] = 0
+        }
+        
+        for order in orders {
+            let month = calendar.component(.month, from: order.created_at)
+            monthlyTotals[month, default: 0] += order.total_amount
+        }
+        
+        var trendData: [SalesTrendData] = []
+        for month in 1...12 {
+            var components = calendar.dateComponents([.year], from: now)
+            components.month = month
+            components.day = 1
+            if let date = calendar.date(from: components) {
+                trendData.append(SalesTrendData(date: date, amount: monthlyTotals[month] ?? 0))
+            }
+        }
+        
+        return (totalSales, totalOrders, trendData.sorted(by: { $0.date < $1.date }))
+    }
+    
     // MARK: - Fast Movers / Floor Display
     
     /// Compares recent local sales against the prior window to identify products gaining momentum.

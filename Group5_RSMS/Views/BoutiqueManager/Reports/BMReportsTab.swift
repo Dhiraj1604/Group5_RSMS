@@ -28,13 +28,13 @@ struct BMReportsTab: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
 
-                        // MARK: - Weekly Performance Header
+                        // MARK: - Yearly Performance Header
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("Weekly Performance")
+                                Text("Yearly Performance")
                                     .font(RSMSTheme.Typography.heading3)
                                     .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                Text("This month's overview")
+                                Text("This year's overview")
                                     .font(RSMSTheme.Typography.caption)
                                     .foregroundColor(RSMSTheme.Colors.textSecondary)
                             }

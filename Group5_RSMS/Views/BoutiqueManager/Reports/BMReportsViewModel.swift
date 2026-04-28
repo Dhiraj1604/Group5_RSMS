@@ -65,13 +65,14 @@ final class BMReportsViewModel: ObservableObject {
         
         print("Reports → payouts: \(payouts.count), employees: \(employees.count), sold: \(soldItems.count), slow: \(slowItems.count)")
         
-        // --- Yearly Sales (Current Year) ---
-        let startOfYear = calendar.date(from: calendar.dateComponents([.year], from: today)) ?? today
-        let yearlyPayouts = payouts.filter { $0.periodEnd >= startOfYear }
-        self.totalSales = yearlyPayouts.reduce(0.0) { $0 + $1.totalSalesAmount }
+        // --- Yearly Performance (from customer_orders) ---
+        let performance = (try? await MerchandisingService.shared.fetchYearlyPerformance(forStore: boutiqueId)) ?? (totalSales: 0, totalOrders: 0, monthlyTrend: [])
+        self.totalSales = performance.totalSales
         self.totalRevenue = self.totalSales * 0.72
-        self.totalOrders = yearlyPayouts.count
+        self.totalOrders = performance.totalOrders
+        self.dailySalesData = performance.monthlyTrend.map { DailySalesPoint(date: $0.date, amount: $0.amount) }
         
+        // --- sold products (for month) ---
         self.soldProducts = soldItems
         
         // --- Footfall (Items in stock > 30 days) ---
@@ -79,6 +80,8 @@ final class BMReportsViewModel: ObservableObject {
         self.unsoldProducts = slowItems
         
         // --- Dormant employees (active but no payout this year) ---
+        let startOfYear = calendar.date(from: calendar.dateComponents([.year], from: today)) ?? today
+        let yearlyPayouts = payouts.filter { $0.periodEnd >= startOfYear }
         let recentEmployeeIds = Set(yearlyPayouts.map { $0.employeeId })
         let activeEmployees = employees.filter { $0.isActive ?? true }
         self.dormantStaffDetails = activeEmployees.filter {
@@ -92,27 +95,6 @@ final class BMReportsViewModel: ObservableObject {
             TargetMetric(label: "Slow Items", target: 500,    actual: Double(self.footfall)),
             TargetMetric(label: "Revenue",  target: 3500000, actual: self.totalRevenue)
         ]
-        
-        // --- Monthly Sales (current year) ---
-        var monthlyData: [DailySalesPoint] = []
-        let monthNames = calendar.shortMonthSymbols
-        
-        for monthIndex in 0..<12 {
-            var components = calendar.dateComponents([.year], from: today)
-            components.month = monthIndex + 1
-            guard let monthDate = calendar.date(from: components) else { continue }
-            
-            let monthPayouts = payouts.filter { payout in
-                let pMonth = calendar.component(.month, from: payout.periodEnd)
-                let pYear = calendar.component(.year, from: payout.periodEnd)
-                let cYear = calendar.component(.year, from: today)
-                return pMonth == (monthIndex + 1) && pYear == cYear
-            }
-            
-            let monthSales = monthPayouts.reduce(0.0) { $0 + $1.totalSalesAmount }
-            monthlyData.append(DailySalesPoint(date: monthDate, amount: monthSales))
-        }
-        self.dailySalesData = monthlyData
 
         
         isLoading = false
