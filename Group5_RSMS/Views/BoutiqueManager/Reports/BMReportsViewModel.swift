@@ -65,12 +65,12 @@ final class BMReportsViewModel: ObservableObject {
         
         print("Reports → payouts: \(payouts.count), employees: \(employees.count), sold: \(soldItems.count), slow: \(slowItems.count)")
         
-        // --- Total Sales (Sold in last 30 days) ---
-        // Payouts might be monthly, but let's filter by date for the 30-day window
-        let recentPayouts = payouts.filter { $0.periodEnd >= thirtyDaysAgo }
-        self.totalSales = recentPayouts.reduce(0.0) { $0 + $1.totalSalesAmount }
+        // --- Yearly Sales (Current Year) ---
+        let startOfYear = calendar.date(from: calendar.dateComponents([.year], from: today)) ?? today
+        let yearlyPayouts = payouts.filter { $0.periodEnd >= startOfYear }
+        self.totalSales = yearlyPayouts.reduce(0.0) { $0 + $1.totalSalesAmount }
         self.totalRevenue = self.totalSales * 0.72
-        self.totalOrders = recentPayouts.count
+        self.totalOrders = yearlyPayouts.count
         
         self.soldProducts = soldItems
         
@@ -78,49 +78,51 @@ final class BMReportsViewModel: ObservableObject {
         self.footfall = slowItems.count
         self.unsoldProducts = slowItems
         
-        // --- Dormant employees (active but no payout in last 30 days) ---
-        let recentEmployeeIds = Set(recentPayouts.map { $0.employeeId })
+        // --- Dormant employees (active but no payout this year) ---
+        let recentEmployeeIds = Set(yearlyPayouts.map { $0.employeeId })
         let activeEmployees = employees.filter { $0.isActive ?? true }
         self.dormantStaffDetails = activeEmployees.filter {
             !recentEmployeeIds.contains($0.id)
         }
         self.dormantEmployees = self.dormantStaffDetails.count
         
-        // --- Targets vs Actual ---
+        // --- Targets vs Actual (Yearly Targets) ---
         self.targetMetrics = [
-            TargetMetric(label: "Sales",    target: 500000, actual: self.totalSales),
-            TargetMetric(label: "Slow Items", target: 50,    actual: Double(self.footfall)), // "Footfall" in UI
-            TargetMetric(label: "Revenue",  target: 350000, actual: self.totalRevenue)
+            TargetMetric(label: "Sales",    target: 5000000, actual: self.totalSales),
+            TargetMetric(label: "Slow Items", target: 500,    actual: Double(self.footfall)),
+            TargetMetric(label: "Revenue",  target: 3500000, actual: self.totalRevenue)
         ]
         
-        // --- Daily Sales (last 14 days) ---
-        var dailyData: [DailySalesPoint] = []
-        for dayOffset in (0..<14).reversed() {
-            guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: today) else { continue }
-            let startOfDay = calendar.startOfDay(for: date)
-            guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else { continue }
+        // --- Monthly Sales (current year) ---
+        var monthlyData: [DailySalesPoint] = []
+        let monthNames = calendar.shortMonthSymbols
+        
+        for monthIndex in 0..<12 {
+            var components = calendar.dateComponents([.year], from: today)
+            components.month = monthIndex + 1
+            guard let monthDate = calendar.date(from: components) else { continue }
             
-            let dayPayouts = payouts.filter { payout in
-                payout.periodEnd >= startOfDay && payout.periodEnd < endOfDay
-            }
-            let daySales: Double = dayPayouts.reduce(0.0) { result, payout in
-                result + payout.totalSalesAmount
+            let monthPayouts = payouts.filter { payout in
+                let pMonth = calendar.component(.month, from: payout.periodEnd)
+                let pYear = calendar.component(.year, from: payout.periodEnd)
+                let cYear = calendar.component(.year, from: today)
+                return pMonth == (monthIndex + 1) && pYear == cYear
             }
             
-            dailyData.append(DailySalesPoint(date: startOfDay, amount: daySales))
+            let monthSales = monthPayouts.reduce(0.0) { $0 + $1.totalSalesAmount }
+            monthlyData.append(DailySalesPoint(date: monthDate, amount: monthSales))
         }
-        self.dailySalesData = dailyData
+        self.dailySalesData = monthlyData
+
         
         isLoading = false
     }
     
     // MARK: - Filtered chart data
     func chartData(for range: ChartRange) -> [DailySalesPoint] {
-        switch range {
-        case .oneWeek:  return Array(dailySalesData.suffix(7))
-        case .twoWeeks: return dailySalesData
-        }
+        return dailySalesData
     }
+
     
     var targetsMet: Int {
         targetMetrics.filter { $0.isMet }.count
@@ -132,6 +134,7 @@ final class BMReportsViewModel: ObservableObject {
 }
 
 enum ChartRange: String, CaseIterable {
-    case oneWeek  = "1W"
-    case twoWeeks = "2W"
+    case yearly = "Yearly"
 }
+
+

@@ -110,24 +110,33 @@ final class BMDashboardViewModel: ObservableObject {
             
             for emp in employees {
                 let empPayouts  = payoutsByEmployee[emp.id] ?? []
-                let total       = empPayouts.reduce(0) { $0 + $1.totalSalesAmount }
+                
+                // Yearly Total
+                let yearlyTotal = empPayouts.filter {
+                    calendar.component(.year, from: $0.periodEnd) == currentYear
+                }.reduce(0) { $0 + $1.totalSalesAmount }
+                
                 let monthSales  = empPayouts.filter {
                     calendar.component(.month, from: $0.periodEnd) == currentMonth &&
                     calendar.component(.year,  from: $0.periodEnd) == currentYear
                 }.reduce(0) { $0 + $1.totalSalesAmount }
-                let count = empPayouts.count
-                let avg   = count > 0 ? total / Double(count) : 0
+                
+                let count = empPayouts.filter {
+                    calendar.component(.year, from: $0.periodEnd) == currentYear
+                }.count
+                
+                let avg = count > 0 ? yearlyTotal / Double(count) : 0
                 
                 entries.append(StaffPerformanceEntry(
                     id: emp.id,
                     name: emp.name,
-                    totalSales: total,
+                    totalSales: yearlyTotal,
                     thisMonthSales: monthSales,
                     totalOrders: count,
                     avgOrderValue: avg
                 ))
                 
-                tSales      += total
+                tSales      += yearlyTotal
                 tMonthSales += monthSales
                 tOrders     += count
             }
@@ -136,6 +145,7 @@ final class BMDashboardViewModel: ObservableObject {
             self.teamTotalSales     = tSales
             self.teamThisMonthSales = tMonthSales
             self.teamTotalOrders    = tOrders
+
             
         } catch {
             print("Failed to load staff performance: \(error)")
