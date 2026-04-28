@@ -135,7 +135,7 @@ struct OffersView: View {
                                 GridItem(.flexible(), spacing: 20)
                             ], spacing: 24) {
                                 ForEach(listedOffers) { offer in
-                                    BoutiqueCouponCard(offer: offer)
+                                    BoutiqueCouponCard(offer: offer, service: service)
                                         .onTapGesture {
                                             offerForDetail = offer
                                         }
@@ -331,6 +331,18 @@ struct OffersView: View {
 // MARK: - BoutiqueCouponCard
 struct BoutiqueCouponCard: View {
     let offer: Offer
+    @ObservedObject var service: OfferService
+    
+    @State private var showEditSheet = false
+    @State private var isRestarting = false
+    @State private var showDeleteConfirm = false
+    @State private var isDeleting = false
+    @State private var actionError: String? = nil
+    @State private var showErrorAlert = false
+    
+    var currentOffer: Offer {
+        service.offers.first(where: { $0.id == offer.id }) ?? offer
+    }
     
     private static let dateFormatter: DateFormatter = {
         let df = DateFormatter()
@@ -412,13 +424,49 @@ struct BoutiqueCouponCard: View {
                 // Right Main Body
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top) {
-                        Text(offer.name)
+                        Text(currentOffer.name)
                             .font(.custom("HelveticaNeue-Bold", size: 16))
                             .foregroundStyle(.white)
                             .lineLimit(2) // Support wrapping
                             .fixedSize(horizontal: false, vertical: true)
                         Spacer()
-                        OfferStatusPill(status: offer.computedStatus)
+                        
+                        // Action Menu
+                        Menu {
+                            if currentOffer.computedStatus != .expired {
+                                Button(action: {
+                                    isRestarting = false
+                                    showEditSheet = true
+                                }) {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                
+                                Button(action: { togglePause() }) {
+                                    Label(currentOffer.isPaused ? "Resume" : "Pause", systemImage: currentOffer.isPaused ? "play.fill" : "pause.fill")
+                                }
+                                
+                                Button(role: .destructive, action: { endEarly() }) {
+                                    Label("End Early", systemImage: "stop.fill")
+                                }
+                            } else {
+                                Button(action: {
+                                    isRestarting = true
+                                    showEditSheet = true
+                                }) {
+                                    Label("Restart", systemImage: "arrow.clockwise")
+                                }
+                            }
+                            
+                            Button(role: .destructive, action: { showDeleteConfirm = true }) {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 20))
+                                .rotationEffect(.degrees(90))
+                                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                                .padding(4)
+                        }
                     }
                     
                     HStack(spacing: 4) {
@@ -438,7 +486,7 @@ struct BoutiqueCouponCard: View {
                             .font(.custom("HelveticaNeue-Bold", size: 8))
                             .foregroundStyle(RSMSTheme.Colors.textTertiary)
                         
-                        Text(Self.dateFormatter.string(from: offer.endDate).uppercased())
+                        Text(Self.dateFormatter.string(from: currentOffer.endDate).uppercased())
                             .font(.custom("HelveticaNeue-Bold", size: 10))
                             .foregroundStyle(RSMSTheme.Colors.textSecondary)
                     }
@@ -452,9 +500,66 @@ struct BoutiqueCouponCard: View {
         .frame(maxWidth: .infinity)
         .overlay(
             CouponShape(stubWidth: 80)
-                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+                .stroke(statusColor.opacity(0.3), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.4), radius: 10, x: 0, y: 5)
+        .shadow(color: statusColor.opacity(0.15), radius: 6, x: 0, y: 3)
+        .sheet(isPresented: $showEditSheet) {
+            EditOfferView(offer: currentOffer, service: service, isRestarting: isRestarting)
+        }
+        .alert("Error", isPresented: $showErrorAlert) {
+            Button("OK") { actionError = nil }
+        } message: {
+            Text(actionError ?? "An unknown error occurred.")
+        }
+        .confirmationDialog("Delete this promotion?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) { performDelete() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This action cannot be undone. The offer will be permanently removed.")
+        }
+        .overlay {
+            if isDeleting {
+                ZStack {
+                    Color.black.opacity(0.4).clipShape(CouponShape(stubWidth: 80))
+                    ProgressView()
+                }
+            }
+        }
+    }
+    
+    // MARK: - Actions
+    
+    private func togglePause() {
+        var updated = currentOffer
+        updated.isPaused.toggle()
+        service.updateOffer(updated)
+    }
+    
+    private func endEarly() {
+        var updated = currentOffer
+        updated.endDate = Date()
+        updated.isPaused = false // unpause if it was paused
+        service.updateOffer(updated)
+    }
+    
+    private func performDelete() {
+        isDeleting = true
+        service.softDeleteOffer(currentOffer) { success in
+            isDeleting = false
+            if !success {
+                actionError = service.errorMessage ?? "Failed to delete offer."
+                showErrorAlert = true
+            }
+        }
+    }
+    
+    private var statusColor: Color {
+        switch currentOffer.computedStatus {
+        case .active: return RSMSTheme.Colors.success
+        case .scheduled: return RSMSTheme.Colors.accentGold
+        case .expired: return RSMSTheme.Colors.error // Red for expired
+        case .paused: return RSMSTheme.Colors.warning
+        }
     }
 }
 

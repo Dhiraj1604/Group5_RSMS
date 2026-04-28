@@ -52,41 +52,6 @@ struct OfferDetailView: View {
                         .foregroundStyle(RSMSTheme.Colors.accentGold)
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    if currentOffer.computedStatus != .expired {
-                        Button(action: {
-                            isRestarting = false
-                            showEditSheet = true
-                        }) {
-                            Label("Edit", systemImage: "pencil")
-                        }
-                        
-                        Button(action: { togglePause() }) {
-                            Label(currentOffer.isPaused ? "Resume" : "Pause", systemImage: currentOffer.isPaused ? "play.fill" : "pause.fill")
-                        }
-                        
-                        Button(role: .destructive, action: { endEarly() }) {
-                            Label("End Early", systemImage: "stop.fill")
-                        }
-                    } else {
-                        Button(action: {
-                            isRestarting = true
-                            showEditSheet = true
-                        }) {
-                            Label("Restart", systemImage: "arrow.clockwise")
-                        }
-                    }
-                    
-                    Button(role: .destructive, action: { showDeleteConfirm = true }) {
-                        Label("Delete", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .fontWeight(.semibold)
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
-                }
-            }
         }
         .task {
             await metricsVM.load(for: currentOffer)
