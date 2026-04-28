@@ -44,27 +44,38 @@ struct BMReportsTab: View {
                         // MARK: - Metric Cards Row
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
-                                ReportMetricCard(
-                                    title: "Total Sales",
-                                    value: "₹\(formatNumber(vm.totalSales))",
-                                    icon: "indianrupeesign.circle.fill",
-                                    trendText: "\(vm.totalOrders) orders",
-                                    accentColor: RSMSTheme.Colors.accentGold
-                                )
-                                ReportMetricCard(
-                                    title: "Footfall",
-                                    value: "\(vm.footfall)",
-                                    icon: "figure.walk.circle.fill",
-                                    trendText: "This month",
-                                    accentColor: RSMSTheme.Colors.accentGoldLight
-                                )
-                                ReportMetricCard(
-                                    title: "Dormant Staff",
-                                    value: "\(vm.dormantEmployees)",
-                                    icon: "person.crop.circle.badge.exclamationmark.fill",
-                                    trendText: "No sales",
-                                    accentColor: RSMSTheme.Colors.warning
-                                )
+                                NavigationLink(destination: ProductSalesReportView(soldProducts: vm.soldProducts, unsoldProducts: [], mode: .sold)) {
+                                    ReportMetricCard(
+                                        title: "Total Sales",
+                                        value: "₹\(formatNumber(vm.totalSales))",
+                                        icon: "indianrupeesign.circle.fill",
+                                        trendText: "",
+                                        accentColor: RSMSTheme.Colors.accentGold
+                                    )
+                                }
+                                .buttonStyle(.plain)
+
+                                NavigationLink(destination: ProductSalesReportView(soldProducts: [], unsoldProducts: vm.unsoldProducts, mode: .slowMoving)) {
+                                    ReportMetricCard(
+                                        title: "Footfall",
+                                        value: "\(vm.footfall)",
+                                        icon: "figure.walk.circle.fill",
+                                        trendText: "",
+                                        accentColor: RSMSTheme.Colors.accentGoldLight
+                                    )
+                                }
+                                .buttonStyle(.plain)
+
+                                NavigationLink(destination: DormantStaffReportView(dormantStaff: vm.dormantStaffDetails)) {
+                                    ReportMetricCard(
+                                        title: "Dormant Staff",
+                                        value: "\(vm.dormantEmployees)",
+                                        icon: "person.crop.circle.badge.exclamationmark.fill",
+                                        trendText: "",
+                                        accentColor: RSMSTheme.Colors.warning
+                                    )
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
 
@@ -78,7 +89,7 @@ struct BMReportsTab: View {
                                 HStack(spacing: 8) {
                                     Circle().fill(RSMSTheme.Colors.accentGold).frame(width: 8, height: 8)
                                     Text("Met").font(.caption2).foregroundColor(RSMSTheme.Colors.textSecondary)
-                                    Circle().fill(RSMSTheme.Colors.error).frame(width: 8, height: 8)
+                                    Circle().fill(RSMSTheme.Colors.textPrimary).frame(width: 8, height: 8)
                                     Text("Missed").font(.caption2).foregroundColor(RSMSTheme.Colors.textSecondary)
                                 }
                             }
@@ -162,7 +173,8 @@ struct BMReportsTab: View {
                                 .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
                         )
 
-                        // MARK: - View Full Report CTA
+                        // MARK: - View Full Report CTA (Hidden as requested)
+                        /*
                         Button {
                             showFullReport = true
                         } label: {
@@ -174,6 +186,7 @@ struct BMReportsTab: View {
                         }
                         .buttonStyle(GoldButtonStyle())
                         .padding(.top, 4)
+                        */
                     }
                     .padding()
                     // Inside the ZStack, after ScrollView closing brace
@@ -200,7 +213,7 @@ struct BMReportsTab: View {
             .navigationTitle("Reports")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -287,7 +300,7 @@ struct TargetRow: View {
     let metric: TargetMetric
 
     private var barColor: Color {
-        metric.isMet ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.error
+        metric.isMet ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textPrimary
     }
 
     var body: some View {

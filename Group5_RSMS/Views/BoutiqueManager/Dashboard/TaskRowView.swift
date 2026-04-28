@@ -13,18 +13,18 @@ struct TaskRowView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
             Button(action: onToggle) {
-                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+                Image(systemName: iconName(for: task.status))
                     .resizable()
                     .frame(width: 24, height: 24)
-                    .foregroundColor(task.isCompleted ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textSecondary)
+                    .foregroundColor(iconColor(for: task.status))
             }
             .buttonStyle(.plain)
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(task.title)
                     .font(RSMSTheme.Typography.bodyCopy1)
-                    .strikethrough(task.isCompleted)
-                    .foregroundColor(task.isCompleted ? RSMSTheme.Colors.textSecondary : RSMSTheme.Colors.textPrimary)
+                    .strikethrough(task.status == .verified)
+                    .foregroundColor(task.status == .verified ? RSMSTheme.Colors.textSecondary : RSMSTheme.Colors.textPrimary)
                 
                 if let desc = task.description, !desc.isEmpty {
                     Text(desc)
@@ -59,6 +59,22 @@ struct TaskRowView: View {
         .background(RSMSTheme.Colors.surfacePrimary)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+    }
+    
+    private func iconName(for status: TaskStatus) -> String {
+        switch status {
+        case .pending: return "circle"
+        case .completedByStaff: return "checkmark.circle"
+        case .verified: return "checkmark.circle.fill"
+        }
+    }
+    
+    private func iconColor(for status: TaskStatus) -> Color {
+        switch status {
+        case .pending: return RSMSTheme.Colors.textSecondary
+        case .completedByStaff: return RSMSTheme.Colors.accentGold
+        case .verified: return RSMSTheme.Colors.success
+        }
     }
 }
 

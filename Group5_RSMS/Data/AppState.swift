@@ -104,7 +104,9 @@ class AppState {
                 throw AuthError.missingRole
             }
         } catch {
-            print("Failed to fetch user role: \(error)")
+            if !(error is CancellationError) {
+                print("Failed to fetch user role: \(error)")
+            }
             throw AuthError.missingRole
         }
         #endif
@@ -197,9 +199,10 @@ class AppState {
             print("Value not found: \(type) — \(context.debugDescription)")
             storeError = "Value not found: \(context.debugDescription)"
         } catch {
-            print("Other error: \(error)")
-            storeError = error.localizedDescription
-
+            if !(error is CancellationError) {
+                print("Other error: \(error)")
+                storeError = error.localizedDescription
+            }
         }
         isLoadingStores = false
     }
@@ -282,7 +285,9 @@ class AppState {
                 .from("products").select().order("created_at", ascending: false).execute().value
             self.products = fetched
         } catch {
-            self.productError = "Failed to load products: \(error.localizedDescription)"
+            if !(error is CancellationError) {
+                self.productError = "Failed to load products: \(error.localizedDescription)"
+            }
         }
         isLoadingProducts = false
     }
@@ -346,19 +351,26 @@ class AppState {
     func deleteProduct(_ product: Product) async {
         do {
             try await SupabaseManager.shared.client
-                .from("products").delete().eq("id", value: product.id).execute()
-            products.removeAll { $0.id == product.id }
+                .from("products")
+                .delete()
+                .eq("id", value: product.id)
+                .execute()
+
+            products.removeAll { $0.id == product.id }  // instant UI update
+            productError = nil
+
             auditLog.log(
                 action: .deleted, entity: .product,
                 entityName: product.name, entityId: product.id.uuidString,
                 details: "Product deleted (SKU: \(product.sku))",
                 before: product
             )
+
         } catch {
             productError = "Failed to delete product: \(error.localizedDescription)"
         }
     }
-
+    
     func submitRepair(for product: Product, issueDescription: String, repairCost: Double) async -> Bool {
         do {
             let payload = RepairInsertPayload(
@@ -372,7 +384,9 @@ class AppState {
             await fetchProducts()
             return true
         } catch {
-            print("❌ Failed to submit repair: \(error)")
+            if !(error is CancellationError) {
+                print("❌ Failed to submit repair: \(error)")
+            }
             return false
         }
     }
@@ -389,7 +403,9 @@ class AppState {
                 .from("products").update(["in_repair": false]).eq("id", value: product.id).execute()
             await fetchProducts()
         } catch {
-            print("❌ Failed to resolve repair: \(error)")
+            if !(error is CancellationError) {
+                print("❌ Failed to resolve repair: \(error)")
+            }
         }
     }
 
@@ -418,7 +434,9 @@ class AppState {
             let total = records.reduce(0) { $0 + $1.stock_quantity }
             self.totalInventoryCount = total
         } catch {
-            print("❌ Failed to fetch total inventory count: \(error)")
+            if !(error is CancellationError) {
+                print("❌ Failed to fetch total inventory count: \(error)")
+            }
         }
     }
 }

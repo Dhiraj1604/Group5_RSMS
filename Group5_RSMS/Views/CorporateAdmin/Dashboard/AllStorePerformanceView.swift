@@ -70,14 +70,14 @@ struct AllStorePerformanceView: View {
                     emptyState
                 } else {
                     ScrollView {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 300, maximum: 400), spacing: RSMSTheme.Spacing.lg)], spacing: RSMSTheme.Spacing.lg) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 20)], spacing: 24) {
                             ForEach(Array(filteredAndSortedStores.enumerated()), id: \.element.id) { index, storeKPI in
                                 PremiumStoreCard(storeKPI: storeKPI, viewModel: viewModel, rank: (sortOption == .revenue && filterActive == nil && searchText.isEmpty) ? index + 1 : nil)
                             }
                         }
                         .padding(RSMSTheme.Spacing.horizontalMargin)
                         .padding(.top, RSMSTheme.Spacing.md)
-                        .padding(.bottom, RSMSTheme.Spacing.xxl)
+                        .padding(.bottom, 120)
                     }
                 }
             }
@@ -160,127 +160,141 @@ struct PremiumStoreCard: View {
     var rank: Int? = nil
 
     var body: some View {
-        let isTop3 = (rank ?? 4) <= 3
-        
-        VStack(alignment: .leading, spacing: 0) {
-            // Header with Rank Badge
-            HStack(alignment: .center) {
-                if let rank = rank {
-                    ZStack {
+        ZStack(alignment: .topLeading) {
+            // Base Background
+            RSMSTheme.Colors.backgroundDeep
+            
+            // Subtle Radial Glow
+            RadialGradient(
+                gradient: Gradient(colors: [RSMSTheme.Colors.accentGold.opacity(0.15), .clear]),
+                center: .topTrailing,
+                startRadius: 0,
+                endRadius: 250
+            )
+            
+            // Original Top-Left Rank Watermark
+            if let rank = rank {
+                Text("\(rank)")
+                    .font(.custom("HelveticaNeue-Bold", size: 82))
+                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.1))
+                    .padding(10)
+                    .allowsHitTesting(false)
+            }
+            
+            VStack(alignment: .leading, spacing: 0) {
+                // Top Right: Status Badge
+                HStack {
+                    Spacer()
+                    // Ultra-Minimal Status Dot
+                    HStack(spacing: 6) {
                         Circle()
-                            .fill(rank == 1 ? RSMSTheme.Colors.accentGold : (rank == 2 ? Color.gray : Color.brown.opacity(0.8)))
-                            .frame(width: 40, height: 40)
-                            .shadow(color: (rank == 1 ? RSMSTheme.Colors.accentGold : .clear).opacity(0.4), radius: 8)
-                        
-                        Text("\(rank)")
-                            .font(.custom("Helvetica-Bold", size: 18))
-                            .foregroundStyle(.black)
+                            .fill(storeKPI.isActive ? RSMSTheme.Colors.success : .red)
+                            .frame(width: 6, height: 6)
+                            .shadow(color: storeKPI.isActive ? RSMSTheme.Colors.success : .red, radius: 4)
+                        Text(storeKPI.isActive ? "ACTIVE" : "INACTIVE")
+                            .font(.custom("HelveticaNeue-Bold", size: 10))
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
                     }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.black.opacity(0.4))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
                 }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(storeKPI.storeName)
-                        .font(.custom("Helvetica-Bold", size: 20))
-                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                    
-                    HStack(spacing: 4) {
-                        Image(systemName: "mappin.and.ellipse")
-                            .font(.system(size: 10))
-                        Text(storeKPI.storeCity)
-                            .font(.custom("Helvetica-Bold", size: 12))
-                    }
-                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                }
-                .padding(.leading, 10)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
                 
                 Spacer()
                 
-                VStack(alignment: .trailing, spacing: 4) {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(storeKPI.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.error)
-                            .frame(width: 6, height: 6)
-                        Text(storeKPI.isActive ? "ONLINE" : "OFFLINE")
-                            .font(.custom("Helvetica-Bold", size: 9))
-                            .foregroundStyle(storeKPI.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.error)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(RSMSTheme.Colors.backgroundPrimary.opacity(0.4))
-                    .clipShape(Capsule())
-                }
-            }
-            .padding(.bottom, 24)
-
-            // Revenue Section
-            VStack(alignment: .leading, spacing: 6) {
-                Text("TOTAL REVENUE")
-                    .font(.custom("Helvetica-Bold", size: 11))
-                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                    .kerning(1.2)
-                
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(viewModel.shortRevenue(storeKPI.revenue))
-                        .font(.custom("Helvetica-Bold", size: 42))
+                // Store Name & City
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(storeKPI.storeName)
+                        .font(.custom("HelveticaNeue-Bold", size: 26))
                         .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                    
-                    HStack(spacing: 2) {
-                        Image(systemName: "arrow.up")
-                        Text("12%")
-                    }
-                    .font(.custom("Helvetica-Bold", size: 12))
-                    .foregroundStyle(RSMSTheme.Colors.success)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                    Text(storeKPI.storeCity.uppercased())
+                        .font(.custom("HelveticaNeue-Medium", size: 12))
+                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                        .tracking(1.5)
                 }
-            }
-            .padding(.bottom, 24)
-
-            Divider().background(RSMSTheme.Colors.borderLight.opacity(0.4))
-                .padding(.bottom, 20)
-
-            // Sub-metrics Grid
-            HStack(spacing: 24) {
-                metricPill(title: "Orders", value: "\(storeKPI.orderCount)", icon: "bag.fill", color: .blue)
-                metricPill(title: "SKU", value: "\(storeKPI.inventoryUnits)", icon: "shippingbox.fill", color: .purple)
-                metricPill(title: "Staff", value: "8", icon: "person.2.fill", color: .orange)
+                .padding(.horizontal, 20)
+                
+                Spacer()
+                
+                // Middle: Muted Revenue
+                VStack(alignment: .leading, spacing: -2) {
+                    Text("TOTAL REVENUE")
+                        .font(.custom("HelveticaNeue-Bold", size: 11))
+                        .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.8))
+                        .tracking(2)
+                    
+                    Text(viewModel.shortRevenue(storeKPI.revenue))
+                        .font(.custom("HelveticaNeue-Bold", size: 28))
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                        .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
+                
+                Spacer()
+                
             }
         }
-        .padding(28)
-        .background(
-            ZStack {
-                RSMSTheme.Colors.backgroundDeep
-                if isTop3 {
-                    LinearGradient(
-                        colors: [RSMSTheme.Colors.accentGold.opacity(0.12), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                }
-            }
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 28))
+        .frame(height: 200)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
         .overlay(
-            RoundedRectangle(cornerRadius: 28)
-                .stroke(isTop3 ? RSMSTheme.Colors.accentGold.opacity(0.3) : RSMSTheme.Colors.borderLight, lineWidth: isTop3 ? 2 : 1)
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.25), radius: 15, x: 0, y: 8)
+        .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
     }
 
-    private func metricPill(title: String, value: String, icon: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+    private func minimalMetric(value: String, label: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 10))
-                    .foregroundStyle(color)
-                Text(title)
-                    .font(.custom("Helvetica-Bold", size: 10))
+                    .font(.system(size: 11))
+                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.6))
+                Text(label)
+                    .font(.custom("HelveticaNeue-Bold", size: 10))
                     .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                    .textCase(.uppercase)
+                    .tracking(1)
             }
             Text(value)
-                .font(.custom("Helvetica-Bold", size: 20))
-                .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                .font(.custom("HelveticaNeue-Bold", size: 21))
+                .foregroundStyle(.white)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    private func metricChip(value: String, label: String) -> some View {
+        VStack(alignment: .center, spacing: 2) {
+            Text(value)
+                .font(.custom("HelveticaNeue-Bold", size: 16))
+                .foregroundStyle(.white)
+            Text(label)
+                .font(.custom("HelveticaNeue-Bold", size: 7))
+                .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                .tracking(1)
+        }
+        .frame(width: 45)
+    }
+
+    private func metricPill(title: String, value: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.8))
+                Text(title.uppercased())
+                    .font(.custom("HelveticaNeue-Bold", size: 8))
+                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                    .tracking(1)
+            }
+            Text(value)
+                .font(.custom("HelveticaNeue-Bold", size: 20))
+                .foregroundStyle(.white)
+        }
     }
 
     }

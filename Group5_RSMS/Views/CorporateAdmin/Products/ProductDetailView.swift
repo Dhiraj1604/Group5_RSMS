@@ -30,7 +30,6 @@ struct ProductDetailView: View {
                 VStack(spacing: RSMSTheme.Spacing.xl) {
                     productHeroImage
                     productInfoCard
-                    activeStatusSection
                     priceSection
                     statusCard
                     craftsmanshipCard
@@ -88,8 +87,8 @@ struct ProductDetailView: View {
                         image
                             .resizable()
                             .scaledToFit()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 300)
+                            .frame(height: 260)
+                            .cornerRadius(RSMSTheme.Radius.md)
                     case .failure:
                         categoryPlaceholder
                     case .empty:
@@ -102,9 +101,8 @@ struct ProductDetailView: View {
                 categoryPlaceholder
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 300)
-        .padding(RSMSTheme.Spacing.sm)
+        .fixedSize()
+        .padding(8)
         .background(RSMSTheme.Colors.backgroundDeep)
         .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
         .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
@@ -145,42 +143,6 @@ struct ProductDetailView: View {
             .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
     }
 
-    // MARK: - Active Status Section
-    private var activeStatusSection: some View {
-        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-            Label("Global Visibility", systemImage: "globe")
-                .font(.headline)
-                .foregroundStyle(RSMSTheme.Colors.textPrimary)
-
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Active Status")
-                        .font(.subheadline).fontWeight(.semibold)
-                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                    Text(currentProduct.isActive ? "Available across all boutiques" : "Hidden from staff and customers")
-                        .font(.caption)
-                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                }
-                Spacer()
-                Toggle("", isOn: Binding(
-                    get: { currentProduct.isActive },
-                    set: { newValue in
-                        Task { await updateActiveStatus(newState: newValue) }
-                    }
-                ))
-                .labelsHidden()
-                .tint(RSMSTheme.Colors.accentGold)
-            }
-            .padding(RSMSTheme.Spacing.lg)
-            .background(RSMSTheme.Colors.backgroundDeep)
-            .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
-            .overlay(
-                RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
-                    .stroke(currentProduct.isActive ? RSMSTheme.Colors.borderLight : RSMSTheme.Colors.warning.opacity(0.3), lineWidth: 1)
-            )
-        }
-    }
-
     // MARK: - Price Section
     private var priceSection: some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
@@ -193,7 +155,7 @@ struct ProductDetailView: View {
                         Text("CURRENT PRICE")
                             .font(.caption).fontWeight(.bold)
                             .foregroundStyle(RSMSTheme.Colors.textSecondary).textCase(.uppercase)
-                        Text("₹\(String(format: "%.0f", currentProduct.basePrice))")
+                        Text(currentProduct.formattedPrice)
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundStyle(RSMSTheme.Colors.accentGold)
                             .minimumScaleFactor(0.6)
@@ -201,14 +163,13 @@ struct ProductDetailView: View {
                     }
                     Spacer()
                     Button { showSetPrice = true } label: {
-                        Label("Update", systemImage: "pencil")
+                        Image(systemName: "pencil")
                             .font(.subheadline).fontWeight(.semibold)
                             .foregroundStyle(RSMSTheme.Colors.accentGold)
-                            .padding(.horizontal, RSMSTheme.Spacing.lg)
-                            .padding(.vertical, RSMSTheme.Spacing.md)
+                            .padding(RSMSTheme.Spacing.md)
                             .background(RSMSTheme.Colors.accentGold.opacity(0.12))
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(RSMSTheme.Colors.accentGold.opacity(0.3), lineWidth: 1))
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(RSMSTheme.Colors.accentGold.opacity(0.3), lineWidth: 1))
                     }
                 }
                 .padding(RSMSTheme.Spacing.xl)
@@ -270,14 +231,20 @@ struct ProductDetailView: View {
             infoRow(icon: "star.fill", label: "Craftsmanship", value: currentProduct.craftsmanshipLevel.rawValue)
             if !currentProduct.craftsmanshipNotes.isEmpty {
                 Divider().background(RSMSTheme.Colors.borderLight)
-                VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
-                    Label("Artisan Notes", systemImage: "text.quote")
-                        .font(.caption).fontWeight(.semibold)
-                        .foregroundStyle(RSMSTheme.Colors.textSecondary).textCase(.uppercase)
-                    Text(currentProduct.craftsmanshipNotes)
-                        .font(.subheadline).foregroundStyle(RSMSTheme.Colors.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .top, spacing: RSMSTheme.Spacing.md) {
+                    Image(systemName: "text.quote").font(.caption)
+                        .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
+                        .padding(.top, 2)
+                    VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
+                        Text("Artisan Notes")
+                            .font(.caption).fontWeight(.semibold)
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary).textCase(.uppercase)
+                        Text(currentProduct.craftsmanshipNotes)
+                            .font(.subheadline).foregroundStyle(RSMSTheme.Colors.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, RSMSTheme.Spacing.sm)
             }
         }
@@ -329,8 +296,8 @@ struct ProductDetailView: View {
                                 isPresented: $showDeleteConfirm, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) {
                     Task {
-                        await appState.deleteProduct(currentProduct)
-                        dismiss()
+                        dismiss()  // dismiss instantly
+                        await appState.deleteProduct(currentProduct)  // runs in background
                     }
                 }
             } message: {
@@ -369,43 +336,7 @@ struct ProductDetailView: View {
         }
         .padding(.vertical, RSMSTheme.Spacing.md)
     }
-
-    // MARK: - Active Status Update
-    // Uses AppState so the computed currentProduct auto-refreshes via @Observable
-    @MainActor
-    private func updateActiveStatus(newState: Bool) async {
-        do {
-            try await SupabaseManager.shared.client
-                .from("products")
-                .update(["is_active": newState])
-                .eq("id", value: currentProduct.id)
-                .execute()
-
-            print("✅ Active status updated")
-
-            // Audit log
-            ActivityLogService.shared.log(
-                userEmail: appState.userEmail,
-                action: newState ? .activated : .deactivated,
-                entity: .product,
-                entityName: currentProduct.name,
-                entityId: currentProduct.id.uuidString,
-                details: "Product \(newState ? "activated" : "deactivated")"
-            )
-
-            // Refresh AppState so currentProduct computed var picks up new value
-            await appState.fetchProducts()
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                onPriceUpdated?()
-            }
-        } catch {
-            print("❌ Failed to update active status: \(error)")
-            updateError = error.localizedDescription
-        }
-    }
 }
-
 #Preview {
     NavigationStack {
         ProductDetailView(product: Product.sample)

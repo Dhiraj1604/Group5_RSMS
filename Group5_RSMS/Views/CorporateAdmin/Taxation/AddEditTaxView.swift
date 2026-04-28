@@ -262,6 +262,64 @@ struct AddEditTaxView: View {
                             }
                         }
 
+                        // Active / Inactive — only shown when editing an existing rule
+                        if let rule = existingRule {
+                            let isActive = viewModel.activeRuleId == rule.id
+                            formCard {
+                                HStack(spacing: RSMSTheme.Spacing.md) {
+                                    // Status icon
+                                    ZStack {
+                                        Circle()
+                                            .fill(isActive
+                                                  ? RSMSTheme.Colors.accentGold.opacity(0.15)
+                                                  : Color.white.opacity(0.05))
+                                            .frame(width: 40, height: 40)
+                                        Image(systemName: isActive ? "bolt.fill" : "bolt.slash")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(isActive ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textTertiary)
+                                    }
+
+                                    VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
+                                        formLabel(isActive ? "Active" : "Inactive")
+                                        Text(isActive
+                                             ? "This rule is currently applied to transactions."
+                                             : "This rule is not applied. Tap to activate.")
+                                            .font(.system(size: 12, weight: .regular, design: .rounded))
+                                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                                    }
+
+                                    Spacer()
+
+                                    // Pill toggle button
+                                    Button {
+                                        if isActive {
+                                            viewModel.activeRuleId = nil
+                                        } else {
+                                            viewModel.setActiveRule(rule)
+                                        }
+                                    } label: {
+                                        Text(isActive ? "Deactivate" : "Activate")
+                                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                                            .tracking(0.5)
+                                            .foregroundColor(isActive ? .black : RSMSTheme.Colors.accentGold)
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 7)
+                                            .background(
+                                                isActive
+                                                    ? RSMSTheme.Colors.accentGold
+                                                    : RSMSTheme.Colors.accentGold.opacity(0.12)
+                                            )
+                                            .clipShape(Capsule())
+                                            .overlay(
+                                                Capsule()
+                                                    .stroke(RSMSTheme.Colors.accentGold.opacity(isActive ? 0 : 0.4), lineWidth: 1)
+                                            )
+                                    }
+                                    .animation(.easeInOut(duration: 0.2), value: isActive)
+                                }
+                            }
+                        }
+
                         // Validation Error
                         if showValidationError {
                             HStack(spacing: RSMSTheme.Spacing.sm) {
@@ -286,28 +344,7 @@ struct AddEditTaxView: View {
                             .transition(.move(edge: .top).combined(with: .opacity))
                         }
 
-                        // Save Button
-                        Button {
-                            attemptSave()
-                        } label: {
-                            HStack(spacing: RSMSTheme.Spacing.sm) {
-                                if isSaving {
-                                    ProgressView()
-                                        .tint(RSMSTheme.Colors.backgroundPrimary)
-                                        .padding(.trailing, 4)
-                                } else {
-                                    Image(systemName: existingRule == nil ? "plus.circle.fill" : "checkmark.circle.fill")
-                                        .font(.system(size: 18, weight: .semibold))
-                                }
 
-                                Text(isSaving ? "Saving..." : (existingRule == nil ? "Add Tax Rule" : "Update Tax Rule"))
-                                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                            }
-                        }
-                        .buttonStyle(GoldButtonStyle())
-                        .opacity((isSaveDisabled || isSaving) ? 0.45 : 1.0)
-                        .disabled(isSaveDisabled || isSaving)
-                        .padding(.top, RSMSTheme.Spacing.sm)
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.lg)
                     .padding(.top, RSMSTheme.Spacing.xl)
@@ -327,6 +364,26 @@ struct AddEditTaxView: View {
                             .font(.system(size: 18))
                             .foregroundColor(RSMSTheme.Colors.textSecondary)
                     }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        attemptSave()
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                                .tint(RSMSTheme.Colors.accentGold)
+                                .scaleEffect(0.8)
+                        } else {
+                            HStack(spacing: 4) {
+                                Image(systemName: existingRule == nil ? "plus.circle.fill" : "checkmark.circle.fill")
+                                    .font(.system(size: 14, weight: .semibold))
+                                Text(existingRule == nil ? "Add" : "Update")
+                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            }
+                            .foregroundColor(isSaveDisabled ? RSMSTheme.Colors.accentGold.opacity(0.4) : RSMSTheme.Colors.accentGold)
+                        }
+                    }
+                    .disabled(isSaveDisabled || isSaving)
                 }
             }
         }
@@ -412,9 +469,7 @@ struct AddEditTaxView: View {
 
     private func showError(_ msg: String) {
         validationMessage = msg
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            showValidationError = true
-        }
+        withAnimation { showValidationError = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
             withAnimation { showValidationError = false }
         }

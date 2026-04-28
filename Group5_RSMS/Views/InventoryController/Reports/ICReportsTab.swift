@@ -82,7 +82,9 @@ struct ICReportsTab: View {
             self.varianceData = variance
             self.heatmapData = heatmap
         } catch {
-            self.fetchError = error.localizedDescription
+            if !(error is CancellationError) {
+                self.fetchError = error.localizedDescription
+            }
         }
         isLoading = false
     }
@@ -101,16 +103,13 @@ struct ICReportsTab: View {
                 let pdfDoc = PDFReportDocument(data: pdfData, filename: "Variance_Report.pdf")
                 
                 ShareLink(item: pdfDoc, preview: SharePreview("Variance Report", image: Image(systemName: "doc.text.fill"))) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "square.and.arrow.up")
-                        Text("Share")
-                    }
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(RSMSTheme.Colors.accentGold)
-                    .cornerRadius(8)
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(RSMSTheme.Colors.accentGold.opacity(0.1))
+                        .cornerRadius(8)
                 }
             }
             
@@ -166,11 +165,16 @@ struct ICReportsTab: View {
                         )
                     }
                     if varianceData.count > 5 {
-                        Text("Showing 5 of \(varianceData.count) records")
-                            .font(.system(size: 12))
-                            .foregroundColor(RSMSTheme.Colors.textTertiary)
+                        NavigationLink(destination: VarianceReportListView(varianceData: varianceData)) {
+                            HStack(spacing: 4) {
+                                Text("See All \(varianceData.count) Records")
+                                Image(systemName: "chevron.right")
+                            }
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(RSMSTheme.Colors.accentGold)
                             .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, 8)
+                            .padding(.top, 12)
+                        }
                     }
                 }
             }
@@ -191,16 +195,13 @@ struct ICReportsTab: View {
                 let pdfDoc = PDFReportDocument(data: pdfData, filename: "Inventory_HeatMap.pdf")
                 
                 ShareLink(item: pdfDoc, preview: SharePreview("Inventory Heat Map", image: Image(systemName: "grid"))) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "square.and.arrow.up")
-                        Text("Share")
-                    }
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(RSMSTheme.Colors.accentGold)
-                    .cornerRadius(8)
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(RSMSTheme.Colors.accentGold.opacity(0.1))
+                        .cornerRadius(8)
                 }
             }
             
@@ -225,12 +226,12 @@ struct ICReportsTab: View {
             let maxStock = item.maxStockLevel ?? 50
             
             let status: String
-            if item.stockQuantity == 0 {
-                status = "Out of Stock"
+            if item.stockQuantity <= 2 {
+                status = "Critical"
             } else if item.stockQuantity < minStock {
                 status = "Low"
             } else if item.stockQuantity > maxStock {
-                status = "Overstock"
+                status = "In-Stock"
             } else {
                 status = "Healthy"
             }
@@ -243,63 +244,55 @@ struct ICReportsTab: View {
             matrix[cat, default: [:]][locStatus] = locCurrent + 1
         }
         
-        let maxCount = matrix.values.flatMap { $0.values }.max() ?? 1
-        let safeMax = maxCount > 0 ? maxCount : 1
-        
-        return ScrollView(.horizontal, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 4) {
-                // Header row
-                HStack(spacing: 4) {
-                    Text("Category")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                        .frame(width: 100, alignment: .leading)
+        return VStack(spacing: 12) {
+            ForEach(categories, id: \.self) { category in
+                VStack(alignment: .leading, spacing: 14) {
+                    Text(category)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(RSMSTheme.Colors.textPrimary)
                     
-                    ForEach(statuses, id: \.self) { status in
-                        Text(status)
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
-                            .frame(width: 70, height: 30)
-                            .lineLimit(1)
-                    }
-                }
-                
-                // Data rows
-                ForEach(categories, id: \.self) { category in
-                    HStack(spacing: 4) {
-                        Text(category)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.white)
-                            .frame(width: 100, alignment: .leading)
-                            .lineLimit(1)
+                    VStack(spacing: 8) {
+                        // Health metrics
+                        HStack(spacing: 8) {
+                            heatMapPill(title: "Critical", value: matrix[category]?["Critical"] ?? 0, highlightColor: RSMSTheme.Colors.error)
+                            heatMapPill(title: "Low", value: matrix[category]?["Low"] ?? 0, highlightColor: RSMSTheme.Colors.warning)
+                            heatMapPill(title: "Good", value: matrix[category]?["Healthy"] ?? 0, highlightColor: RSMSTheme.Colors.success)
+                            heatMapPill(title: "In-Stock", value: matrix[category]?["In-Stock"] ?? 0, highlightColor: RSMSTheme.Colors.textSecondary)
+                        }
                         
-                        ForEach(statuses, id: \.self) { status in
-                            let val = matrix[category]?[status] ?? 0
-                            let intensity = Double(val) / Double(safeMax)
-                            let cellColor = RSMSTheme.Colors.accentGold.opacity(intensity * 0.8 + 0.1)
-                            
-                            ZStack {
-                                Rectangle()
-                                    .fill(val == 0 ? RSMSTheme.Colors.backgroundElevated : cellColor)
-                                
-                                Text("\(val)")
-                                    .font(.system(size: 12, weight: val > 0 ? .bold : .regular))
-                                    .foregroundColor(val == 0 ? RSMSTheme.Colors.textTertiary : (intensity > 0.5 ? .black : .white))
-                            }
-                            .frame(width: 70, height: 40)
-                            .cornerRadius(4)
+                        // Location metrics
+                        HStack(spacing: 8) {
+                            heatMapPill(title: "Floor", value: matrix[category]?["Floor"] ?? 0, highlightColor: RSMSTheme.Colors.accentGold)
+                            heatMapPill(title: "Backroom", value: matrix[category]?["Backroom"] ?? 0, highlightColor: RSMSTheme.Colors.accentGoldDark)
                         }
                     }
                 }
+                .padding(16)
+                .background(RSMSTheme.Colors.backgroundElevated)
+                .cornerRadius(16)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
+                )
             }
-            .padding(16)
-            .background(RSMSTheme.Colors.backgroundElevated)
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
-            )
         }
+    }
+    
+    private func heatMapPill(title: String, value: Int, highlightColor: Color) -> some View {
+        return VStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(highlightColor.opacity(0.8))
+                .textCase(.uppercase)
+            
+            Text("\(value)")
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundColor(highlightColor)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(highlightColor.opacity(0.1))
+        .cornerRadius(8)
     }
 
     // CSV Generators removed as we are now using PDF Generator Utility

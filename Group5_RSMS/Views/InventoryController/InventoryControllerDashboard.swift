@@ -15,7 +15,7 @@ struct InventoryControllerDashboard: View {
         TabView(selection: $selectedTab) {
             ICStockTab()
                 .tabItem {
-                    Image(systemName: "shippingbox.fill")
+                    Image(systemName: "archivebox.fill")
                     Text("Stock")
                 }
                 .tag(0)
@@ -30,7 +30,7 @@ struct InventoryControllerDashboard: View {
             ICShipmentsTab()
                 .tabItem {
                     Image(systemName: "shippingbox.fill")
-                    Text("Shipments") // Shipments icon was the same as Stock, we might want to differentiate, but keeping it
+                    Text("Shipments")
                 }
                 .tag(2)
 

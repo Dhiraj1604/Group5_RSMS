@@ -44,13 +44,12 @@ struct OffersView: View {
     private var listedOffers: [Offer] {
         var base: [Offer]
         switch selectedTab {
-        case .active: 
-            base = service.activeOffers
+        case .active:
+            base = service.activeOffers  // already includes both .active and .paused
             if showPausedOnly {
                 base = base.filter { $0.computedStatus == .paused }
-            } else {
-                base = base.filter { $0.computedStatus == .active }
             }
+            // when showPausedOnly is false, show ALL (active + paused) — don't filter
         case .scheduled: base = service.scheduledOffers
         case .expired: base = service.expiredOffers
         }
@@ -129,24 +128,26 @@ struct OffersView: View {
                         if listedOffers.isEmpty {
                             emptyRow
                         } else {
-                            LazyVStack(spacing: RSMSTheme.Spacing.md) {
+                            // ── Cinematic Multi-Row Offers Grid ──────────────────────────
+                            LazyVGrid(columns: [
+                                GridItem(.flexible(), spacing: 20),
+                                GridItem(.flexible(), spacing: 20),
+                                GridItem(.flexible(), spacing: 20)
+                            ], spacing: 24) {
                                 ForEach(listedOffers) { offer in
-                                    SwipeToDeleteWrapper(action: {
-                                        service.softDeleteOffer(offer)
-                                    }) {
-                                        OfferRow(offer: offer)
-                                            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-                                            .onTapGesture {
-                                                offerForDetail = offer
-                                            }
-                                    }
+                                    BoutiqueCouponCard(offer: offer, service: service)
+                                        .onTapGesture {
+                                            offerForDetail = offer
+                                        }
                                 }
                             }
+                            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+                            .padding(.vertical, 10)
                         }
                     }
                 }
             }
-            .padding(.bottom, 100) // Padding for tab bar
+            .padding(.bottom, 60)
         }
         .scrollContentBackground(.hidden)
         .background(RSMSTheme.Colors.backgroundPrimary)
@@ -166,7 +167,6 @@ struct OffersView: View {
             }
         }
         .sheet(isPresented: $showCreate) {
-            // Refresh after creation sheet is dismissed
             service.fetchOffers()
         } content: {
             CreateOfferView(service: service)
@@ -198,17 +198,7 @@ struct OffersView: View {
         }
     }
 
-    // MARK: - Swipe to delete
-
-    private func deleteOffers(at offsets: IndexSet) {
-        for index in offsets {
-            let offer = listedOffers[index]
-            service.softDeleteOffer(offer)
-        }
-    }
-
     // MARK: - Stats row
-
     private var statsRow: some View {
         HStack(spacing: RSMSTheme.Spacing.sm) {
             StatCell(
@@ -230,7 +220,7 @@ struct OffersView: View {
             StatCell(
                 value: "\(service.expiredOffers.count)",
                 label: "Expired",
-                color: Color(red: 1.0, green: 0.5, blue: 0.31), // Coral
+                color: Color(red: 1.0, green: 0.5, blue: 0.31),
                 iconName: "clock.fill",
                 isSelected: selectedTab == .expired
             ) { selectedTab = .expired }
@@ -238,12 +228,9 @@ struct OffersView: View {
         .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
     }
 
-    // MARK: - Sort & Filter Row
-    
     private var sortAndFilterRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: RSMSTheme.Spacing.md) {
-                // Paused Checkbox First
                 if selectedTab == .active {
                     Button(action: { showPausedOnly.toggle() }) {
                         HStack {
@@ -327,8 +314,6 @@ struct OffersView: View {
         }
     }
 
-    // MARK: - Empty state row
-
     private var emptyRow: some View {
         VStack(spacing: RSMSTheme.Spacing.sm) {
             Image(systemName: selectedTab == .active ? "tag.slash" : (selectedTab == .scheduled ? "clock.badge.xmark" : "archivebox"))
@@ -343,8 +328,269 @@ struct OffersView: View {
     }
 }
 
-// MARK: - StatCell
+// MARK: - BoutiqueCouponCard
+struct BoutiqueCouponCard: View {
+    let offer: Offer
+    @ObservedObject var service: OfferService
+    
+    @State private var showEditSheet = false
+    @State private var isRestarting = false
+    @State private var showDeleteConfirm = false
+    @State private var isDeleting = false
+    @State private var actionError: String? = nil
+    @State private var showErrorAlert = false
+    
+    var currentOffer: Offer {
+        service.offers.first(where: { $0.id == offer.id }) ?? offer
+    }
+    
+    private static let dateFormatter: DateFormatter = {
+        let df = DateFormatter()
+        df.dateFormat = "d MMM yyyy"
+        return df
+    }()
+    
+    var body: some View {
+        ZStack {
+            // 1. Base Paper
+            RSMSTheme.Colors.backgroundElevated
+                .clipShape(CouponShape())
+            
+            // 2. Luxurious Texture & Glow
+            Canvas { context, size in
+                let dotSize: CGFloat = 1.0
+                let spacing: CGFloat = 8.0
+                for x in stride(from: spacing, to: size.width, by: spacing) {
+                    for y in stride(from: spacing, to: size.height, by: spacing) {
+                        context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: dotSize, height: dotSize)), with: .color(RSMSTheme.Colors.accentGold.opacity(0.15)))
+                    }
+                }
+            }
+            .blendMode(.plusLighter)
+            
+            LinearGradient(
+                colors: [RSMSTheme.Colors.accentGold.opacity(0.08), .clear],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            // Dashed perforation line — full height from notch to notch
+            GeometryReader { geo in
+                Path { path in
+                    path.move(to: CGPoint(x: 80, y: 10))       // top notch bottom edge
+                    path.addLine(to: CGPoint(x: 80, y: geo.size.height - 10)) // bottom notch top edge
+                }
+                .stroke(
+                    RSMSTheme.Colors.accentGold.opacity(0.5),
+                    style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [4, 6])
+                )
+            }
+            
+            // 3. Coupon Content
+            HStack(spacing: 0) {
+                // Left Stub (Discount)
+                VStack(spacing: 4) {
+                    Text("VALUED AT")
+                        .font(.custom("HelveticaNeue-Bold", size: 8))
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        .tracking(1.5)
+                    
+                    Text(offer.discountLabel.replacingOccurrences(of: " OFF", with: ""))
+                        .font(.custom("HelveticaNeue-Bold", size: 32))
+                        .foregroundStyle(.white)
+                        .minimumScaleFactor(0.5)
+                        .lineLimit(1)
+                    
+                    Text("OFF")
+                        .font(.custom("HelveticaNeue-Bold", size: 12))
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        .tracking(3)
+                }
+                .frame(width: 80)
+//                .overlay(
+//                    GeometryReader { geo in
+//                        Path { path in
+//                            // Start just below the top semicircle notch (radius = 10)
+//                            path.move(to: CGPoint(x: geo.size.width, y: 10))
+//                            path.addLine(to: CGPoint(x: geo.size.width, y: geo.size.height - 10))
+//                        }
+//                        .stroke(
+//                            RSMSTheme.Colors.accentGold.opacity(0.5),
+//                            style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [4, 6])
+//                        )
+//                    },
+//                    alignment: .trailing
+//                )
+                
+                // Right Main Body
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .top) {
+                        Text(currentOffer.name)
+                            .font(.custom("HelveticaNeue-Bold", size: 16))
+                            .foregroundStyle(.white)
+                            .lineLimit(2) // Support wrapping
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer()
+                        
+                        // Action Menu
+                        Menu {
+                            if currentOffer.computedStatus != .expired {
+                                Button(action: {
+                                    isRestarting = false
+                                    showEditSheet = true
+                                }) {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                
+                                Button(action: { togglePause() }) {
+                                    Label(currentOffer.isPaused ? "Resume" : "Pause", systemImage: currentOffer.isPaused ? "play.fill" : "pause.fill")
+                                }
+                                
+                                Button(role: .destructive, action: { endEarly() }) {
+                                    Label("End Early", systemImage: "stop.fill")
+                                }
+                            } else {
+                                Button(action: {
+                                    isRestarting = true
+                                    showEditSheet = true
+                                }) {
+                                    Label("Restart", systemImage: "arrow.clockwise")
+                                }
+                            }
+                            
+                            Button(role: .destructive, action: { showDeleteConfirm = true }) {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 20))
+                                .rotationEffect(.degrees(90))
+                                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                                .padding(4)
+                        }
+                    }
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "tag.fill")
+                            .font(.system(size: 9))
+                        Text(offer.applicableTo?.uppercased() ?? "ALL COLLECTIONS")
+                            .font(.custom("HelveticaNeue-Bold", size: 9))
+                            .tracking(1.0)
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("VALID UNTIL")
+                            .font(.custom("HelveticaNeue-Bold", size: 8))
+                            .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                        
+                        Text(Self.dateFormatter.string(from: currentOffer.endDate).uppercased())
+                            .font(.custom("HelveticaNeue-Bold", size: 10))
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    }
+                }
+                .padding(.leading, 16)
+                .padding(.trailing, 12)
+                .padding(.vertical, 20)
+            }
+        }
+        .frame(height: 180)
+        .frame(maxWidth: .infinity)
+        .overlay(
+            CouponShape(stubWidth: 80)
+                .stroke(statusColor.opacity(0.3), lineWidth: 1)
+        )
+        .shadow(color: statusColor.opacity(0.15), radius: 6, x: 0, y: 3)
+        .sheet(isPresented: $showEditSheet) {
+            EditOfferView(offer: currentOffer, service: service, isRestarting: isRestarting)
+        }
+        .alert("Error", isPresented: $showErrorAlert) {
+            Button("OK") { actionError = nil }
+        } message: {
+            Text(actionError ?? "An unknown error occurred.")
+        }
+        .confirmationDialog("Delete this promotion?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) { performDelete() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This action cannot be undone. The offer will be permanently removed.")
+        }
+        .overlay {
+            if isDeleting {
+                ZStack {
+                    Color.black.opacity(0.4).clipShape(CouponShape(stubWidth: 80))
+                    ProgressView()
+                }
+            }
+        }
+    }
+    
+    // MARK: - Actions
+    
+    private func togglePause() {
+        var updated = currentOffer
+        updated.isPaused.toggle()
+        service.updateOffer(updated)
+    }
+    
+    private func endEarly() {
+        var updated = currentOffer
+        updated.endDate = Date()
+        updated.isPaused = false // unpause if it was paused
+        service.updateOffer(updated)
+    }
+    
+    private func performDelete() {
+        isDeleting = true
+        service.softDeleteOffer(currentOffer) { success in
+            isDeleting = false
+            if !success {
+                actionError = service.errorMessage ?? "Failed to delete offer."
+                showErrorAlert = true
+            }
+        }
+    }
+    
+    private var statusColor: Color {
+        switch currentOffer.computedStatus {
+        case .active: return RSMSTheme.Colors.success
+        case .scheduled: return RSMSTheme.Colors.accentGold
+        case .expired: return RSMSTheme.Colors.error // Red for expired
+        case .paused: return RSMSTheme.Colors.warning
+        }
+    }
+}
 
+// MARK: - CouponShape
+struct CouponShape: Shape {
+    var stubWidth: CGFloat = 80
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let notchRadius: CGFloat = 10
+        let stubX: CGFloat = stubWidth
+        
+        path.move(to: CGPoint(x: 0, y: 0))
+        
+        path.addLine(to: CGPoint(x: stubX - notchRadius, y: 0))
+        path.addArc(center: CGPoint(x: stubX, y: 0), radius: notchRadius, startAngle: .degrees(180), endAngle: .degrees(0), clockwise: true)
+        path.addLine(to: CGPoint(x: rect.width, y: 0))
+        
+        path.addLine(to: CGPoint(x: rect.width, y: rect.height))
+        
+        path.addLine(to: CGPoint(x: stubX + notchRadius, y: rect.height))
+        path.addArc(center: CGPoint(x: stubX, y: rect.height), radius: notchRadius, startAngle: .degrees(0), endAngle: .degrees(180), clockwise: true)
+        path.addLine(to: CGPoint(x: 0, y: rect.height))
+        
+        path.closeSubpath()
+        
+        return path
+    }
+}
+
+// MARK: - StatCell
 struct StatCell: View {
     let value: String
     let label: String

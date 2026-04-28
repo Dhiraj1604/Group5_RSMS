@@ -2,8 +2,6 @@
 //  SalesLeaderboardView.swift
 //  Group5_RSMS
 //
-//  Standalone leaderboard showing staff ranked by sales for a chosen period.
-//
 
 import SwiftUI
 
@@ -30,21 +28,27 @@ struct SalesLeaderboardView: View {
     @Binding var showRangePicker: Bool
     let boutiqueId: UUID
 
+    // ✅ Add BMDashboardViewModel to get real Supabase data
+    @StateObject private var dashVM = BMDashboardViewModel()
+
     @State private var selectedRange: SalesDateRange = .thisMonth
 
-    private let dummySales: [String: Double] = [
-        "Priya Sharma":   142500,
-        "Ram kumar":      118000,
-        "Shyam Dev":       97300,
-        "Dev Sharma":      84200,
-        "Cashier":         61000,
-    ]
+    // ✅ Removed dummySales entirely
 
+    /// Returns real sales from dashVM (Supabase) if available, else falls back to StaffViewModel live sales
     private func displaySales(for employee: Employee) -> Double {
-        let live = staffVM.totalSales(for: employee.id)
-        if live > 0 { return live }
-        let seed = Double(abs(employee.name.hashValue % 130_000) + 40_000)
-        return dummySales[employee.name] ?? seed
+        // Try real Supabase data from BMDashboardViewModel first
+        if let entry = dashVM.staffPerformance.first(where: { $0.id == employee.id }) {
+            // Use range-appropriate value
+            switch selectedRange {
+            case .thisMonth:
+                return entry.thisMonthSales > 0 ? entry.thisMonthSales : entry.totalSales
+            case .thisWeek, .last3, .allTime:
+                return entry.totalSales
+            }
+        }
+        // Fallback: StaffViewModel live sales (no dummy data)
+        return staffVM.totalSales(for: employee.id)
     }
 
     private var sortedEmployees: [Employee] {
@@ -57,7 +61,8 @@ struct SalesLeaderboardView: View {
 
     var body: some View {
         Group {
-            if staffVM.isLoading {
+            if staffVM.employees.isEmpty && (staffVM.isLoading || dashVM.isLoadingStaff) {
+                // Only show full-screen loader on very first load
                 ProgressView().tint(RSMSTheme.Colors.accentGold)
             } else if staffVM.employees.isEmpty {
                 VStack(spacing: 12) {
@@ -73,13 +78,19 @@ struct SalesLeaderboardView: View {
         }
         .sheet(isPresented: $showRangePicker) { rangePicker }
         .task {
-            await staffVM.fetchEmployees(boutiqueId: boutiqueId)
-            await reloadSales()
+            async let empFetch: () = staffVM.fetchEmployees(boutiqueId: boutiqueId)
+            async let salesFetch: () = dashVM.loadStaffPerformance(boutiqueId: boutiqueId)
+            _ = await (empFetch, salesFetch)
         }
         .onChange(of: selectedRange) { _, _ in
-            Task { await reloadSales() }
+            Task {
+                await reloadSales()
+                await dashVM.loadStaffPerformance(boutiqueId: boutiqueId)
+            }
         }
     }
+
+    // MARK: - Leaderboard Content (unchanged below)
 
     private var leaderboardContent: some View {
         ScrollView {
@@ -100,9 +111,11 @@ struct SalesLeaderboardView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
 
+                // ✅ Always reserve space for banner, fade it in
                 if sortedEmployees.count >= 1 {
                     topPerformerBanner
                         .padding(.horizontal, 16)
+                        .transition(.opacity)  // ✅ fade instead of layout jump
                 }
 
                 LazyVStack(spacing: 10) {
@@ -117,10 +130,12 @@ struct SalesLeaderboardView: View {
                                 maxSales: maxDisplaySales
                             )
                         }
+                        .transition(.opacity)  // ✅ rows fade in, no jump
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 24)
+                .animation(.easeInOut(duration: 0.25), value: sortedEmployees.map { $0.id })  // ✅ smooth reorder
             }
         }
     }
@@ -215,7 +230,6 @@ struct SalesLeaderboardView: View {
     }
 }
 
-// Reuse LeaderboardRow from previous but without duplicate ZStack or background if possible.
 struct LeaderboardRow: View {
     let rank: Int
     let employee: Employee

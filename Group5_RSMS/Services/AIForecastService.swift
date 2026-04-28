@@ -1,143 +1,78 @@
-//
-//  AIForecastService.swift
-//  Group5_RSMS
-//
-//  Handles requests to external AI APIs (Google Gemini) to generate
-//  predictive insights based on dashboard context.
-//
 
 import Foundation
 
 class AIForecastService {
     
-    // TODO: Securely inject this via an environment variable or Supabase Edge Function.
-    // For now, replace with your actual Google Gemini API key.
-    private let geminiKey = "AIzaSyCjdPPAD1O7tZF3PIbyfMg54TPh6d6yS6E"
+    // MARK: - Configuration
+    private let groqKey = "api"
+    private let modelName = "llama-3.1-8b-instant" // Latest high-speed model
     
-    struct GeminiResponse: Decodable {
-        let candidates: [Candidate]?
-        
-        struct Candidate: Decodable {
-            let content: Content
+    struct GroqResponse: Decodable {
+        let choices: [Choice]
+        struct Choice: Decodable {
+            let message: Message
         }
-        
-        struct Content: Decodable {
-            let parts: [Part]
-        }
-        
-        struct Part: Decodable {
-            let text: String
+        struct Message: Decodable {
+            let content: String
         }
     }
     
-    /// Dynamically finds a supported model for the provided API key
-    private func getValidModelName() async throws -> String {
-        let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models?key=\(geminiKey)")!
-        let (data, _) = try await URLSession.shared.data(from: url)
-        
-        struct ModelsRes: Decodable {
-            struct Model: Decodable {
-                let name: String
-                let supportedGenerationMethods: [String]?
-            }
-            let models: [Model]
-        }
-        
-        let res = try JSONDecoder().decode(ModelsRes.self, from: data)
-        // Try to find a flash model first
-        if let flash = res.models.first(where: { $0.supportedGenerationMethods?.contains("generateContent") == true && $0.name.contains("flash") }) {
-            return flash.name // usually "models/gemini-1.5-flash"
-        }
-        // Fallback to any model that supports generateContent
-        if let fallback = res.models.first(where: { $0.supportedGenerationMethods?.contains("generateContent") == true }) {
-            return fallback.name
-        }
-        
-        return "models/gemini-1.5-flash"
-    }
-    
-    /// Sends dashboard context to the AI and requests both short insights and a detailed analysis.
+    /// Sends dashboard context to Groq AI and requests structured insights.
     func fetchInsights(context: String) async throws -> (predictions: [String], suggestions: [String], bestCategory: String, suggestion: String, detailed: String) {
-        guard geminiKey != "YOUR_GEMINI_API_KEY_HERE" else {
+        
+        guard groqKey != "YOUR_GROQ_API_KEY_HERE" && !groqKey.isEmpty else {
             // Fallback mock response if API key is not configured.
             return (
                 predictions: ["Revenue surge expected.", "AOV to hit new peak.", "Customer growth trending up."],
                 suggestions: ["Restock Jewellery.", "Launch VIP campaign.", "Optimize ad spend."],
                 bestCategory: "Jewellery",
                 suggestion: "Focus on high-value Jewellery.",
-                detailed: "Detailed analysis placeholder."
+                detailed: "AI Forecast is in demo mode. Please add a Groq API key."
             )
         }
         
-        let modelName = try await getValidModelName()
-        let endpoint = "https://generativelanguage.googleapis.com/v1beta/\(modelName):generateContent?key=\(geminiKey)"
-        guard let url = URL(string: endpoint) else {
-            throw URLError(.badURL)
-        }
+        let url = URL(string: "https://api.groq.com/openai/v1/chat/completions")!
         
         let systemPrompt = """
-        You are an elite retail analytics AI.
-        Analyze the provided dashboard metrics.
-        Return strictly a JSON object with these keys:
-        1. "predictions": An array of 3 highly detailed, data-driven revenue or behavior predictions. Include specific percentages or volumes based on the data.
-        2. "suggestions": An array of 3 highly actionable, strategic suggestions to improve specific KPIs.
-        3. "best_performing_category": The name of the category expected to lead growth in the next 30 days.
-        4. "suggested_action": A single primary strategic action for the week.
-        5. "detailed_analysis": A single comprehensive paragraph (3-4 sentences) explaining the reasoning behind the forecast.
+        You are an elite retail analytics AI. Analyze the provided dashboard metrics.
+        Return strictly a JSON object. No conversational filler.
         
-        Example:
-        {
-          "predictions": ["Revenue is projected to rise by 12.4% over the next 14 days.", "Luxury watches will likely see a 20% volume surge.", "Customer retention rate is trending towards a 5% improvement."],
-          "suggestions": ["Immediate restock of high-demand watch models is critical.", "Target high-AOV customers with a premium loyalty campaign.", "Optimize inventory for the upcoming revenue peak on Tuesday."],
-          "best_performing_category": "Luxury Watches",
-          "suggested_action": "Restock premium watches and run a targeted VIP promotion.",
-          "detailed_analysis": "The upcoming 30 days show a strong upward trend in revenue driven primarily by the luxury watches segment..."
-        }
-        
-        Here is the current dashboard data context:
-        \(context)
+        Keys required:
+        1. "predictions": Array of 3 short, data-driven bullets (max 10 words each).
+        2. "suggestions": Array of 3 actionable tactics (max 8 words each).
+        3. "best_performing_category": Name of the leading category.
+        4. "suggested_action": A single punchy tactical move (max 8 words).
+        5. "detailed_analysis": A single powerful summary sentence (max 18 words).
         """
         
         let requestBody: [String: Any] = [
-            "contents": [
-                [
-                    "parts": [
-                        ["text": systemPrompt]
-                    ]
-                ]
+            "model": modelName,
+            "messages": [
+                ["role": "system", "content": systemPrompt],
+                ["role": "user", "content": "Here is the data: \(context)"]
             ],
-            "generationConfig": [
-                "temperature": 0.3
-            ]
+            "response_format": ["type": "json_object"],
+            "temperature": 0.2
         ]
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody, options: [])
+        request.setValue("Bearer \(groqKey)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         
         let (data, response) = try await URLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            print("Gemini API Error: \(String(data: data, encoding: .utf8) ?? "Unknown")")
+            let errorMsg = String(data: data, encoding: .utf8) ?? "Unknown Error"
+            print("Groq API Error: \(errorMsg)")
             throw URLError(.badServerResponse)
         }
         
-        let decoded = try JSONDecoder().decode(GeminiResponse.self, from: data)
-        guard let content = decoded.candidates?.first?.content.parts.first?.text else {
-            throw URLError(.cannotParseResponse)
-        }
+        let decoded = try JSONDecoder().decode(GroqResponse.self, from: data)
+        let jsonString = decoded.choices.first?.message.content ?? ""
         
-        // Remove markdown formatting if Gemini wrapped the JSON array in ```json ... ```
-        var cleanContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        if cleanContent.hasPrefix("```json") {
-            cleanContent = cleanContent.replacingOccurrences(of: "```json", with: "")
-        }
-        if cleanContent.hasSuffix("```") {
-            cleanContent = cleanContent.replacingOccurrences(of: "```", with: "")
-        }
-        
-        struct GeminiAIResult: Decodable {
+        struct AIResult: Decodable {
             let predictions: [String]
             let suggestions: [String]
             let best_performing_category: String
@@ -145,64 +80,56 @@ class AIForecastService {
             let detailed_analysis: String
         }
         
-        if let data = cleanContent.data(using: .utf8),
-           let result = try? JSONDecoder().decode(GeminiAIResult.self, from: data) {
-            return (predictions: result.predictions, 
-                    suggestions: result.suggestions,
-                    bestCategory: result.best_performing_category,
-                    suggestion: result.suggested_action,
-                    detailed: result.detailed_analysis)
-        } else {
-            // Fallback if AI fails to return proper JSON object
-            return (predictions: ["Revenue growth predicted."], 
-                    suggestions: ["Maintain inventory."],
-                    bestCategory: "Luxury Goods",
-                    suggestion: "Maintain current strategy.",
-                    detailed: "Analysis generated but failed to parse into detailed view.")
+        if let jsonData = jsonString.data(using: .utf8),
+           let result = try? JSONDecoder().decode(AIResult.self, from: jsonData) {
+            return (
+                predictions: result.predictions,
+                suggestions: result.suggestions,
+                bestCategory: result.best_performing_category,
+                suggestion: result.suggested_action,
+                detailed: result.detailed_analysis
+            )
         }
+        
+        throw URLError(.cannotParseResponse)
     }
 
-    /// Uses Gemini to analyze audit history and provide a forensic diagnosis for a discrepancy.
+    /// Forensic audit diagnosis using Groq AI.
     func fetchAuditDiagnosis(sku: String, productName: String, expected: Int, actual: Int, historyLogs: [String]) async throws -> String {
-        guard geminiKey != "YOUR_GEMINI_API_KEY" && !geminiKey.isEmpty else {
-            throw URLError(.userAuthenticationRequired)
+        guard groqKey != "YOUR_GROQ_API_KEY_HERE" && !groqKey.isEmpty else {
+            return "AI Diagnosis unavailable without API key."
         }
 
-        let modelName = try await getValidModelName()
-        let endpoint = "https://generativelanguage.googleapis.com/v1beta/\(modelName):generateContent?key=\(geminiKey)"
-        guard let url = URL(string: endpoint) else { throw URLError(.badURL) }
-
+        let url = URL(string: "https://api.groq.com/openai/v1/chat/completions")!
         let historyString = historyLogs.joined(separator: "\n")
+        
         let prompt = """
-        You are a forensic retail auditor.
-        A discrepancy has been found for:
+        Analyze this inventory discrepancy:
         Product: \(productName) (SKU: \(sku))
-        Expected Stock: \(expected)
-        Actual Physical Count: \(actual)
-        Difference: \(actual - expected)
-
-        Here is the recent audit history for this item:
-        \(historyString)
-
-        Based ONLY on the database history records provided below, identify the pattern and provide a BRIEF fix (max 20 words).
-        Format: [Simple cause based on database records]. Tap "[Button Name]" to fix it.
-        Example: 'Three previous receiving errors found. Tap "Approve Fix" to sync.'
+        Expected: \(expected), Actual: \(actual), Diff: \(actual - expected)
+        History: \(historyString)
+        
+        Identify the likely cause in 1 sentence (max 15 words).
         """
 
         let requestBody: [String: Any] = [
-            "contents": [["parts": [["text": prompt]]]],
-            "generationConfig": ["temperature": 0.4]
+            "model": modelName,
+            "messages": [["role": "user", "content": prompt]],
+            "temperature": 0.1
         ]
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(groqKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
 
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else { return "Failed to reach AI diagnostic engine." }
+        guard let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200 else {
+            return "AI diagnostic engine offline."
+        }
 
-        let decoded = try JSONDecoder().decode(GeminiResponse.self, from: data)
-        return decoded.candidates?.first?.content.parts.first?.text ?? "Unable to generate diagnosis."
+        let decoded = try JSONDecoder().decode(GroqResponse.self, from: data)
+        return decoded.choices.first?.message.content ?? "Unable to diagnose."
     }
 }

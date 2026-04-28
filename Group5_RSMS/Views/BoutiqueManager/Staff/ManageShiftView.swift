@@ -69,10 +69,10 @@ struct ManageShiftView: View {
                             
                             VStack(spacing: 12) {
                                 DatePicker("Start Time", selection: $startTime, displayedComponents: [.date, .hourAndMinute])
-                                    .colorScheme(.dark)
+                                    
                                 
                                 DatePicker("End Time", selection: $endTime, in: startTime..., displayedComponents: [.date, .hourAndMinute])
-                                    .colorScheme(.dark)
+                                    
                             }
                             .padding()
                             .background(RSMSTheme.Colors.backgroundDeep)
@@ -112,7 +112,7 @@ struct ManageShiftView: View {
             .navigationTitle(existingShift == nil ? "Create Shift" : "Edit Shift")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

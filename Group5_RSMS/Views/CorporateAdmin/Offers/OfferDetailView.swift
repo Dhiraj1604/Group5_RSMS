@@ -6,6 +6,7 @@ struct OfferDetailView: View {
     
     let offer: Offer
     @ObservedObject var service: OfferService
+    @StateObject private var metricsVM = OfferMetricsViewModel()
     
     @State private var showEditSheet = false
     @State private var isRestarting = false
@@ -30,10 +31,12 @@ struct OfferDetailView: View {
             VStack(spacing: RSMSTheme.Spacing.xl) {
                 headerSection
                 statusSection
-                metricsSection
-                chartSection
-                configurationSection
-                storesSection
+                if currentOffer.computedStatus != .scheduled {
+                    metricsSection
+                    chartSection
+                    configurationSection
+                    storesSection
+                }
             }
             .padding(.vertical, RSMSTheme.Spacing.lg)
             .padding(.horizontal, RSMSTheme.Spacing.md)
@@ -49,41 +52,9 @@ struct OfferDetailView: View {
                         .foregroundStyle(RSMSTheme.Colors.accentGold)
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    if currentOffer.computedStatus != .expired {
-                        Button(action: {
-                            isRestarting = false
-                            showEditSheet = true
-                        }) {
-                            Label("Edit", systemImage: "pencil")
-                        }
-                        
-                        Button(action: { togglePause() }) {
-                            Label(currentOffer.isPaused ? "Resume" : "Pause", systemImage: currentOffer.isPaused ? "play.fill" : "pause.fill")
-                        }
-                        
-                        Button(role: .destructive, action: { endEarly() }) {
-                            Label("End Early", systemImage: "stop.fill")
-                        }
-                    } else {
-                        Button(action: {
-                            isRestarting = true
-                            showEditSheet = true
-                        }) {
-                            Label("Restart", systemImage: "arrow.clockwise")
-                        }
-                    }
-                    
-                    Button(role: .destructive, action: { showDeleteConfirm = true }) {
-                        Label("Delete", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .fontWeight(.semibold)
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
-                }
-            }
+        }
+        .task {
+            await metricsVM.load(for: currentOffer)
         }
         .sheet(isPresented: $showEditSheet) {
             EditOfferView(offer: currentOffer, service: service, isRestarting: isRestarting)
@@ -138,7 +109,7 @@ struct OfferDetailView: View {
                     .font(.caption)
                     .foregroundStyle(RSMSTheme.Colors.textTertiary)
                 Text(currentOffer.applicableTo ?? "All Products")
-                    .font(.subheadline)
+                    .font(.title3)
                     .foregroundStyle(RSMSTheme.Colors.textPrimary)
             }
             Spacer()
@@ -161,6 +132,8 @@ struct OfferDetailView: View {
         .background(RSMSTheme.Colors.backgroundDeep)
         .cornerRadius(RSMSTheme.Radius.lg)
         .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
+        .padding(.bottom, currentOffer.computedStatus == .scheduled ? 0 : 0)
+        .scaleEffect(currentOffer.computedStatus == .scheduled ? CGSize(width: 1, height: 0.85) : CGSize(width: 1, height: 1), anchor: .top)
     }
     
     private var metricsSection: some View {
@@ -168,11 +141,16 @@ struct OfferDetailView: View {
             Text("Performance")
                 .font(.custom("Helvetica", size: 18).weight(.semibold))
                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
-            
-            HStack(spacing: RSMSTheme.Spacing.md) {
-                DashboardMetricCard(title: "Revenue", value: "₹1.88L")
-                DashboardMetricCard(title: "Orders", value: "142")
-                DashboardMetricCard(title: "AOV", value: "₹1,323")
+
+            if metricsVM.isLoading {
+                ProgressView().tint(RSMSTheme.Colors.accentGold)
+                    .frame(maxWidth: .infinity)
+            } else {
+                HStack(spacing: RSMSTheme.Spacing.md) {
+                    DashboardMetricCard(title: "Revenue", value: formatRevenue(metricsVM.revenue))
+                    DashboardMetricCard(title: "Orders", value: "\(metricsVM.orderCount)")
+                    DashboardMetricCard(title: "AOV", value: formatRevenue(metricsVM.aov))
+                }
             }
         }
     }
@@ -182,21 +160,25 @@ struct OfferDetailView: View {
             Text("Revenue Trend")
                 .font(.custom("Helvetica", size: 18).weight(.semibold))
                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
-            
-            Chart(mockTrendData) { item in
+
+            let data = metricsVM.dailyRevenue
+
+            Chart(data) { item in
                 LineMark(x: .value("Day", item.day), y: .value("Revenue", item.revenue))
                     .interpolationMethod(.catmullRom)
                     .foregroundStyle(RSMSTheme.Colors.accentGold)
-                
                 AreaMark(x: .value("Day", item.day), y: .value("Revenue", item.revenue))
                     .interpolationMethod(.catmullRom)
-                    .foregroundStyle(LinearGradient(colors: [RSMSTheme.Colors.accentGold.opacity(0.3), Color.clear], startPoint: .top, endPoint: .bottom))
+                    .foregroundStyle(LinearGradient(
+                        colors: [RSMSTheme.Colors.accentGold.opacity(0.3), Color.clear],
+                        startPoint: .top, endPoint: .bottom))
             }
             .frame(height: 180)
             .padding()
             .background(RSMSTheme.Colors.backgroundDeep)
             .cornerRadius(RSMSTheme.Radius.lg)
-            .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
         }
     }
     
@@ -280,6 +262,16 @@ struct OfferDetailView: View {
         let components = Calendar.current.dateComponents([.day], from: Date(), to: targetOffer.endDate)
         return max(0, components.day ?? 0)
     }
+    
+    private func formatRevenue(_ value: Double) -> String {
+        if value >= 100000 {
+            return "₹\(String(format: "%.2f", value / 100000))L"
+        } else if value >= 1000 {
+            return "₹\(Int(value / 1000))K"
+        } else {
+            return "₹\(Int(value))"
+        }
+    }
 }
 
 // MARK: - Subviews
@@ -288,15 +280,15 @@ struct DashboardMetricCard: View {
     let title: String
     let value: String
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .center, spacing: 6) {
             Text(title)
-                .font(.caption)
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(RSMSTheme.Colors.textSecondary)
             Text(value)
-                .font(.custom("Helvetica", size: 20).weight(.bold))
+                .font(.custom("Helvetica", size: 24).weight(.bold))
                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
         .padding()
         .background(RSMSTheme.Colors.backgroundDeep)
         .cornerRadius(RSMSTheme.Radius.lg)
@@ -310,25 +302,25 @@ struct DashboardConfigCard: View {
     let value: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        VStack(alignment: .center, spacing: 10) {
+            HStack(spacing: 6) {
                 Image(systemName: icon)
                     .foregroundStyle(RSMSTheme.Colors.accentGold)
                     .font(.system(size: 16))
                 Text(title)
-                    .font(.caption)
+                    .font(.title3.weight(.semibold))
                     .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                Spacer()
             }
             Text(value)
-                .font(.subheadline)
-                .fontWeight(.medium)
+                .font(.headline)
+                .fontWeight(.bold)
                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
+                .multilineTextAlignment(.center)
         }
         .padding()
-        .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 110, alignment: .center)
         .background(
             LinearGradient(
                 colors: [RSMSTheme.Colors.backgroundDeep, RSMSTheme.Colors.backgroundDeep.opacity(0.5)],
@@ -532,3 +524,4 @@ struct EditOfferView: View {
         .colorScheme(.dark)
     }
 }
+
