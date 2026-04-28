@@ -66,6 +66,42 @@ class DashboardViewModel {
     private var stores: [Store] = []
 
     // ─────────────────────────────────────────────
+    // MARK: - Time Frame
+    // ─────────────────────────────────────────────
+
+    enum DashboardTimeFrame: String, CaseIterable, Identifiable {
+        case today = "Today"
+        case last7Days = "Last 7 Days"
+        case last30Days = "Last 30 Days"
+        case thisMonth = "This Month"
+        case thisYear = "This Year"
+        case allTime = "All Time"
+        
+        var id: String { self.rawValue }
+        
+        var startDate: Date? {
+            let calendar = Calendar.current
+            let now = Date()
+            switch self {
+            case .today: return calendar.startOfDay(for: now)
+            case .last7Days: return calendar.date(byAdding: .day, value: -7, to: calendar.startOfDay(for: now))
+            case .last30Days: return calendar.date(byAdding: .day, value: -30, to: calendar.startOfDay(for: now))
+            case .thisMonth: return calendar.date(from: calendar.dateComponents([.year, .month], from: now))
+            case .thisYear: return calendar.date(from: calendar.dateComponents([.year], from: now))
+            case .allTime: return nil
+            }
+        }
+    }
+
+    var selectedTimeFrame: DashboardTimeFrame = .last30Days {
+        didSet {
+            if oldValue != selectedTimeFrame {
+                Task { await fetchDashboardData(stores: stores) }
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────
     // MARK: - Models
     // ─────────────────────────────────────────────
 
@@ -110,18 +146,20 @@ class DashboardViewModel {
 
     /// `customer_orders` — store_id links to stores, user_id is the customer (NOT NULL)
     private struct OrderRow: Decodable {
-        let store_id: UUID?    // actual column name (boutique_id does NOT exist on this table)
+        let id: UUID
+        let store_id: UUID?
         let total_amount: Double
         let status: String?
         let created_at: String?
         let user_id: UUID?
 
         enum CodingKeys: String, CodingKey {
-            case store_id, total_amount, status, created_at, user_id
+            case id, store_id, total_amount, status, created_at, user_id
         }
 
         init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.id          = try c.decode(UUID.self, forKey: .id)
             self.store_id    = try c.decodeIfPresent(UUID.self, forKey: .store_id)
             self.status      = try c.decodeIfPresent(String.self, forKey: .status)
             self.created_at  = try c.decodeIfPresent(String.self, forKey: .created_at)
@@ -156,6 +194,7 @@ class DashboardViewModel {
         let store_id: UUID?
         let amount: Double
         let category: String?
+        let created_at: String?
     }
 
     /// One row per day per store from store_traffic
@@ -172,6 +211,7 @@ class DashboardViewModel {
 
         struct EmbeddedCat: Decodable {
             let category: String?
+            let cost_price: Double?
         }
 
         enum CodingKeys: String, CodingKey {
@@ -227,10 +267,34 @@ class DashboardViewModel {
                 try await (o, i, items, logs, pCount, emps, exps, traffic)
 
             // ── Filter valid orders (exclude cancelled / refunded) ──
-            let valid = orders.filter { order in
+            var valid = orders.filter { order in
                 guard let s = order.status?.lowercased() else { return true }
                 return !Self.excludedStatuses.contains(s)
             }
+            
+            var validAuditLogs = auditLogs
+            var validExpenses = expenses
+
+            // ── Apply Time Frame Filter ──
+            if let startDate = self.selectedTimeFrame.startDate {
+                valid = valid.filter { order in
+                    guard let orderDate = Self.parseDate(order.created_at) else { return false }
+                    return orderDate >= startDate
+                }
+                
+                validAuditLogs = validAuditLogs.filter { log in
+                    guard let logDate = Self.parseDate(log.created_at) else { return false }
+                    return logDate >= startDate
+                }
+                
+                validExpenses = validExpenses.filter { exp in
+                    guard let expDateStr = exp.created_at, let expDate = Self.parseDate(expDateStr) else { return false }
+                    return expDate >= startDate
+                }
+            }
+            
+            let validOrderIDs = Set(valid.map { $0.id })
+            let filteredOrderItems = orderItems.filter { validOrderIDs.contains($0.order_id) }
 
             // ── Global KPIs ──
             self.totalRevenue        = valid.reduce(0) { $0 + $1.total_amount }
@@ -238,7 +302,7 @@ class DashboardViewModel {
             self.totalInventoryUnits = Set(inventory.map(\.product_id)).count
             self.activeStoreCount    = stores.filter { $0.isActive == true }.count
             self.avgOrderValue       = totalOrders > 0 ? totalRevenue / Double(totalOrders) : 0
-            self.totalExpenses        = expenses.reduce(0) { $0 + $1.amount }
+            self.totalExpenses        = validExpenses.reduce(0) { $0 + $1.amount }
 
             // ── Per-store breakdown ──
             var revByStore:   [UUID: Double] = [:]
@@ -313,16 +377,16 @@ class DashboardViewModel {
             computeDailyRevenue(from: valid)
 
             // ── Basket Size ──
-            computeBasketSize(from: orderItems)
+            computeBasketSize(from: filteredOrderItems)
 
             // ── Category Breakdown ──
-            computeCategorySales(from: orderItems)
+            computeCategorySales(from: filteredOrderItems)
 
             // ── Customer Insights ──
             computeCustomerInsights(from: valid)
 
             // ── Audit Logs ──
-            self.recentAuditLogs = auditLogs.prefix(15).map { row in
+            self.recentAuditLogs = validAuditLogs.prefix(15).map { row in
                 AuditLogEntry(
                     id: row.id,
                     action: row.action ?? "Action",
@@ -337,7 +401,7 @@ class DashboardViewModel {
             await computeForecast()
 
             // ── Financials ──
-            computeFinancials()
+            computeFinancials(from: filteredOrderItems)
 
             self.lastRefreshed = Date()
         } catch is CancellationError {
@@ -359,7 +423,7 @@ class DashboardViewModel {
     private func fetchOrders() async throws -> [OrderRow] {
         try await SupabaseManager.shared.client
             .from("customer_orders")
-            .select("store_id, total_amount, status, created_at, user_id")
+            .select("id, store_id, total_amount, status, created_at, user_id")
             .execute()
             .value
     }
@@ -376,7 +440,7 @@ class DashboardViewModel {
     private func fetchOrderItems() async throws -> [OrderItemRow] {
         try await SupabaseManager.shared.client
             .from("customer_order_items")
-            .select("order_id, quantity, price_at_purchase, products(category)")
+            .select("order_id, quantity, price_at_purchase, products(category, cost_price)")
             .execute()
             .value
     }
@@ -426,7 +490,7 @@ class DashboardViewModel {
         do {
             return try await SupabaseManager.shared.client
                 .from("expenses")
-                .select("store_id, amount, category")
+                .select("store_id, amount, category, created_at")
                 .execute()
                 .value
         } catch is CancellationError { return [] }
@@ -522,19 +586,24 @@ class DashboardViewModel {
         // conversionRate is set in the main fetch using store_traffic data
     }
 
-    private func computeFinancials() {
-        // Gross Profit = Revenue - COGS (luxury retail COGS ≈ 58% of revenue)
-        let estimatedCOGS = totalRevenue * 0.58
+    private func computeFinancials(from items: [OrderItemRow]) {
+        // COGS = Sum of (cost_price * quantity). Fallback to 58% of revenue if cost_price is missing.
+        let realCOGS = items.reduce(0) { sum, item in
+            let cost = item.products?.cost_price ?? (item.price_at_purchase * 0.58)
+            return sum + (cost * Double(item.quantity))
+        }
+        
+        let estimatedCOGS = realCOGS > 0 ? realCOGS : totalRevenue * 0.58
         self.grossProfit = totalRevenue - estimatedCOGS
 
-        // OPEX: use real expenses data if available, else estimate at 18%
+        // OPEX: Use real, filtered expenses from the database
         if totalExpenses > 0 {
             self.estimatedOpex = totalExpenses
         } else {
-            self.estimatedOpex = totalRevenue * 0.18
+            self.estimatedOpex = totalRevenue * 0.18 // Safe fallback
         }
 
-        // Tax: use weighted average store tax rate if available, else 25% of gross profit
+        // Tax: Estimate at 25% of gross profit
         self.estimatedTax = grossProfit * 0.25
 
         let netProfit = grossProfit - estimatedOpex - estimatedTax
@@ -629,8 +698,10 @@ class DashboardViewModel {
             self.aiSuggestedAction = fetchedInsights.suggestion
             self.aiDetailedAnalysis = fetchedInsights.detailed
         } catch {
-            print("Failed to fetch AI Insights: \(error)")
-            // Fallback to local heuristics if API fails
+            if (error as NSError).code != -999 {
+                print("Failed to fetch AI Insights: \(error)")
+            }
+            // Fallback to local heuristics if API fails or is cancelled
             self.aiPredictions = ["Growth predicted.", "AOV trending up.", "Inventory stable."]
             self.aiSuggestions = ["Restock Watches.", "Run promo.", "Audit logs."]
             self.bestPredictedCategory = "Jewellery"

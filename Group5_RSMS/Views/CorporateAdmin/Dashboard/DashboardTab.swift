@@ -150,6 +150,28 @@ struct DashboardTab: View {
                 Text("Updated \(viewModel.lastRefreshedText)").font(.system(size: 13)).foregroundStyle(RSMSTheme.Colors.textTertiary)
             }
             Spacer()
+            
+            Menu {
+                Picker("Time Frame", selection: $viewModel.selectedTimeFrame) {
+                    ForEach(DashboardViewModel.DashboardTimeFrame.allCases) { timeFrame in
+                        Text(timeFrame.rawValue).tag(timeFrame)
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar")
+                    Text(viewModel.selectedTimeFrame.rawValue)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 10))
+                }
+                .font(.custom("Helvetica-Bold", size: 13))
+                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(RSMSTheme.Colors.accentGold.opacity(0.1))
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(RSMSTheme.Colors.accentGold.opacity(0.3), lineWidth: 1))
+            }
         }
     }
 
@@ -448,12 +470,14 @@ struct DashboardTab: View {
                         HStack(spacing: 40) {
                             let sales = viewModel.categorySales
                             
+                            let totalCategoryRev = sales.reduce(0) { $0 + $1.revenue }
                             // Left Column
                             VStack(alignment: .leading, spacing: 12) {
                                 ForEach(Array(sales.prefix(3)), id: \.category) { item in
+                                    let pct = totalCategoryRev > 0 ? (item.revenue / totalCategoryRev) * 100 : 0
                                     HStack(spacing: 8) {
                                         Circle().fill(categoryColor(for: item.category)).frame(width: 10, height: 10)
-                                        Text(item.category.replacingOccurrences(of: "_", with: " ").capitalized)
+                                        Text("\(item.category.replacingOccurrences(of: "_", with: " ").capitalized) (\(String(format: "%.0f", pct))%)")
                                             .font(.custom("Helvetica-Bold", size: 15))
                                             .foregroundStyle(RSMSTheme.Colors.textSecondary)
                                             .lineLimit(1)
@@ -464,9 +488,10 @@ struct DashboardTab: View {
                             // Right Column
                             VStack(alignment: .leading, spacing: 12) {
                                 ForEach(Array(sales.dropFirst(3).prefix(3)), id: \.category) { item in
+                                    let pct = totalCategoryRev > 0 ? (item.revenue / totalCategoryRev) * 100 : 0
                                     HStack(spacing: 8) {
                                         Circle().fill(categoryColor(for: item.category)).frame(width: 10, height: 10)
-                                        Text(item.category.replacingOccurrences(of: "_", with: " ").capitalized)
+                                        Text("\(item.category.replacingOccurrences(of: "_", with: " ").capitalized) (\(String(format: "%.0f", pct))%)")
                                             .font(.custom("Helvetica-Bold", size: 15))
                                             .foregroundStyle(RSMSTheme.Colors.textSecondary)
                                             .lineLimit(1)
@@ -667,16 +692,27 @@ struct DashboardTab: View {
                             .foregroundStyle(RSMSTheme.Colors.textTertiary)
                         Text("\(String(format: "%.1f%%", viewModel.netProfitMargin))")
                             .font(.custom("Helvetica-Bold", size: 32))
-                            .foregroundStyle(RSMSTheme.Colors.success)
+                            .foregroundStyle(viewModel.netProfitMargin >= 0 ? RSMSTheme.Colors.success : .red)
                     }
                 }
                 
-                // Detailed Breakdown
-                HStack(spacing: 0) {
-                    breakdownItem(label: "GROSS PROFIT", value: viewModel.shortRevenue(viewModel.grossProfit), color: RSMSTheme.Colors.accentGold.opacity(0.8))
-                    breakdownItem(label: "EST. OPEX", value: viewModel.shortRevenue(viewModel.estimatedOpex), color: .orange.opacity(0.8))
-                    breakdownItem(label: "EST. TAX", value: viewModel.shortRevenue(viewModel.estimatedTax), color: .blue.opacity(0.8))
+                // Detailed Breakdown (Proportional Split)
+                GeometryReader { proxy in
+                    let total = viewModel.grossProfit + viewModel.estimatedOpex + viewModel.estimatedTax
+                    let gpRatio = total > 0 ? (viewModel.grossProfit / total) : 0.33
+                    let opRatio = total > 0 ? (viewModel.estimatedOpex / total) : 0.33
+                    let taxRatio = total > 0 ? (viewModel.estimatedTax / total) : 0.34
+                    
+                    HStack(spacing: 0) {
+                        breakdownItem(label: "GROSS", value: viewModel.shortRevenue(viewModel.grossProfit), color: RSMSTheme.Colors.accentGold.opacity(0.8))
+                            .frame(width: proxy.size.width * gpRatio)
+                        breakdownItem(label: "OPEX", value: viewModel.shortRevenue(viewModel.estimatedOpex), color: .orange.opacity(0.8))
+                            .frame(width: proxy.size.width * opRatio)
+                        breakdownItem(label: "TAX", value: viewModel.shortRevenue(viewModel.estimatedTax), color: .blue.opacity(0.8))
+                            .frame(width: proxy.size.width * taxRatio)
+                    }
                 }
+                .frame(height: 50)
                 .clipShape(Capsule())
                 
                 HStack {
@@ -696,11 +732,10 @@ struct DashboardTab: View {
     
     private func breakdownItem(label: String, value: String, color: Color) -> some View {
         VStack(spacing: 6) {
-            Text(label).font(.custom("Helvetica-Bold", size: 12)).foregroundStyle(.white.opacity(0.8))
-            Text(value).font(.custom("Helvetica-Bold", size: 16)).foregroundStyle(.white)
+            Text(label).font(.custom("Helvetica-Bold", size: 11)).foregroundStyle(.white.opacity(0.8)).lineLimit(1).minimumScaleFactor(0.8)
+            Text(value).font(.custom("Helvetica-Bold", size: 14)).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.8)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(color)
     }
 

@@ -109,7 +109,7 @@ struct StockAnalysisView: View {
                 .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.5))
             Text("No Products Listed")
                 .font(.system(.title2, design: .serif))
-                .foregroundStyle(.white)
+                .foregroundStyle(RSMSTheme.Colors.textSecondary)
         }
         .padding(.horizontal, RSMSTheme.Spacing.xxl)
     }
@@ -259,7 +259,7 @@ struct StockAnalysisView: View {
                             
                         Text(item.productName)
                             .font(.custom("HelveticaNeue-Bold", size: 26))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(RSMSTheme.Colors.textPrimary)
                             .lineLimit(3)
                             .minimumScaleFactor(0.6)
                             .multilineTextAlignment(.leading)
@@ -279,12 +279,12 @@ struct StockAnalysisView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text("\(item.stockQuantity)")
                             .font(.custom("HelveticaNeue-Bold", size: 58))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(RSMSTheme.Colors.textPrimary)
                             .shadow(color: .black.opacity(0.8), radius: 5)
                         
                         Text("UNITS")
                             .font(.custom("HelveticaNeue-Bold", size: 14))
-                            .foregroundStyle(.white.opacity(0.8))
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
                             .tracking(1.5)
                             .shadow(color: .black.opacity(0.8), radius: 2)
                     }

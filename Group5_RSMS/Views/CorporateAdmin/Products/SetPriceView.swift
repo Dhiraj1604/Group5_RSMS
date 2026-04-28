@@ -79,6 +79,18 @@ struct SetPriceView: View {
                     .foregroundStyle(RSMSTheme.Colors.accentGold)
                     .disabled(!isValidPrice || isLoading)
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { submitPrice() }) {
+                        if isLoading {
+                            ProgressView().tint(RSMSTheme.Colors.accentGold)
+                        } else {
+                            Image(systemName: "checkmark")
+                                .fontWeight(.bold)
+                        }
+                    }
+                    .foregroundStyle(isValidPrice ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textTertiary)
+                    .disabled(!isValidPrice || isLoading)
+                }
             }
             .alert("Error", isPresented: Binding<Bool>(
                 get: { errorMessage != nil },
