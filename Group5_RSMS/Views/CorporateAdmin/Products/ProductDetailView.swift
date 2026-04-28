@@ -155,7 +155,7 @@ struct ProductDetailView: View {
                         Text("CURRENT PRICE")
                             .font(.caption).fontWeight(.bold)
                             .foregroundStyle(RSMSTheme.Colors.textSecondary).textCase(.uppercase)
-                        Text("₹\(String(format: "%.0f", currentProduct.basePrice))")
+                        Text(currentProduct.formattedPrice)
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundStyle(RSMSTheme.Colors.accentGold)
                             .minimumScaleFactor(0.6)
@@ -163,14 +163,13 @@ struct ProductDetailView: View {
                     }
                     Spacer()
                     Button { showSetPrice = true } label: {
-                        Label("Update", systemImage: "pencil")
+                        Image(systemName: "pencil")
                             .font(.subheadline).fontWeight(.semibold)
                             .foregroundStyle(RSMSTheme.Colors.accentGold)
-                            .padding(.horizontal, RSMSTheme.Spacing.lg)
-                            .padding(.vertical, RSMSTheme.Spacing.md)
+                            .padding(RSMSTheme.Spacing.md)
                             .background(RSMSTheme.Colors.accentGold.opacity(0.12))
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(RSMSTheme.Colors.accentGold.opacity(0.3), lineWidth: 1))
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(RSMSTheme.Colors.accentGold.opacity(0.3), lineWidth: 1))
                     }
                 }
                 .padding(RSMSTheme.Spacing.xl)
@@ -232,14 +231,20 @@ struct ProductDetailView: View {
             infoRow(icon: "star.fill", label: "Craftsmanship", value: currentProduct.craftsmanshipLevel.rawValue)
             if !currentProduct.craftsmanshipNotes.isEmpty {
                 Divider().background(RSMSTheme.Colors.borderLight)
-                VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
-                    Label("Artisan Notes", systemImage: "text.quote")
-                        .font(.caption).fontWeight(.semibold)
-                        .foregroundStyle(RSMSTheme.Colors.textSecondary).textCase(.uppercase)
-                    Text(currentProduct.craftsmanshipNotes)
-                        .font(.subheadline).foregroundStyle(RSMSTheme.Colors.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .top, spacing: RSMSTheme.Spacing.md) {
+                    Image(systemName: "text.quote").font(.caption)
+                        .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
+                        .padding(.top, 2)
+                    VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
+                        Text("Artisan Notes")
+                            .font(.caption).fontWeight(.semibold)
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary).textCase(.uppercase)
+                        Text(currentProduct.craftsmanshipNotes)
+                            .font(.subheadline).foregroundStyle(RSMSTheme.Colors.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, RSMSTheme.Spacing.sm)
             }
         }
