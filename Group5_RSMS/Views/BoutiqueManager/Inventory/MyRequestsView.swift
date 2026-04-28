@@ -2,7 +2,7 @@
 //  MyRequestsView.swift
 //  Group5_RSMS
 //
-//  Boutique Manager — Outbound pending/accepted requests.
+//  Boutique Manager — Outbound pending/accepted/rejected requests.
 //
 
 import SwiftUI
@@ -10,9 +10,12 @@ import SwiftUI
 struct MyRequestsView: View {
     let currentStoreName: String
     @ObservedObject var viewModel: BMInventoryViewModel
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         ZStack {
+            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+
             if viewModel.isLoadingMyRequests {
                 loadingState
             } else if viewModel.myRequests.isEmpty {
@@ -23,26 +26,51 @@ struct MyRequestsView: View {
         }
         .navigationTitle("My Requests")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            if let storeId = appState.currentStoreID {
+                await viewModel.loadMyRequests(forStore: storeId)
+            }
+        }
     }
 
     private var requestsList: some View {
-        ScrollView(showsIndicators: false) {
-            LazyVStack(spacing: 14) {
-                ForEach(viewModel.myRequests) { request in
-                    requestCard(request)
-                }
+        List {
+            ForEach(viewModel.myRequests) { request in
+                requestCard(request)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
-            .padding(.horizontal, RSMSTheme.Spacing.lg)
-            .padding(.top, RSMSTheme.Spacing.lg)
-            .padding(.bottom, 40)
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .refreshable {
+            if let storeId = appState.currentStoreID {
+                await viewModel.loadMyRequests(forStore: storeId)
+            }
         }
     }
 
     private func requestCard(_ request: TransferRequest) -> some View {
         // Map status
-        let isAccepted = request.status == .fulfilled
-        let statusString = isAccepted ? "Accepted" : "Pending"
-        let statusColor = isAccepted ? RSMSTheme.Colors.success : RSMSTheme.Colors.warning
+        let statusString: String
+        let statusColor: Color
+        let statusIcon: String
+
+        switch request.status {
+        case .fulfilled:
+            statusString = "Accepted"
+            statusColor = RSMSTheme.Colors.success
+            statusIcon = "checkmark.circle.fill"
+        case .rejected:
+            statusString = "Rejected"
+            statusColor = RSMSTheme.Colors.error
+            statusIcon = "xmark.circle.fill"
+        case .pending:
+            statusString = "Pending"
+            statusColor = RSMSTheme.Colors.warning
+            statusIcon = "clock.fill"
+        }
 
         return VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 14) {
@@ -104,7 +132,7 @@ struct MyRequestsView: View {
 
             // Status Badge
             HStack(spacing: 6) {
-                Image(systemName: isAccepted ? "checkmark.circle.fill" : "clock.fill")
+                Image(systemName: statusIcon)
                     .font(.system(size: 12))
                 Text(statusString)
                     .font(.system(size: 13, weight: .bold))

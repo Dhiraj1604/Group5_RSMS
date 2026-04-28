@@ -259,17 +259,16 @@ final class BMReportsViewModel: ObservableObject {
     
     // MARK: - Filtered chart data
     func chartData(for range: ChartRange) -> [DailySalesPoint] {
-        switch range {
-        case .oneWeek:  return Array(dailySalesData.suffix(7))
-        case .twoWeeks: return dailySalesData
-        }
+        return dailySalesData
     }
+
     
     var targetsMet: Int   { targetMetrics.filter { $0.isMet }.count }
     var targetsMissed: Int { targetMetrics.filter { !$0.isMet }.count }
 }
 
 enum ChartRange: String, CaseIterable {
-    case oneWeek  = "1W"
-    case twoWeeks = "2W"
+    case yearly = "Yearly"
 }
+
+
