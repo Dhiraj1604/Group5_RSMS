@@ -65,62 +65,46 @@ final class BMReportsViewModel: ObservableObject {
         
         print("Reports → payouts: \(payouts.count), employees: \(employees.count), sold: \(soldItems.count), slow: \(slowItems.count)")
         
-        // --- Total Sales (Sold in last 30 days) ---
-        // Payouts might be monthly, but let's filter by date for the 30-day window
-        let recentPayouts = payouts.filter { $0.periodEnd >= thirtyDaysAgo }
-        self.totalSales = recentPayouts.reduce(0.0) { $0 + $1.totalSalesAmount }
+        // --- Yearly Performance (from customer_orders) ---
+        let performance = (try? await MerchandisingService.shared.fetchYearlyPerformance(forStore: boutiqueId)) ?? (totalSales: 0, totalOrders: 0, monthlyTrend: [])
+        self.totalSales = performance.totalSales
         self.totalRevenue = self.totalSales * 0.72
-        self.totalOrders = recentPayouts.count
+        self.totalOrders = performance.totalOrders
+        self.dailySalesData = performance.monthlyTrend.map { DailySalesPoint(date: $0.date, amount: $0.amount) }
         
+        // --- sold products (for month) ---
         self.soldProducts = soldItems
         
         // --- Footfall (Items in stock > 30 days) ---
         self.footfall = slowItems.count
         self.unsoldProducts = slowItems
         
-        // --- Dormant employees (active but no payout in last 30 days) ---
-        let recentEmployeeIds = Set(recentPayouts.map { $0.employeeId })
+        // --- Dormant employees (active but no payout this year) ---
+        let startOfYear = calendar.date(from: calendar.dateComponents([.year], from: today)) ?? today
+        let yearlyPayouts = payouts.filter { $0.periodEnd >= startOfYear }
+        let recentEmployeeIds = Set(yearlyPayouts.map { $0.employeeId })
         let activeEmployees = employees.filter { $0.isActive ?? true }
         self.dormantStaffDetails = activeEmployees.filter {
             !recentEmployeeIds.contains($0.id)
         }
         self.dormantEmployees = self.dormantStaffDetails.count
         
-        // --- Targets vs Actual ---
+        // --- Targets vs Actual (Yearly Targets) ---
         self.targetMetrics = [
-            TargetMetric(label: "Sales",    target: 500000, actual: self.totalSales),
-            TargetMetric(label: "Slow Items", target: 50,    actual: Double(self.footfall)), // "Footfall" in UI
-            TargetMetric(label: "Revenue",  target: 350000, actual: self.totalRevenue)
+            TargetMetric(label: "Sales",    target: 5000000, actual: self.totalSales),
+            TargetMetric(label: "Slow Items", target: 500,    actual: Double(self.footfall)),
+            TargetMetric(label: "Revenue",  target: 3500000, actual: self.totalRevenue)
         ]
-        
-        // --- Daily Sales (last 14 days) ---
-        var dailyData: [DailySalesPoint] = []
-        for dayOffset in (0..<14).reversed() {
-            guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: today) else { continue }
-            let startOfDay = calendar.startOfDay(for: date)
-            guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else { continue }
-            
-            let dayPayouts = payouts.filter { payout in
-                payout.periodEnd >= startOfDay && payout.periodEnd < endOfDay
-            }
-            let daySales: Double = dayPayouts.reduce(0.0) { result, payout in
-                result + payout.totalSalesAmount
-            }
-            
-            dailyData.append(DailySalesPoint(date: startOfDay, amount: daySales))
-        }
-        self.dailySalesData = dailyData
+
         
         isLoading = false
     }
     
     // MARK: - Filtered chart data
     func chartData(for range: ChartRange) -> [DailySalesPoint] {
-        switch range {
-        case .oneWeek:  return Array(dailySalesData.suffix(7))
-        case .twoWeeks: return dailySalesData
-        }
+        return dailySalesData
     }
+
     
     var targetsMet: Int {
         targetMetrics.filter { $0.isMet }.count
@@ -132,6 +116,7 @@ final class BMReportsViewModel: ObservableObject {
 }
 
 enum ChartRange: String, CaseIterable {
-    case oneWeek  = "1W"
-    case twoWeeks = "2W"
+    case yearly = "Yearly"
 }
+
+
