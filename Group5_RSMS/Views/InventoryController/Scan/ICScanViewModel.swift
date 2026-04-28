@@ -35,6 +35,7 @@ final class ICScanViewModel: ObservableObject {
     // MARK: - Global Taxation Engine
     @Published private(set) var currentProduct: Product?
     @Published private(set) var currentTaxRule: TaxRule?
+    @Published private(set) var regionalRate: Double = 0.0 // Base regional tax (e.g. GST/VAT)
     @Published private(set) var currentBreakdown: PricingBreakdown?
     
     // MARK: - Inventory Management
@@ -78,17 +79,15 @@ final class ICScanViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] notification in
                 guard let self else { return }
-                if let newRule = notification.userInfo?["rule"] as? TaxRule {
-                    self.currentTaxRule = newRule
-                    print("🔄 [Scanner] Tax rule updated → \(newRule.name)")
-
-                    // Re-calculate breakdown if a product is loaded
-                    if let product = self.currentProduct {
-                        self.currentBreakdown = PricingService.calculate(
-                            product: product,
-                            taxRule: newRule
-                        )
-                    }
+                // In the new category-based model, we update the breakdown if the active rule matches the current product category
+                if let product = self.currentProduct {
+                    let additionalRule = TaxSettingsViewModel.shared.taxRules.first(where: { $0.category == product.category })
+                    self.currentTaxRule = additionalRule
+                    self.currentBreakdown = PricingService.calculate(
+                        product: product,
+                        regionalRate: self.regionalRate,
+                        additionalTaxRule: additionalRule
+                    )
                 }
             }
             .store(in: &cancellables)
@@ -189,19 +188,38 @@ final class ICScanViewModel: ObservableObject {
             
             self.currentProduct = foundProduct
             
-            // Load active tax rule for UI breakdown
-            let rule = TaxSettingsViewModel.shared.activeRule
-                ?? TaxRule(name: "Default VAT - 20%", rate: 0.20, isInclusive: true)
-            self.currentTaxRule = rule
-            self.currentBreakdown = PricingService.calculate(product: foundProduct, taxRule: rule)
-            self.currentBreakdown = PricingService.calculate(product: foundProduct, taxRule: rule)
-
-            // 2. Validate current store context
+            // 2. Validate current store context and load regional tax
             guard let storeId = storeId else {
                 showTemporaryError("No active store assigned.")
                 isSearching = false
                 return
             }
+
+            // Fetch store's regional tax rate
+            let storeResult = try await SupabaseManager.shared.client
+                .from("stores")
+                .select("taxRate")
+                .eq("id", value: storeId)
+                .execute()
+            
+            struct StoreTax: Decodable { let taxRate: Double? }
+            let storeData = try decoder.decode([StoreTax].self, from: storeResult.data)
+            let regionalRatePercent = storeData.first?.taxRate ?? 18.0
+            self.regionalRate = regionalRatePercent / 100.0
+
+            // 3. Find additional tax rule for THIS category
+            // (Ensure rules are fetched in TaxSettingsViewModel)
+            if TaxSettingsViewModel.shared.taxRules.isEmpty {
+                await TaxSettingsViewModel.shared.fetchTaxRules()
+            }
+            let additionalRule = TaxSettingsViewModel.shared.taxRules.first(where: { $0.category == foundProduct.category })
+            self.currentTaxRule = additionalRule
+            
+            self.currentBreakdown = PricingService.calculate(
+                product: foundProduct, 
+                regionalRate: self.regionalRate, 
+                additionalTaxRule: additionalRule
+            )
 
             // 3. Check if product exists in this store's inventory (Strict Mode)
             struct InventoryRecord: Decodable {

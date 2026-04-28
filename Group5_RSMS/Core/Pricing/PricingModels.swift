@@ -208,27 +208,27 @@ struct Product: Identifiable, Codable, Equatable, Hashable {
 
 // MARK: - TaxRule
 
-/// Defines a regional tax rule aligned with the `tax_rules` Supabase table.
+/// Defines an additional category-based tax rule.
 struct TaxRule: Identifiable, Codable, Equatable, Hashable {
     let id: UUID
     var name: String
     var rate: Double
     var isInclusive: Bool
-    var storeId: UUID
+    var category: ProductCategory
 
     enum CodingKeys: String, CodingKey {
         case id
         case name
         case rate
         case isInclusive = "is_inclusive"
-        case storeId     = "store_id"
+        case category
     }
 
     struct DBPayload: Encodable {
         let name: String
         let rate: Double
         let is_inclusive: Bool
-        let store_id: UUID
+        let category: String
     }
 
     var dbPayload: DBPayload {
@@ -236,7 +236,7 @@ struct TaxRule: Identifiable, Codable, Equatable, Hashable {
             name: name,
             rate: rate,
             is_inclusive: isInclusive,
-            store_id: storeId
+            category: category.rawValue
         )
     }
 
@@ -245,13 +245,13 @@ struct TaxRule: Identifiable, Codable, Equatable, Hashable {
         name: String,
         rate: Double,
         isInclusive: Bool,
-        storeId: UUID = UUID()
+        category: ProductCategory = .other
     ) {
         self.id = id
         self.name = name
         self.rate = rate
         self.isInclusive = isInclusive
-        self.storeId = storeId
+        self.category = category
     }
 }
 
@@ -260,12 +260,16 @@ struct TaxRule: Identifiable, Codable, Equatable, Hashable {
 /// The result format of a pricing calculation.
 struct PricingBreakdown: Equatable, Hashable {
     let subtotal: Double
+    let regionalTaxAmount: Double
+    let additionalTaxAmount: Double
     let taxAmount: Double
     let total: Double
 
-    init(subtotal: Double, taxAmount: Double, total: Double) {
+    init(subtotal: Double, regionalTaxAmount: Double, additionalTaxAmount: Double, total: Double) {
         self.subtotal = subtotal
-        self.taxAmount = taxAmount
+        self.regionalTaxAmount = regionalTaxAmount
+        self.additionalTaxAmount = additionalTaxAmount
+        self.taxAmount = regionalTaxAmount + additionalTaxAmount
         self.total = total
     }
 }

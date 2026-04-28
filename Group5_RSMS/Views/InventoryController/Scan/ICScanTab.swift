@@ -289,13 +289,25 @@ struct ICScanTab: View {
                         }
 
                         HStack {
-                            Text("Tax (\(rule.name))")
+                            Text("Regional Tax")
                                 .font(.system(size: 15, weight: .medium, design: .rounded))
                                 .foregroundColor(RSMSTheme.Colors.textSecondary)
                             Spacer()
-                            Text(String(format: "$%.2f", breakdown.taxAmount))
+                            Text(String(format: "$%.2f", breakdown.regionalTaxAmount))
                                 .font(.system(size: 15, weight: .medium, design: .monospaced))
                                 .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        }
+
+                        if breakdown.additionalTaxAmount > 0 {
+                            HStack {
+                                Text("Admin Tax (\(rule.name))")
+                                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                                Spacer()
+                                Text(String(format: "$%.2f", breakdown.additionalTaxAmount))
+                                    .font(.system(size: 15, weight: .medium, design: .monospaced))
+                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            }
                         }
 
                         Divider()

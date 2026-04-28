@@ -10,40 +10,50 @@ import Foundation
 /// A stateless engine for executing product pricing and tax calculations.
 struct PricingService {
     
-    /// Calculates the full receipt breakdown for a given product and tax rule.
+    /// Calculates the full receipt breakdown for a given product, considering regional tax and additional category tax.
     /// - Parameters:
-    ///   - product: The product containing the base price.
-    ///   - taxRule: The tax rule containing rate and inclusiveness settings.
+    ///   - product: The product containing the base price and category.
+    ///   - regionalRate: The base tax rate for the boutique's region (e.g. 0.18 for 18%).
+    ///   - additionalTaxRule: An optional admin-defined additional tax for the product's category.
     /// - Returns: A calculated `PricingBreakdown`.
-    static func calculate(product: Product, taxRule: TaxRule) -> PricingBreakdown {
+    static func calculate(product: Product, regionalRate: Double, additionalTaxRule: TaxRule?) -> PricingBreakdown {
         let base = product.basePrice
-        let rate = taxRule.rate
+        let additionalRate = additionalTaxRule?.rate ?? 0.0
         
         let subtotal: Double
+        let regionalTaxAmt: Double
+        let additionalTaxAmt: Double
         let taxAmount: Double
         let total: Double
         
-        if taxRule.isInclusive {
-            // Price already includes the tax
-            // Example: $120 total with 20% VAT
-            // subtotal = 120 / 1.20 = 100
-            // tax = 120 - 100 = 20
-            total = base
-            subtotal = base / (1 + rate)
-            taxAmount = total - subtotal
+        // Logic: 
+        // 1. Regional tax is ALWAYS added on top of the subtotal.
+        // 2. Additional category tax can be inclusive or exclusive.
+        
+        if let rule = additionalTaxRule, rule.isInclusive {
+            // Base price includes the additional tax
+            let subtotalWithAdditional = base
+            subtotal = subtotalWithAdditional / (1 + additionalRate)
+            
+            additionalTaxAmt = subtotalWithAdditional - subtotal
+            regionalTaxAmt = subtotal * regionalRate
+            
+            taxAmount = additionalTaxAmt + regionalTaxAmt
+            total = subtotal + taxAmount
         } else {
-            // Tax is added ON TOP of the base price
-            // Example: $100 base with 10% sales tax
-            // tax = 10
-            // total = 110
+            // Both taxes are added on top of the base price
             subtotal = base
-            taxAmount = base * rate
+            regionalTaxAmt = base * regionalRate
+            additionalTaxAmt = base * additionalRate
+            
+            taxAmount = regionalTaxAmt + additionalTaxAmt
             total = subtotal + taxAmount
         }
         
         return PricingBreakdown(
             subtotal: subtotal,
-            taxAmount: taxAmount,
+            regionalTaxAmount: regionalTaxAmt,
+            additionalTaxAmount: additionalTaxAmt,
             total: total
         )
     }

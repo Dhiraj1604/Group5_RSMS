@@ -454,7 +454,7 @@ struct BMInventoryTab: View {
                         navigationPath.append(RequestDestination.myRequests)
                     } label: {
                         transferCard(title: "My Requests", icon: "paperplane.fill",
-                                     hasNotification: false)
+                                     hasNotification: viewModel.myRequests.contains { $0.status == .pending })
                     }
                     .buttonStyle(.plain)
                 }
@@ -524,7 +524,7 @@ struct BMInventoryTab: View {
                 
                 if hasNotification {
                     Circle()
-                        .fill(RSMSTheme.Colors.error)
+                        .fill(RSMSTheme.Colors.accentGold)
                         .frame(width: 10, height: 10)
                         .overlay(Circle().stroke(RSMSTheme.Colors.backgroundElevated, lineWidth: 1.5))
                 }

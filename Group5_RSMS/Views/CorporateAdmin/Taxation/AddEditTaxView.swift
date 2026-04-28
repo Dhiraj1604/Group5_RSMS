@@ -25,7 +25,7 @@ struct AddEditTaxView: View {
 
     // MARK: - Form State
 
-    @State private var selectedStoreId: UUID?
+    @State private var selectedCategory: ProductCategory
     @State private var taxName: String
     @State private var rateString: String
     @State private var isInclusive: Bool
@@ -36,12 +36,11 @@ struct AddEditTaxView: View {
 
     // MARK: - Computed
 
-    /// Save is disabled unless a boutique is selected AND a valid rate is entered.
+    /// Save is disabled unless a category is selected AND a valid rate is entered.
     private var isSaveDisabled: Bool {
-        let hasStore = selectedStoreId != nil
         let hasName = !taxName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let hasRate = Double(rateString).map { $0 > 0 && $0 <= 100 } ?? false
-        return !(hasStore && hasName && hasRate)
+        return !(hasName && hasRate)
     }
 
     // MARK: - Init
@@ -50,7 +49,7 @@ struct AddEditTaxView: View {
         self.viewModel = viewModel
         self.existingRule = existingRule
 
-        _selectedStoreId = State(initialValue: existingRule?.storeId)
+        _selectedCategory = State(initialValue: existingRule?.category ?? .other)
         _taxName = State(initialValue: existingRule?.name ?? "")
         _rateString = State(initialValue: existingRule.map {
             String(format: "%.3g", $0.rate * 100)
@@ -70,97 +69,61 @@ struct AddEditTaxView: View {
 
                         headerIcon
 
-                        // Boutique Picker (Task 3)
+                        // Category Picker
                         formCard {
                             VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
-                                formLabel("Select Boutique")
+                                formLabel("Product Category")
 
-                                if viewModel.availableStores.isEmpty {
-                                    // No stores registered yet
-                                    HStack(spacing: RSMSTheme.Spacing.sm) {
-                                        Image(systemName: "exclamationmark.triangle")
+                                Menu {
+                                    ForEach(ProductCategory.allCases) { category in
+                                        Button {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                selectedCategory = category
+                                            }
+                                        } label: {
+                                            HStack {
+                                                Label(category.rawValue, systemImage: category.icon)
+                                                Spacer()
+                                                if category == selectedCategory {
+                                                    Image(systemName: "checkmark")
+                                                }
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    HStack {
+                                        Image(systemName: selectedCategory.icon)
                                             .font(.system(size: 14, weight: .medium))
-                                            .foregroundColor(RSMSTheme.Colors.warning)
+                                            .foregroundColor(RSMSTheme.Colors.accentGold)
 
-                                        Text("No boutiques registered. Please add a store first.")
-                                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                                            .foregroundColor(RSMSTheme.Colors.warning)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(selectedCategory.rawValue)
+                                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                                .foregroundColor(RSMSTheme.Colors.textPrimary)
+
+                                            Text("Applies to all products in this category")
+                                                .font(.system(size: 11, weight: .regular, design: .rounded))
+                                                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                                        }
+
+                                        Spacer()
+
+                                        Image(systemName: "chevron.up.chevron.down")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundColor(RSMSTheme.Colors.accentGoldDark)
                                     }
                                     .padding(RSMSTheme.Spacing.md)
                                     .background(
                                         RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
-                                            .fill(RSMSTheme.Colors.warning.opacity(0.1))
+                                            .fill(RSMSTheme.Colors.backgroundElevated)
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
-                                                    .stroke(RSMSTheme.Colors.warning.opacity(0.3), lineWidth: 1)
+                                                    .stroke(
+                                                        RSMSTheme.Colors.accentGold.opacity(0.4),
+                                                        lineWidth: 1
+                                                    )
                                             )
                                     )
-                                } else {
-                                    Menu {
-                                        ForEach(viewModel.availableStores) { store in
-                                            Button {
-                                                withAnimation(.easeInOut(duration: 0.2)) {
-                                                    selectedStoreId = store.id
-                                                }
-                                            } label: {
-                                                HStack {
-                                                    VStack(alignment: .leading) {
-                                                        Text("\(store.city), \(store.country)")
-                                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                                        Text(store.name)
-                                                            .font(.caption2)
-                                                    }
-                                                    Spacer()
-                                                    if store.id == selectedStoreId {
-                                                        Image(systemName: "checkmark")
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: "storefront.fill")
-                                                .font(.system(size: 14, weight: .medium))
-                                                .foregroundColor(RSMSTheme.Colors.accentGold)
-
-                                            if let storeId = selectedStoreId,
-                                               let store = viewModel.availableStores.first(where: { $0.id == storeId }) {
-                                                VStack(alignment: .leading, spacing: 2) {
-                                                    Text("\(store.city), \(store.country)")
-                                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                                        .foregroundColor(RSMSTheme.Colors.textPrimary)
-
-                                                    Text(store.name)
-                                                        .font(.system(size: 11, weight: .regular, design: .rounded))
-                                                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                                                }
-                                            } else {
-                                                Text("Choose a boutique…")
-                                                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                                                    .foregroundColor(RSMSTheme.Colors.textTertiary)
-                                            }
-
-                                            Spacer()
-
-                                            Image(systemName: "chevron.up.chevron.down")
-                                                .font(.system(size: 12, weight: .medium))
-                                                .foregroundColor(RSMSTheme.Colors.accentGoldDark)
-                                        }
-                                        .padding(RSMSTheme.Spacing.md)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
-                                                .fill(RSMSTheme.Colors.backgroundElevated)
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
-                                                        .stroke(
-                                                            selectedStoreId == nil
-                                                                ? RSMSTheme.Colors.accentGoldDark.opacity(0.15)
-                                                                : RSMSTheme.Colors.accentGold.opacity(0.4),
-                                                            lineWidth: 1
-                                                        )
-                                                )
-                                        )
-                                    }
                                 }
                             }
                         }
@@ -422,12 +385,6 @@ struct AddEditTaxView: View {
     // MARK: - Actions
 
     private func attemptSave() {
-        // Validate
-        guard let storeId = selectedStoreId else {
-            showError("Please select a boutique.")
-            return
-        }
-
         let trimmedName = taxName.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedName.isEmpty else {
@@ -448,7 +405,7 @@ struct AddEditTaxView: View {
             name: trimmedName,
             rate: rateDecimal,
             isInclusive: isInclusive,
-            storeId: storeId
+            category: selectedCategory
         )
 
         isSaving = true

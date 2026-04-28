@@ -25,7 +25,7 @@ struct TaxSettingsView: View {
             VStack(spacing: 20) {
                 // Custom Large Title
                 HStack {
-                    Text("Tax Settings")
+                    Text("Additional Taxes")
                         .font(.custom("Helvetica-Bold", size: 34))
                         .foregroundStyle(.white)
                     Spacer()
@@ -92,7 +92,6 @@ struct TaxSettingsView: View {
             AddEditTaxView(viewModel: viewModel, existingRule: rule)
         }
         .task {
-            viewModel.fetchAvailableStores(from: appState)
             if viewModel.taxRules.isEmpty {
                 await viewModel.fetchTaxRules()
             }
@@ -106,7 +105,7 @@ struct TaxSettingsView: View {
             // Total Rules
             summaryCard(
                 value: "\(viewModel.taxRules.count)",
-                label: "RULES",
+                label: "BY CATEGORY",
                 icon: "doc.text.fill",
                 color: .white,
                 filter: .all
@@ -185,8 +184,7 @@ struct TaxSettingsView: View {
     
     private func taxRuleCard(for rule: TaxRule) -> some View {
         let isActive = viewModel.activeRuleId == rule.id
-        let store = viewModel.store(for: rule.storeId)
-        let locationName = store.map { "\($0.city), \($0.country)" } ?? "Global"
+        let categoryName = rule.category.rawValue
         let ratePercent = String(format: "%.1f", rule.rate * 100)
         let accentColor = rule.isInclusive ? Color(red: 0.2, green: 0.8, blue: 0.3) : Color.orange
 
@@ -226,34 +224,27 @@ struct TaxSettingsView: View {
                         
                         Spacer()
                         
-                        // Type Badge
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(accentColor)
-                                .frame(width: 6, height: 6)
-                            Text(rule.isInclusive ? "INCLUSIVE" : "EXCLUSIVE")
-                                .font(.custom("HelveticaNeue-Bold", size: 10))
-                                .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.black.opacity(0.4))
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                        // Category Icon
+                        Image(systemName: rule.category.icon)
+                            .font(.system(size: 14))
+                            .foregroundColor(accentColor)
+                            .padding(8)
+                            .background(Color.black.opacity(0.4))
+                            .clipShape(Circle())
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
                     
                     Spacer()
                     
-                    // Rule Name & Location
+                    // Rule Name & Category
                     VStack(alignment: .leading, spacing: 4) {
                         Text(rule.name)
                             .font(.custom("HelveticaNeue-Bold", size: 26))
                             .foregroundStyle(RSMSTheme.Colors.textPrimary)
                             .lineLimit(2)
                             .minimumScaleFactor(0.8)
-                        Text(locationName.uppercased())
+                        Text(categoryName.uppercased())
                             .font(.custom("HelveticaNeue-Medium", size: 12))
                             .foregroundStyle(RSMSTheme.Colors.textTertiary)
                             .tracking(1.5)
@@ -264,7 +255,7 @@ struct TaxSettingsView: View {
                     
                     // Middle: Tax Rate
                     VStack(alignment: .leading, spacing: -2) {
-                        Text("TAX RATE")
+                        Text("ADDITIONAL RATE")
                             .font(.custom("HelveticaNeue-Bold", size: 11))
                             .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.8))
                             .tracking(2)
@@ -315,11 +306,11 @@ struct TaxSettingsView: View {
             }
             
             VStack(spacing: 12) {
-                Text("No Tax Rules Defined")
+                Text("No Additional Taxes")
                     .font(.custom("HelveticaNeue-Bold", size: 18))
                     .foregroundStyle(.white)
                 
-                Text("Add your first tax rule to begin managing regional tax compliance.")
+                Text("Create category-specific tax rules that will be applied on top of regional taxes.")
                     .font(.custom("HelveticaNeue", size: 14))
                     .foregroundStyle(RSMSTheme.Colors.textSecondary)
                     .multilineTextAlignment(.center)
@@ -332,7 +323,7 @@ struct TaxSettingsView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "plus")
                         .font(.system(size: 14, weight: .semibold))
-                    Text("Add Tax Rule")
+                    Text("Add Additional Tax")
                         .font(.custom("HelveticaNeue-Bold", size: 15))
                 }
                 .padding(.horizontal, 32)
