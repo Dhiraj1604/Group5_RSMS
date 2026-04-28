@@ -25,10 +25,25 @@ final class TaxSettingsViewModel: ObservableObject {
     @Published var availableStores: [Store] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
+    @Published var selectedFilter: TaxFilter = .all
+
+    enum TaxFilter: String, CaseIterable {
+        case all = "All"
+        case inclusive = "Inclusive"
+        case exclusive = "Exclusive"
+    }
 
     var activeRule: TaxRule? {
         guard let id = activeRuleId else { return taxRules.first }
         return taxRules.first(where: { $0.id == id }) ?? taxRules.first
+    }
+
+    var filteredRules: [TaxRule] {
+        switch selectedFilter {
+        case .all: return taxRules
+        case .inclusive: return taxRules.filter { $0.isInclusive }
+        case .exclusive: return taxRules.filter { !$0.isInclusive }
+        }
     }
 
     init() {}
