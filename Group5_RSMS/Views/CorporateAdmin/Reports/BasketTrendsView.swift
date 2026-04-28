@@ -24,10 +24,9 @@ struct BasketTrendsView: View {
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: RSMSTheme.Spacing.lg) {
+                        filtersSection
                         summaryCards
-                        periodPicker
                         chartSection
-                        filterSection
                         trendTable
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
@@ -85,14 +84,14 @@ struct BasketTrendsView: View {
                 value: "₹\(String(format: "%.0f", viewModel.overallAvgValue))",
                 subtitle: "per txn",
                 icon: "indianrupeesign.circle.fill",
-                color: RSMSTheme.Colors.success
+                color: RSMSTheme.Colors.accentGold
             )
             metricCard(
                 title: "Total Txns",
                 value: "\(viewModel.totalTransactions)",
                 subtitle: "recorded",
                 icon: "receipt.fill",
-                color: .blue
+                color: RSMSTheme.Colors.accentGold
             )
         }
     }
@@ -121,45 +120,159 @@ struct BasketTrendsView: View {
         )
     }
 
-    // MARK: - Period Picker
-    private var periodPicker: some View {
-        HStack(spacing: RSMSTheme.Spacing.sm) {
-            ForEach(BasketTrendsViewModel.Period.allCases, id: \.self) { period in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        viewModel.selectedPeriod = period
+    // MARK: - Consolidated Filters
+
+    private var filtersSection: some View {
+        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
+            // Row 1: Store dropdown
+            storeDropdown
+
+            // Row 2: Category filter pills
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: RSMSTheme.Spacing.sm) {
+                    filterChip(label: "All Categories", isSelected: viewModel.selectedCategory == nil) {
+                        viewModel.selectedCategory = nil
+                        Task { await viewModel.fetchTrends() }
                     }
-                } label: {
-                    Text(period.rawValue)
-                        .font(.system(size: 13, weight: .semibold))
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 8)
-                        .foregroundStyle(viewModel.selectedPeriod == period ? .black : RSMSTheme.Colors.textSecondary)
-                        .background(viewModel.selectedPeriod == period
-                            ? RSMSTheme.Colors.accentGold
-                            : RSMSTheme.Colors.backgroundElevated)
-                        .cornerRadius(20)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(viewModel.selectedPeriod == period
-                                    ? Color.clear : RSMSTheme.Colors.borderLight, lineWidth: 1)
-                        )
+                    ForEach(viewModel.categories, id: \.self) { cat in
+                        filterChip(label: cat, isSelected: viewModel.selectedCategory == cat) {
+                            viewModel.selectedCategory = cat
+                            Task { await viewModel.fetchTrends() }
+                        }
+                    }
                 }
             }
-            Spacer()
+
+
+        }
+        .padding(RSMSTheme.Spacing.lg)
+        .background(RSMSTheme.Colors.backgroundDeep)
+        .cornerRadius(RSMSTheme.Radius.lg)
+        .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+            .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
+    }
+
+    // MARK: - Store Dropdown
+
+    private var storeDropdown: some View {
+        let isFiltered = viewModel.selectedStoreId != nil
+        let selectedName: String = {
+            guard let id = viewModel.selectedStoreId else { return "All Stores" }
+            return appState.stores.first(where: { $0.id == id })?.name ?? "All Stores"
+        }()
+
+        return Menu {
+            Button {
+                viewModel.selectedStoreId = nil
+                Task { await viewModel.fetchTrends() }
+            } label: {
+                HStack {
+                    Text("All Stores")
+                    if viewModel.selectedStoreId == nil { Image(systemName: "checkmark") }
+                }
+            }
+
+            if !appState.stores.isEmpty { Divider() }
+
+            ForEach(appState.stores) { store in
+                Button {
+                    viewModel.selectedStoreId = store.id
+                    Task { await viewModel.fetchTrends() }
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(store.name)
+                            Text(store.city).font(.caption)
+                        }
+                        if viewModel.selectedStoreId == store.id { Image(systemName: "checkmark") }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: RSMSTheme.Spacing.sm) {
+                Image(systemName: "storefront.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(isFiltered ? Color.black : RSMSTheme.Colors.accentGold)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("STORE")
+                        .font(.system(size: 9, weight: .semibold)).tracking(0.8)
+                        .foregroundStyle(isFiltered ? Color.black.opacity(0.6) : RSMSTheme.Colors.textTertiary)
+                    Text(selectedName)
+                        .font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                        .foregroundStyle(isFiltered ? Color.black : RSMSTheme.Colors.textPrimary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(isFiltered ? Color.black.opacity(0.6) : RSMSTheme.Colors.textSecondary)
+            }
+            .padding(.horizontal, RSMSTheme.Spacing.lg)
+            .padding(.vertical, RSMSTheme.Spacing.md)
+            .background(isFiltered ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.backgroundElevated)
+            .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
+            .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                .stroke(isFiltered ? Color.clear : RSMSTheme.Colors.borderLight, lineWidth: 1))
+        }
+    }
+
+    private func filterChip(label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 12, weight: .semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .foregroundStyle(isSelected ? .black : RSMSTheme.Colors.textSecondary)
+                .background(isSelected ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.backgroundElevated)
+                .cornerRadius(16)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(isSelected ? Color.clear : RSMSTheme.Colors.borderLight, lineWidth: 1)
+                )
         }
     }
 
     // MARK: - Chart
+
+    private var basketPeriodDropdown: some View {
+        Menu {
+            ForEach(BasketTrendsViewModel.Period.allCases, id: \.self) { period in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { viewModel.selectedPeriod = period }
+                } label: {
+                    HStack {
+                        Text(period.rawValue)
+                        if viewModel.selectedPeriod == period { Image(systemName: "checkmark") }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(viewModel.selectedPeriod.rawValue)
+                    .font(.system(size: 12, weight: .semibold))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .foregroundStyle(RSMSTheme.Colors.accentGold)
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(RSMSTheme.Colors.accentGold.opacity(0.12))
+            .cornerRadius(12)
+        }
+    }
     private var chartSection: some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-            Text("Avg Items per Transaction")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+            HStack {
+                Text("Avg Items per Transaction")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                Spacer()
+                basketPeriodDropdown
+            }
 
             Chart {
                 ForEach(viewModel.activeTrendData) { point in
-                    // Area fill
                     AreaMark(
                         x: .value("Period", point.label),
                         y: .value("Avg Basket", point.avgBasketSize)
@@ -171,18 +284,16 @@ struct BasketTrendsView: View {
                             endPoint: .bottom
                         )
                     )
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.monotone)
 
-                    // Line
                     LineMark(
                         x: .value("Period", point.label),
                         y: .value("Avg Basket", point.avgBasketSize)
                     )
                     .foregroundStyle(RSMSTheme.Colors.accentGold)
                     .lineStyle(StrokeStyle(lineWidth: 2.5))
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.monotone)
 
-                    // Data points
                     PointMark(
                         x: .value("Period", point.label),
                         y: .value("Avg Basket", point.avgBasketSize)
@@ -191,6 +302,7 @@ struct BasketTrendsView: View {
                     .symbolSize(40)
                 }
             }
+            .chartYScale(domain: .automatic(includesZero: true))
             .chartYAxisLabel("Items")
             .chartXAxis {
                 AxisMarks(values: .automatic) { _ in
@@ -217,64 +329,6 @@ struct BasketTrendsView: View {
             RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
                 .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
         )
-    }
-
-    // MARK: - Filters
-    private var filterSection: some View {
-        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
-            Text("FILTERS")
-                .font(.system(size: 11, weight: .semibold))
-                .tracking(1.5)
-                .foregroundStyle(RSMSTheme.Colors.accentGold)
-
-            // Store filter
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: RSMSTheme.Spacing.sm) {
-                    filterChip(label: "All Stores", isSelected: viewModel.selectedStoreId == nil) {
-                        viewModel.selectedStoreId = nil
-                        Task { await viewModel.fetchTrends() }
-                    }
-                    ForEach(appState.stores) { store in
-                        filterChip(label: store.name, isSelected: viewModel.selectedStoreId == store.id) {
-                            viewModel.selectedStoreId = store.id
-                            Task { await viewModel.fetchTrends() }
-                        }
-                    }
-                }
-            }
-
-            // Category filter
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: RSMSTheme.Spacing.sm) {
-                    filterChip(label: "All Categories", isSelected: viewModel.selectedCategory == nil) {
-                        viewModel.selectedCategory = nil
-                        Task { await viewModel.fetchTrends() }
-                    }
-                    ForEach(viewModel.categories, id: \.self) { cat in
-                        filterChip(label: cat, isSelected: viewModel.selectedCategory == cat) {
-                            viewModel.selectedCategory = cat
-                            Task { await viewModel.fetchTrends() }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func filterChip(label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 12, weight: .semibold))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .foregroundStyle(isSelected ? .black : RSMSTheme.Colors.textSecondary)
-                .background(isSelected ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.backgroundElevated)
-                .cornerRadius(16)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(isSelected ? Color.clear : RSMSTheme.Colors.borderLight, lineWidth: 1)
-                )
-        }
     }
 
     // MARK: - Trend Table
