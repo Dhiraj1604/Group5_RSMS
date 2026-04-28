@@ -607,13 +607,14 @@ struct RevenueTrendsView: View {
                         .labelsHidden()
                 }
 
-                // End date
+                // End date (max 30 days from start)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("TO")
+                    Text("TO (max 30 days)")
                         .font(.system(size: 9, weight: .bold)).tracking(1)
                         .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    let maxEnd = Calendar.current.date(byAdding: .day, value: 30, to: viewModel.startDate) ?? viewModel.startDate
                     DatePicker("", selection: $viewModel.endDate,
-                               in: viewModel.startDate..., displayedComponents: .date)
+                               in: viewModel.startDate...maxEnd, displayedComponents: .date)
                         .datePickerStyle(.compact)
                         .tint(RSMSTheme.Colors.accentGold)
                         .colorScheme(.dark)
