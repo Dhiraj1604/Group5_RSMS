@@ -26,7 +26,7 @@ struct SetPriceView: View {
     private var parsedPrice: Double? {
         let cleaned = priceInput
             .trimmingCharacters(in: .whitespaces)
-            .replacingOccurrences(of: "$", with: "")
+            .replacingOccurrences(of: "₹", with: "")
             .replacingOccurrences(of: ",", with: "")
         return Double(cleaned)
     }
@@ -48,7 +48,6 @@ struct SetPriceView: View {
                         priceInputSection
                         noteSection
                         auditNotice
-                        confirmButton
                         Spacer().frame(height: RSMSTheme.Spacing.xxl)
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.lg)
@@ -64,6 +63,18 @@ struct SetPriceView: View {
                     Button("Cancel") { dismiss() }
                         .foregroundStyle(RSMSTheme.Colors.textSecondary)
                         .disabled(isLoading)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { submitPrice() }) {
+                        if isLoading {
+                            ProgressView().tint(RSMSTheme.Colors.accentGold)
+                        } else {
+                            Image(systemName: "checkmark")
+                                .fontWeight(.bold)
+                        }
+                    }
+                    .foregroundStyle(isValidPrice ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textTertiary)
+                    .disabled(!isValidPrice || isLoading)
                 }
             }
             .alert("Error", isPresented: Binding<Bool>(
@@ -128,14 +139,14 @@ struct SetPriceView: View {
 
     private var priceInputSection: some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-            Text("New Retail Price (USD)")
+            Text("New Retail Price (INR)")
                 .font(.caption)
                 .fontWeight(.semibold)
                 .foregroundStyle(RSMSTheme.Colors.textSecondary)
                 .textCase(.uppercase)
 
             HStack(spacing: RSMSTheme.Spacing.md) {
-                Text("$")
+                Text("₹")
                     .font(.system(size: 30, weight: .semibold))
                     .foregroundStyle(RSMSTheme.Colors.accentGold)
 
@@ -229,33 +240,13 @@ struct SetPriceView: View {
         )
     }
 
-    // MARK: - Confirm Button
-
-    private var confirmButton: some View {
-        Button { submitPrice() } label: {
-            HStack(spacing: RSMSTheme.Spacing.sm) {
-                if isLoading {
-                    ProgressView()
-                        .tint(.black)
-                        .padding(.trailing, 4)
-                } else {
-                    Image(systemName: "checkmark.circle.fill")
-                }
-                Text(isLoading ? "Saving..." : (product.basePrice > 0 ? "Update Retail Price" : "Set Retail Price"))
-            }
-        }
-        .buttonStyle(GoldButtonStyle())
-        .disabled(!isValidPrice || isLoading)
-        .opacity(isValidPrice && !isLoading ? 1.0 : 0.5)
-    }
-
     // MARK: - Submit Logic
 
     private func submitPrice() {
         guard let price = parsedPrice, price > 0 else {
             withAnimation {
                 showValidationError = true
-                validationMessage = "Please enter a valid price greater than $0."
+                validationMessage = "Please enter a valid price greater than ₹0."
             }
             return
         }
