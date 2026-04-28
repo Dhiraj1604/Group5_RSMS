@@ -26,7 +26,7 @@ struct SetPriceView: View {
     private var parsedPrice: Double? {
         let cleaned = priceInput
             .trimmingCharacters(in: .whitespaces)
-            .replacingOccurrences(of: "$", with: "")
+            .replacingOccurrences(of: "₹", with: "")
             .replacingOccurrences(of: ",", with: "")
         return Double(cleaned)
     }
@@ -128,14 +128,14 @@ struct SetPriceView: View {
 
     private var priceInputSection: some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-            Text("New Retail Price (USD)")
+            Text("New Retail Price (INR)")
                 .font(.caption)
                 .fontWeight(.semibold)
                 .foregroundStyle(RSMSTheme.Colors.textSecondary)
                 .textCase(.uppercase)
 
             HStack(spacing: RSMSTheme.Spacing.md) {
-                Text("$")
+                Text("₹")
                     .font(.system(size: 30, weight: .semibold))
                     .foregroundStyle(RSMSTheme.Colors.accentGold)
 
@@ -214,7 +214,7 @@ struct SetPriceView: View {
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                Text("This change is recorded in price_history with your account, previous price, and timestamp.")
+                Text("This change will be recorded")
                     .font(.caption2)
                     .foregroundStyle(RSMSTheme.Colors.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -255,7 +255,7 @@ struct SetPriceView: View {
         guard let price = parsedPrice, price > 0 else {
             withAnimation {
                 showValidationError = true
-                validationMessage = "Please enter a valid price greater than $0."
+                validationMessage = "Please enter a valid price greater than ₹0."
             }
             return
         }

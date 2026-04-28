@@ -142,6 +142,7 @@ struct Product: Identifiable, Codable, Equatable, Hashable {
         f.numberStyle = .currency
         f.currencyCode = "INR"
         f.currencySymbol = "₹"
+        f.maximumFractionDigits = basePrice.truncatingRemainder(dividingBy: 1) == 0 ? 0 : 2
         return f.string(from: NSNumber(value: basePrice)) ?? "₹\(basePrice)"
     }
 
