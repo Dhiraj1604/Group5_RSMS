@@ -3,6 +3,7 @@
 //  Group5_RSMS
 //
 //  Boutique Manager — Lists pending transfer requests requiring fulfillment.
+//  Swipe left on a request to reveal Accept / Reject actions.
 //
 
 import SwiftUI
@@ -10,10 +11,15 @@ import SwiftUI
 struct IncomingRequestsView: View {
     let currentStoreName: String
     @ObservedObject var viewModel: BMInventoryViewModel
+    @Environment(AppState.self) private var appState
     @State private var selectedRequest: TransferRequest? = nil
+    @State private var rejectingRequestId: UUID? = nil
+    @State private var showRejectConfirm: Bool = false
 
     var body: some View {
         ZStack {
+            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+
             if viewModel.isLoadingRequests {
                 loadingState
             } else if viewModel.incomingRequests.isEmpty {
@@ -22,6 +28,8 @@ struct IncomingRequestsView: View {
                 requestsList
             }
         }
+        .navigationTitle("Incoming Requests")
+        .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $selectedRequest) { request in
             FulfillRequestSheet(
                 request: request,
@@ -31,121 +39,149 @@ struct IncomingRequestsView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
+        .confirmationDialog(
+            "Reject this request?",
+            isPresented: $showRejectConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Reject Request", role: .destructive) {
+                guard let reqId = rejectingRequestId,
+                      let request = viewModel.incomingRequests.first(where: { $0.id == reqId })
+                else { return }
+                Task {
+                    await viewModel.rejectRequest(request, currentStoreName: currentStoreName)
+                }
+            }
+            Button("Cancel", role: .cancel) { rejectingRequestId = nil }
+        } message: {
+            Text("The requesting boutique will be notified of the rejection. No inventory changes will be made.")
+        }
+        .task {
+            if let storeId = appState.currentStoreID {
+                await viewModel.loadIncomingRequests(forStore: storeId)
+            }
+        }
     }
 
     // MARK: - Requests List
 
     private var requestsList: some View {
-        ScrollView(showsIndicators: false) {
-            LazyVStack(spacing: 14) {
-                ForEach(viewModel.incomingRequests) { request in
-                    requestCard(request)
-                }
+        List {
+            // Swipe hint
+            HStack(spacing: 6) {
+                Image(systemName: "hand.draw.fill")
+                    .font(.system(size: 11))
+                Text("Swipe left to accept or reject")
+                    .font(.system(size: 11, weight: .medium))
             }
-            .padding(.horizontal, RSMSTheme.Spacing.lg)
-            .padding(.top, RSMSTheme.Spacing.lg)
-            .padding(.bottom, 40)
+            .foregroundColor(RSMSTheme.Colors.textTertiary)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+
+            ForEach(viewModel.incomingRequests) { request in
+                requestCard(request)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        // Reject (furthest from edge — appears on the right)
+                        Button {
+                            rejectingRequestId = request.id
+                            showRejectConfirm = true
+                        } label: {
+                            Label("Reject", systemImage: "xmark.circle.fill")
+                        }
+                        .tint(RSMSTheme.Colors.error)
+
+                        // Accept (closer to edge — appears on the left)
+                        Button {
+                            selectedRequest = request
+                        } label: {
+                            Label("Accept", systemImage: "checkmark.circle.fill")
+                        }
+                        .tint(RSMSTheme.Colors.success)
+                    }
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .refreshable {
+            if let storeId = appState.currentStoreID {
+                await viewModel.loadIncomingRequests(forStore: storeId)
+            }
         }
     }
 
+    // MARK: - Request Card (compact horizontal)
+
     private func requestCard(_ request: TransferRequest) -> some View {
-        VStack(spacing: 0) {
-            // Top Section (Store & Product)
-            HStack(alignment: .top, spacing: 14) {
-                // Product Thumbnail
-                Group {
-                    if let urlString = request.productImageUrl,
-                       let url = URL(string: urlString) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            case .failure, .empty:
-                                productPlaceholder
-                            @unknown default:
-                                productPlaceholder
-                            }
+        HStack(spacing: 12) {
+            // Product Thumbnail
+            Group {
+                if let urlString = request.productImageUrl,
+                   let url = URL(string: urlString) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        case .failure, .empty:
+                            productPlaceholder
+                        @unknown default:
+                            productPlaceholder
                         }
-                    } else {
-                        productPlaceholder
                     }
-                }
-                .frame(width: 50, height: 50)
-                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm))
-                .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(request.productName)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(RSMSTheme.Colors.textPrimary)
-                        .lineLimit(1)
-                    
-                    Text("Requested by: \(request.requestingStoreName)")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-
-                    Text(request.createdAt.formatted(date: .abbreviated, time: .shortened))
-                        .font(.system(size: 10, weight: .regular))
-                        .foregroundColor(RSMSTheme.Colors.textTertiary)
-                }
-
-                Spacer()
-
-                // Quantity requested
-                VStack(spacing: 2) {
-                    Text("\(request.quantity)")
-                        .font(.system(size: 24, weight: .black, design: .rounded))
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
-                    Text("Qty")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(RSMSTheme.Colors.accentGoldDark)
-                        .textCase(.uppercase)
-                        .tracking(0.4)
+                } else {
+                    productPlaceholder
                 }
             }
+            .frame(width: 44, height: 44)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
 
-            Divider()
-                .background(RSMSTheme.Colors.borderLight)
-                .padding(.vertical, RSMSTheme.Spacing.md)
+            // Info
+            VStack(alignment: .leading, spacing: 3) {
+                Text(request.productName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .lineLimit(1)
 
-            // Fulfill Button
-            Button {
-                selectedRequest = request
-            } label: {
-                HStack(spacing: RSMSTheme.Spacing.sm) {
-                    Image(systemName: "box.truck.badge.clock.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("Review Fulfillment")
-                        .font(.system(size: 13, weight: .bold))
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
-                }
-                .foregroundColor(RSMSTheme.Colors.textPrimary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
-                        .fill(RSMSTheme.Colors.accentGold)
-                )
+                Text("From: \(request.requestingStoreName)")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .lineLimit(1)
             }
-            .buttonStyle(.plain)
+
+            Spacer(minLength: 4)
+
+            // Quantity badge
+            VStack(spacing: 1) {
+                Text("\(request.quantity)")
+                    .font(.system(size: 20, weight: .black, design: .rounded))
+                    .foregroundColor(RSMSTheme.Colors.accentGold)
+                Text("QTY")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(RSMSTheme.Colors.accentGoldDark)
+                    .tracking(0.4)
+            }
         }
-        .padding(16)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .background(RSMSTheme.Colors.backgroundDeep)
-        .cornerRadius(16)
+        .cornerRadius(14)
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: 14)
                 .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
         )
-        .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.25), radius: 6, x: 0, y: 3)
     }
 
     private var productPlaceholder: some View {
         ZStack {
             RSMSTheme.Colors.backgroundElevated
             Image(systemName: "shippingbox.fill")
-                .font(.system(size: 16, weight: .light))
+                .font(.system(size: 14, weight: .light))
                 .foregroundColor(RSMSTheme.Colors.accentGoldDark.opacity(0.4))
         }
     }

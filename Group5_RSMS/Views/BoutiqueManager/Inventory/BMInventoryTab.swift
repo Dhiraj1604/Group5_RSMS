@@ -16,10 +16,14 @@ struct BMInventoryTab: View {
     @State private var selectedAlert: LowStockAlert? = nil
     @State private var hasFetchedStores = false
     @State private var selectedTabSegment = 0 // 0 = Transfer, 1 = Insights
-    
-    @State private var isShowingIncomingRequests = false
-    @State private var isShowingMyRequests = false
     @State private var productToMove: FastMovingProduct? = nil
+    @State private var navigationPath = NavigationPath()
+
+    // Navigation destination enum
+    enum RequestDestination: Hashable {
+        case incoming
+        case myRequests
+    }
 
     // Resolved current store from AppState
 
@@ -33,7 +37,7 @@ struct BMInventoryTab: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
@@ -102,11 +106,13 @@ struct BMInventoryTab: View {
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
-            .navigationDestination(isPresented: $isShowingIncomingRequests) {
-                IncomingRequestsView(currentStoreName: currentStoreName, viewModel: viewModel)
-            }
-            .navigationDestination(isPresented: $isShowingMyRequests) {
-                MyRequestsView(currentStoreName: currentStoreName, viewModel: viewModel)
+            .navigationDestination(for: RequestDestination.self) { destination in
+                switch destination {
+                case .incoming:
+                    IncomingRequestsView(currentStoreName: currentStoreName, viewModel: viewModel)
+                case .myRequests:
+                    MyRequestsView(currentStoreName: currentStoreName, viewModel: viewModel)
+                }
             }
             .sheet(item: $productToMove) { product in
                 FloorQuantitySheet(
@@ -437,14 +443,20 @@ struct BMInventoryTab: View {
                     .listRowSeparator(.hidden)
 
                 HStack(spacing: 16) {
-                    Button { isShowingIncomingRequests = true } label: {
+                    Button {
+                        navigationPath.append(RequestDestination.incoming)
+                    } label: {
                         transferCard(title: "Incoming Requests", icon: "tray.fill",
                                      hasNotification: viewModel.incomingRequests.count > 0)
                     }
-                    Button { isShowingMyRequests = true } label: {
+                    .buttonStyle(.plain)
+                    Button {
+                        navigationPath.append(RequestDestination.myRequests)
+                    } label: {
                         transferCard(title: "My Requests", icon: "paperplane.fill",
                                      hasNotification: false)
                     }
+                    .buttonStyle(.plain)
                 }
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 24, trailing: 16))
                 .listRowBackground(Color.clear)
@@ -499,7 +511,7 @@ struct BMInventoryTab: View {
     }
 
     private func transferCard(title: String, icon: String, hasNotification: Bool) -> some View {
-        VStack(spacing: 8) {
+        HStack(spacing: 10) {
             ZStack(alignment: .topTrailing) {
                 ZStack {
                     Circle()
@@ -521,12 +533,17 @@ struct BMInventoryTab: View {
             Text(title)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(RSMSTheme.Colors.textPrimary)
-                .multilineTextAlignment(.center)
                 .lineLimit(2)
+            
+            Spacer(minLength: 4)
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(RSMSTheme.Colors.textTertiary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .padding(.horizontal, 8)
+        .padding(.vertical, 14)
+        .padding(.horizontal, 14)
         .background(RSMSTheme.Colors.backgroundElevated)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
