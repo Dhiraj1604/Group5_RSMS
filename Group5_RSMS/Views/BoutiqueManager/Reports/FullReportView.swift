@@ -225,6 +225,9 @@ struct FullReportView: View {
                         }
                         .padding(.horizontal, 22)
                     }
+                    .refreshable {
+                        await vm.loadConsolidatedReport(boutiqueId: boutiqueId, period: selectedPeriod)
+                    }
                 }
             }
             .navigationTitle("Consolidated Report")

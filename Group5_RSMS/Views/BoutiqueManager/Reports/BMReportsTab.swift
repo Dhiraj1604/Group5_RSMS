@@ -76,9 +76,9 @@ struct BMReportsTab: View {
 
                                 NavigationLink(destination: ProductSalesReportView(soldProducts: [], unsoldProducts: vm.unsoldProducts, mode: .slowMoving)) {
                                     ReportMetricCard(
-                                        title: "Footfall",
-                                        value: "\(vm.footfall)",
-                                        icon: "figure.walk.circle.fill",
+                                        title: "Slow Moving Items",
+                                        value: "\(vm.slowMovingItemsCount)",
+                                        icon: "shippingbox.fill",
                                         trendText: "",
                                         accentColor: RSMSTheme.Colors.accentGoldLight
                                     )
@@ -173,7 +173,7 @@ struct BMReportsTab: View {
                                     }
                                 }
                                 .chartYAxis {
-                                    AxisMarks { _ in
+                                    AxisMarks(position: .leading) { _ in
                                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3))
                                             .foregroundStyle(RSMSTheme.Colors.border)
                                         AxisValueLabel()
@@ -227,6 +227,11 @@ struct BMReportsTab: View {
                         .animation(.easeInOut(duration: 0.3), value: vm.isLoading)
                     }
                 }
+                .refreshable {
+                    if let boutiqueId = appState.currentStoreID {
+                        await vm.loadReports(boutiqueId: boutiqueId, isRefresh: true)
+                    }
+                }
             }
             .navigationTitle("Reports")
             .navigationBarTitleDisplayMode(.large)
@@ -234,22 +239,8 @@ struct BMReportsTab: View {
             
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        Task {
-                            if let boutiqueId = appState.currentStoreID {
-                                await vm.loadReports(boutiqueId: boutiqueId)
-                            }
-                        }
-                    } label: {
-                        Image(systemName: vm.isLoading ? "arrow.clockwise" : "arrow.clockwise")
-                            .foregroundColor(RSMSTheme.Colors.accentGold)
-                            .rotationEffect(.degrees(vm.isLoading ? 360 : 0))
-                            .animation(
-                                vm.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
-                                value: vm.isLoading
-                            )
-                    }
-                    .disabled(vm.isLoading)
+                    // Refresh button removed in favor of pull-to-refresh
+                    EmptyView()
                 }
             }
             .task {
