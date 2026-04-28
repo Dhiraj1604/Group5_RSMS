@@ -34,6 +34,7 @@ struct StockCheckView: View {
     @State private var showSuccessScreen = false
     @State private var lastScannedSKU: String? = nil
     @State private var lastScanTime: Date = .distantPast
+    @State private var showScanHistory = false
 
     private var effectiveStoreId: UUID? {
         appState.assignedStoreId ?? appState.currentStoreID
@@ -158,34 +159,8 @@ struct StockCheckView: View {
                                 }
                             }
                         }
-
-                        // Live Tally HUD
-                        if let info = lastScannedInfo {
-                            VStack {
-                                Spacer().frame(height: 100)
-                                HStack(spacing: 12) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(RSMSTheme.Colors.success)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(info.name)
-                                            .font(.system(size: 14, weight: .bold))
-                                            .foregroundStyle(.white)
-                                        Text("Current Count: \(info.qty)")
-                                            .font(.system(size: 12, weight: .semibold))
-                                            .foregroundStyle(RSMSTheme.Colors.accentGold)
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 12)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.black.opacity(0.85))
-                                        .overlay(Capsule().stroke(RSMSTheme.Colors.accentGold.opacity(0.3), lineWidth: 1))
-                                )
-                                .transition(.move(edge: .top).combined(with: .opacity))
-                                Spacer()
-                            }
-                        }
+                        
+                        scannerHUD
                     }
                     .toolbar {
                         ToolbarItem(placement: .topBarLeading) {
@@ -196,6 +171,25 @@ struct StockCheckView: View {
                             .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(RSMSTheme.Colors.accentGold)
                         }
+                        
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                showScanHistory = true
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "list.bullet.rectangle.portrait.fill")
+                                    Text("Review Session")
+                                }
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Capsule().fill(RSMSTheme.Colors.accentGold.opacity(0.8)))
+                            }
+                        }
+                    }
+                    .sheet(isPresented: $showScanHistory) {
+                        ScanHistorySheet(vm: vm)
                     }
                 }
             }
@@ -465,6 +459,38 @@ struct StockCheckView: View {
     }
 
     // MARK: - Subsidiary Views
+
+    // MARK: - Scanner Components
+    
+    @ViewBuilder
+    private var scannerHUD: some View {
+        if let info = lastScannedInfo {
+            VStack {
+                Spacer().frame(height: 100)
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(RSMSTheme.Colors.success)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(info.name)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
+                        Text("Current Count: \(info.qty)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(
+                    Capsule()
+                        .fill(Color.black.opacity(0.85))
+                        .overlay(Capsule().stroke(RSMSTheme.Colors.accentGold.opacity(0.3), lineWidth: 1))
+                )
+                .transition(.move(edge: .top).combined(with: .opacity))
+                Spacer()
+            }
+        }
+    }
 
     private var loadingView: some View {
         VStack(spacing: RSMSTheme.Spacing.lg) {
@@ -850,6 +876,71 @@ struct StockCheckRowView: View {
                 inputText = ""
             }
         }
+    }
+}
+
+// MARK: - Scan History Sheet
+struct ScanHistorySheet: View {
+    let vm: StockCheckViewModel
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+                
+                let scannedItems = vm.items.filter { ($0.scannedQty ?? 0) > 0 }
+                
+                if scannedItems.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "barcode.viewfinder")
+                            .font(.system(size: 48))
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                        Text("No items scanned yet")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    }
+                } else {
+                    List {
+                        ForEach(scannedItems) { item in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(item.productName)
+                                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                                    Text("SKU: \(item.sku)")
+                                        .font(.system(size: 12, design: .monospaced))
+                                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                                }
+                                
+                                Spacer()
+                                
+                                Text("\(item.scannedQty ?? 0)")
+                                    .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(RSMSTheme.Colors.accentGold)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(Capsule().fill(RSMSTheme.Colors.accentGold.opacity(0.1)))
+                            }
+                            .listRowBackground(RSMSTheme.Colors.backgroundElevated)
+                            .listRowSeparatorTint(RSMSTheme.Colors.borderLight)
+                        }
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("Current Session")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Close") { dismiss() }
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 }
 
