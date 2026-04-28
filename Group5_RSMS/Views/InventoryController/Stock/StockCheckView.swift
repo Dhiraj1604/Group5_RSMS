@@ -236,6 +236,8 @@ struct StockCheckView: View {
                     Text(vm.checkCompletedAt != nil ? "Audit Completed" : "Audit in Progress")
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    
                     if let date = vm.checkCompletedAt {
                         Text("Last run \(date.formatted(date: .omitted, time: .shortened))")
                             .font(.caption)
@@ -673,6 +675,7 @@ extension StockCheckView {
                         .font(.system(size: 16))
                         .foregroundStyle(RSMSTheme.Colors.textSecondary)
                         .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 40)
                 }
                 
@@ -707,11 +710,12 @@ extension StockCheckView {
                     }
                 } label: {
                     Text("Finish Audit")
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(.black)
-                        .frame(width: 220, height: 56)
-                        .background(RSMSTheme.Colors.success)
-                        .clipShape(Capsule())
+                        .frame(width: 240, height: 56)
+                        .background(RSMSTheme.Colors.goldGradient)
+                        .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
+                        .shadow(color: RSMSTheme.Colors.accentGold.opacity(0.35), radius: 10, y: 4)
                 }
                 .padding(.top, 20)
             }
