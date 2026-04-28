@@ -10,7 +10,8 @@ import Combine
 final class StaffViewModel: ObservableObject {
 
     @Published var employees: [Employee] = []
-    @Published var employeeSales: [UUID: Double] = [:]   // employeeId → total sales in selected period
+    @Published var employeeSales: [UUID: Double] = [:]       // employeeId → total sales
+    @Published var employeeTransactions: [UUID: Int] = [:]    // employeeId → total transaction count
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
 
@@ -22,6 +23,8 @@ final class StaffViewModel: ObservableObject {
         errorMessage = nil
         do {
             employees = try await sync.fetchEmployees(boutiqueId: boutiqueId)
+            // Automatically fetch sales for ranking
+            await fetchSalesPerEmployee(boutiqueId: boutiqueId)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -32,12 +35,17 @@ final class StaffViewModel: ObservableObject {
     func fetchSalesPerEmployee(boutiqueId: UUID) async {
         do {
             let sales = try await sync.fetchSalesPerEmployee(boutiqueId: boutiqueId)
-            var map: [UUID: Double] = [:]
-            for sale in sales { map[sale.employeeId] = sale.totalSales }
-            employeeSales = map
+            var salesMap: [UUID: Double] = [:]
+            var transMap: [UUID: Int] = [:]
+            for sale in sales { 
+                salesMap[sale.employeeId] = sale.totalSales 
+                transMap[sale.employeeId] = sale.transactionCount
+            }
+            employeeSales = salesMap
+            employeeTransactions = transMap
         } catch {
-            // Silently ignore — sales data may not be set up yet in the DB
             employeeSales = [:]
+            employeeTransactions = [:]
         }
     }
 
@@ -45,9 +53,14 @@ final class StaffViewModel: ObservableObject {
     func fetchSalesPerEmployee(boutiqueId: UUID, from: Date, to: Date) async {
         do {
             let sales = try await sync.fetchSalesPerEmployee(boutiqueId: boutiqueId, from: from, to: to)
-            var map: [UUID: Double] = [:]
-            for sale in sales { map[sale.employeeId] = sale.totalSales }
-            employeeSales = map
+            var salesMap: [UUID: Double] = [:]
+            var transMap: [UUID: Int] = [:]
+            for sale in sales { 
+                salesMap[sale.employeeId] = sale.totalSales 
+                transMap[sale.employeeId] = sale.transactionCount
+            }
+            employeeSales = salesMap
+            employeeTransactions = transMap
         } catch {
             // Silently ignore — sales data may not be set up yet in the DB
             employeeSales = [:]
@@ -57,6 +70,15 @@ final class StaffViewModel: ObservableObject {
     // MARK: - Helper: total sales for one employee
     func totalSales(for employeeId: UUID) -> Double {
         return employeeSales[employeeId] ?? 0.0
+    }
+
+    func transactionCount(for employeeId: UUID) -> Int {
+        return employeeTransactions[employeeId] ?? 0
+    }
+
+    func averageOrderValue(for employeeId: UUID) -> Double {
+        let count = transactionCount(for: employeeId)
+        return count > 0 ? totalSales(for: employeeId) / Double(count) : 0.0
     }
 
     // MARK: - Sorted employees by sales (highest first)
@@ -72,6 +94,18 @@ final class StaffViewModel: ObservableObject {
         errorMessage = nil
         do {
             try await sync.createEmployee(employee)
+            await fetchEmployees(boutiqueId: boutiqueId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    func updateEmployee(_ employee: Employee, boutiqueId: UUID) async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await sync.updateEmployee(employee)
             await fetchEmployees(boutiqueId: boutiqueId)
         } catch {
             errorMessage = error.localizedDescription

@@ -2,6 +2,9 @@
 //  AddTaskSheet.swift
 //  Group5_RSMS
 //
+//  Premium Add Task Sheet - Native iPadOS style.
+//  Enhanced with symbol-only toolbars and professional intelligence styling.
+//
 
 import SwiftUI
 
@@ -19,40 +22,45 @@ struct AddTaskSheet: View {
     
     var body: some View {
         NavigationStack {
-            Form {
+            SwiftUI.Form {
                 Section {
-                    TextField("Task Title", text: $title)
-                        .font(RSMSTheme.Typography.bodyCopy1)
+                    TextField("Intelligence Objective", text: $title)
+                        .font(.headline)
                     
-                    TextField("Description (Optional)", text: $description, axis: .vertical)
+                    TextField("Detailed Instructions (Optional)", text: $description, axis: .vertical)
                         .lineLimit(3...6)
-                        .font(RSMSTheme.Typography.bodyCopy2)
+                        .font(.subheadline)
                 } header: {
-                    Text("Task Details")
+                    Text("Strategic Directive")
                 }
                 
                 Section {
-                    DatePicker("Due Date", selection: $dueDate, displayedComponents: .date)
+                    DatePicker("Target Completion", selection: $dueDate, displayedComponents: .date)
                     
-                    Picker("Assign To", selection: $assignedTo) {
-                        Text("Unassigned").tag(UUID?.none)
+                    Picker("Designated Specialist", selection: $assignedTo) {
+                        Text("Unassigned Portfolio").tag(UUID?.none)
                         ForEach(staff) { employee in
                             Text(employee.name).tag(UUID?.some(employee.id))
                         }
                     }
                 } header: {
-                    Text("Assignment")
+                    Text("Execution & Assignment")
                 }
             }
-            .navigationTitle("New Task")
+            .navigationTitle("New Objective")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundColor(RSMSTheme.Colors.error)
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button { dismiss() } label: {
+                        ZStack {
+                            Circle().fill(.ultraThinMaterial).frame(width: 36, height: 36)
+                            Image(systemName: "xmark").font(.system(size: 14, weight: .bold))
+                        }
+                    }
+                    .foregroundColor(.primary)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
                         let newTask = StoreTask(
                             boutiqueId: boutiqueId,
                             title: title,
@@ -63,10 +71,13 @@ struct AddTaskSheet: View {
                         )
                         onSave(newTask)
                         dismiss()
+                    } label: {
+                        ZStack {
+                            Circle().fill(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.secondary.opacity(0.1) : Color.accentColor).frame(width: 36, height: 36)
+                            Image(systemName: "checkmark").font(.system(size: 14, weight: .bold)).foregroundColor(.white)
+                        }
                     }
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .fontWeight(.bold)
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
                 }
             }
         }

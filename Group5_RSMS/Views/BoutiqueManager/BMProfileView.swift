@@ -2,7 +2,8 @@
 //  BMProfileView.swift
 //  Group5_RSMS
 //
-//  Boutique Manager — Profile modal. Uses shared RSMSTheme (dark/gold).
+//  Boutique Manager — Profile modal. 
+//  Enhanced with symbol-only toolbars and professional intelligence styling.
 //
 
 import SwiftUI
@@ -16,7 +17,6 @@ struct BMProfileView: View {
         return appState.stores.first(where: { $0.id == id })
     }
 
-    /// Derive a readable name from the email local part (e.g. "john.doe@…" → "John Doe")
     private var displayName: String {
         let email = appState.userEmail
         guard !email.isEmpty else { return "Boutique Manager" }
@@ -29,168 +29,111 @@ struct BMProfileView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 20) {
-
-                        // ── Avatar + Name + Email ───────────────────────
-                        VStack(spacing: 14) {
-                            ZStack {
-                                Circle()
-                                    .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
-                                    .frame(width: 90, height: 90)
-                                Text(String(displayName.prefix(1)))
-                                    .font(.system(size: 38, weight: .bold, design: .rounded))
-                                    .foregroundStyle(RSMSTheme.Colors.goldGradient)
-                            }
-                            VStack(spacing: 4) {
-                                Text(displayName)
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                Text(appState.userEmail)
-                                    .font(.system(size: 14))
-                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-                            }
-                            // Active session badge
+            SwiftUI.Form {
+                Section("Identity Intelligence") {
+                    HStack(spacing: 20) {
+                        ZStack {
+                            Circle()
+                                .fill(.ultraThinMaterial)
+                                .frame(width: 80, height: 80)
+                                .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
+                            Text(String(displayName.prefix(1)))
+                                .font(.custom("Helvetica", size: 36))
+                                .fontWeight(.bold)
+                                .foregroundColor(.accentColor)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(displayName)
+                                .font(.custom("Helvetica", size: 24))
+                                .fontWeight(.bold)
+                                .foregroundColor(.primary)
+                            Text(appState.userEmail)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            
                             HStack(spacing: 6) {
-                                Circle().fill(RSMSTheme.Colors.success).frame(width: 7, height: 7)
-                                Text("Active Session")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(RSMSTheme.Colors.success)
+                                Circle().fill(Color.green).frame(width: 8, height: 8)
+                                Text("ACTIVE INTELLIGENCE SESSION")
+                                    .font(.custom("Helvetica", size: 10))
+                                    .fontWeight(.black)
+                                    .foregroundColor(.green)
                             }
-                            .padding(.horizontal, 12).padding(.vertical, 5)
-                            .background(RSMSTheme.Colors.success.opacity(0.12))
-                            .clipShape(Capsule())
+                            .padding(.top, 4)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 24)
-                        .background(RSMSTheme.Colors.backgroundElevated)
-                        .clipShape(RoundedRectangle(cornerRadius: 18))
-                        .overlay(RoundedRectangle(cornerRadius: 18).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
-
-                        // ── Store Details ───────────────────────────────
-                        if let store = currentStore {
-                            VStack(alignment: .leading, spacing: 0) {
-                                sectionLabel("MY STORE")
-                                ProfileInfoRow(icon: "storefront.fill",         iconColor: RSMSTheme.Colors.accentGold,
-                                               title: "Store Name", value: store.name)
-                                rowDivider
-                                ProfileInfoRow(icon: "mappin.circle.fill",      iconColor: RSMSTheme.Colors.error,
-                                               title: "City", value: store.city)
-                                rowDivider
-                                ProfileInfoRow(icon: "globe.asia.australia.fill", iconColor: RSMSTheme.Colors.warning,
-                                               title: "Country", value: store.country)
-                                if let phone = store.phone, !phone.isEmpty {
-                                    rowDivider
-                                    ProfileInfoRow(icon: "phone.fill",          iconColor: RSMSTheme.Colors.success,
-                                                   title: "Store Phone", value: phone)
-                                }
-                            }
-                            .background(RSMSTheme.Colors.backgroundElevated)
-                            .clipShape(RoundedRectangle(cornerRadius: 18))
-                            .overlay(RoundedRectangle(cornerRadius: 18).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
-                        }
-
-                        // ── Role ────────────────────────────────────────
-                        VStack(alignment: .leading, spacing: 0) {
-                            sectionLabel("ROLE & ACCESS")
-                            ProfileInfoRow(icon: "person.badge.key.fill", iconColor: RSMSTheme.Colors.accentGold,
-                                           title: "Role", value: "Boutique Manager")
-                            rowDivider
-                            ProfileInfoRow(icon: "building.2.fill",       iconColor: RSMSTheme.Colors.accentGoldLight,
-                                           title: "Access Level", value: "Store Operations")
-                        }
-                        .background(RSMSTheme.Colors.backgroundElevated)
-                        .clipShape(RoundedRectangle(cornerRadius: 18))
-                        .overlay(RoundedRectangle(cornerRadius: 18).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
-
-                        // ── Sign Out ────────────────────────────────────
-                        Button {
-                            dismiss()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                                appState.signOut()
-                            }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "rectangle.portrait.and.arrow.right")
-                                    .font(.system(size: 16, weight: .semibold))
-                                Text("Sign Out")
-                                    .font(.system(size: 17, weight: .semibold))
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 54)
-                            .background(RSMSTheme.Colors.error)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                        }
-                        .padding(.top, 8)
                     }
-                    .padding(20)
+                    .padding(.vertical, 16)
+                }
+                
+                if let store = currentStore {
+                    Section("Boutique Operational Context") {
+                        LabeledContent {
+                            Text(store.name).foregroundColor(.primary).font(.headline)
+                        } label: {
+                            Label("Store", systemImage: "storefront.fill")
+                        }
+                        
+                        LabeledContent {
+                            Text(store.city).foregroundColor(.primary)
+                        } label: {
+                            Label("Location", systemImage: "mappin.circle.fill")
+                        }
+                        
+                        LabeledContent {
+                            Text(store.country).foregroundColor(.primary)
+                        } label: {
+                            Label("Jurisdiction", systemImage: "globe.asia.australia.fill")
+                        }
+                    }
+                }
+                
+                Section("Access Architecture") {
+                    LabeledContent {
+                        Text("Boutique Manager").foregroundColor(.primary).font(.headline)
+                    } label: {
+                        Label("Designation", systemImage: "person.badge.key.fill")
+                    }
+                    
+                    LabeledContent {
+                        Text("Full Operational Access").foregroundColor(.primary)
+                    } label: {
+                        Label("Permissions", systemImage: "lock.shield.fill")
+                    }
+                }
+                
+                Section {
+                    Button(role: .destructive) {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            appState.signOut()
+                        }
+                    } label: {
+                        HStack {
+                            Spacer()
+                             Text("TERMINATE SESSION")
+                                .font(.custom("Helvetica", size: 14))
+                                .fontWeight(.black)
+                                .tracking(1)
+                            Spacer()
+                        }
+                    }
                 }
             }
-            .navigationTitle("My Profile")
+            .navigationTitle("Manager Profile")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .fontWeight(.semibold)
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { dismiss() } label: {
+                        ZStack {
+                             Circle().fill(.ultraThinMaterial).frame(width: 36, height: 36)
+                            Image(systemName: "xmark")
+                                .font(.custom("Helvetica", size: 14))
+                                .fontWeight(.bold)
+                        }
+                    }
+                    .foregroundColor(.primary)
                 }
             }
         }
     }
-
-    private var rowDivider: some View {
-        Divider()
-            .background(RSMSTheme.Colors.borderLight)
-            .padding(.leading, 52)
-    }
-
-    private func sectionLabel(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11, weight: .bold))
-            .tracking(0.6)
-            .foregroundColor(RSMSTheme.Colors.textSecondary)
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 6)
-    }
-}
-
-struct ProfileInfoRow: View {
-    let icon: String
-    let iconColor: Color
-    let title: String
-    let value: String
-
-    var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(iconColor.opacity(0.14))
-                    .frame(width: 34, height: 34)
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(iconColor)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-                Text(value)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 11)
-    }
-}
-
-#Preview {
-    BMProfileView().environment(AppState())
 }

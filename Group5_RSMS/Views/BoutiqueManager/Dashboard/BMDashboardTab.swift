@@ -2,77 +2,11 @@
 //  BMDashboardTab.swift
 //  Group5_RSMS
 //
-//  Boutique Manager — Dashboard. Uses shared RSMSTheme (dark/gold).
-//  Top 3 performers shown inline; See All navigates to full list.
+//  Boutique Manager — Dashboard. iOS 26 Liquid Glass & Segmented Cards.
 //
 
 import SwiftUI
 
-// MARK: - See All Staff Performance
-struct AllStaffPerformanceView: View {
-    let entries: [StaffPerformanceEntry]
-    let teamTotal: Double
-
-    var body: some View {
-        ZStack {
-            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-            ScrollView {
-                LazyVStack(spacing: 12) {
-                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                        StaffPerfRow(entry: entry, rank: index + 1, teamTotal: teamTotal)
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-            }
-        }
-        .navigationTitle("Staff Performance")
-        .navigationBarTitleDisplayMode(.large)
-        .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
-    }
-}
-
-// MARK: - See All Tasks
-struct AllTasksView: View {
-    @ObservedObject var tasksVM: BMTasksViewModel
-
-    var body: some View {
-        ZStack {
-            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-            if tasksVM.tasks.isEmpty {
-                VStack(spacing: 14) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 52))
-                        .foregroundColor(RSMSTheme.Colors.success.opacity(0.5))
-                    Text("All tasks completed!")
-                        .font(.headline)
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(tasksVM.tasks) { task in
-                            let staffName = tasksVM.staff.first(where: { $0.id == task.assignedTo })?.name
-                            TaskRowView(task: task, onToggle: {
-                                Task { await tasksVM.cycleTaskStatus(task) }
-                            }, staffName: staffName)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
-                }
-            }
-        }
-        .navigationTitle("Store Tasks")
-        .navigationBarTitleDisplayMode(.large)
-        .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
-    }
-}
-
-// MARK: - Main Dashboard
 struct BMDashboardTab: View {
     @Environment(AppState.self) private var appState
     @StateObject private var tasksVM     = BMTasksViewModel()
@@ -81,47 +15,30 @@ struct BMDashboardTab: View {
     @State private var showingAddTask = false
     @State private var showingProfile = false
 
-    private var greetingText: String {
-        let h = Calendar.current.component(.hour, from: Date())
-        switch h {
-        case 5..<12:  return "Good morning"
-        case 12..<17: return "Good afternoon"
-        case 17..<21: return "Good evening"
-        default:      return "Good night"
-        }
-    }
-
     var body: some View {
         NavigationStack {
-            ZStack {
-                RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 24) {
-                        pacingCard.padding(.horizontal, 20)
-                        teamMetricsRow.padding(.horizontal, 20)
-                        staffSection
-                        tasksSection.padding(.horizontal, 20)
-                    }
-                    .padding(.top, 8)
-                    .padding(.bottom, 40)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 40) {
+                    pacingCard
+                    teamMetricsRow
+                    staffSection
+                    tasksSection
                 }
+                .padding(.horizontal, 32)
+                .padding(.top, 24)
+                .padding(.bottom, 80)
             }
-            .navigationTitle("Dashboard")
+            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+            .navigationTitle("Intelligence")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 14) {
+                    HStack(spacing: 20) {
                         Button { showingAddTask = true } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 22))
-                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                            LiquidBarButton(icon: "plus")
                         }
                         Button { showingProfile = true } label: {
-                            Image(systemName: "person.crop.circle.fill")
-                                .font(.system(size: 22))
-                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                            LiquidBarButton(icon: "person.fill")
                         }
                     }
                 }
@@ -143,212 +60,199 @@ struct BMDashboardTab: View {
                     await tasksVM.fetchTasksAndStaff(boutiqueId: id)
                 }
             }
-            .onChange(of: appState.currentStoreID) { _, newId in
-                guard let id = newId else { return }
-                Task {
-                    await dashboardVM.loadDailyPacing(boutiqueId: id)
-                    await dashboardVM.loadStaffPerformance(boutiqueId: id)
-                    await tasksVM.fetchTasksAndStaff(boutiqueId: id)
-                }
-            }
         }
     }
 
-    // MARK: - Greeting Header
-    private var greetingHeader: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(greetingText)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(RSMSTheme.Colors.textSecondary)
-            Text("Boutique Manager")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(RSMSTheme.Colors.textPrimary)
-            Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide)))
-                .font(.system(size: 14))
-                .foregroundColor(RSMSTheme.Colors.textTertiary)
-        }
-    }
-
-    // MARK: - Daily Pacing Card
+    // MARK: - Daily Pacing (Segmented Card)
     private var pacingCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 0) {
+            // Top: Progress Intelligence
             HStack {
-                Text("DAILY PACING")
-                    .font(.system(size: 11, weight: .bold))
-                    .tracking(0.8)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("DAILY VELOCITY")
+                        .font(.custom("Helvetica", size: 12))
+                        .fontWeight(.black)
+                        .tracking(2)
+                        .foregroundColor(.accentColor)
+                    Text("Today's Performance")
+                        .font(.custom("Helvetica", size: 28))
+                        .fontWeight(.bold)
+                }
                 Spacer()
-                Text("\(Int(dashboardVM.progress * 100))% to target")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(RSMSTheme.Colors.accentGold.opacity(0.15))
+                Text("\(Int(dashboardVM.progress * 100))%")
+                    .font(.custom("Helvetica", size: 20))
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.accentColor.opacity(0.12))
+                    .foregroundColor(.accentColor)
                     .clipShape(Capsule())
             }
+            .padding(32)
+            .background(.ultraThinMaterial)
 
-            HStack(spacing: 20) {
+            Divider().opacity(0.3)
+
+            // Bottom: Analytics
+            HStack(alignment: .center, spacing: 60) {
                 ZStack {
                     Circle()
-                        .stroke(RSMSTheme.Colors.surfacePrimary, lineWidth: 14)
+                        .stroke(Color(UIColor.tertiarySystemGroupedBackground), lineWidth: 20)
                     Circle()
-                        .trim(from: 0, to: dashboardVM.progress)
-                        .stroke(RSMSTheme.Colors.accentGold, style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                        .trim(from: 0, to: min(dashboardVM.progress, 1.0))
+                        .stroke(
+                            Color.accentColor,
+                            style: StrokeStyle(lineWidth: 20, lineCap: .round)
+                        )
                         .rotationEffect(.degrees(-90))
-                        .animation(.easeOut(duration: 1.0), value: dashboardVM.progress)
-                    VStack(spacing: 2) {
+                        .animation(.spring(response: 1.0, dampingFraction: 0.7), value: dashboardVM.progress)
+                    
+                    VStack(spacing: 4) {
                         Text("\(Int(dashboardVM.progress * 100))%")
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .foregroundColor(RSMSTheme.Colors.textPrimary)
-                        Text("achieved")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            .font(.custom("Helvetica", size: 44))
+                            .fontWeight(.bold)
+                        Text("ATTAINED")
+                            .font(.custom("Helvetica", size: 10))
+                            .fontWeight(.black)
+                            .foregroundColor(.secondary)
                     }
                 }
-                .frame(width: 115, height: 115)
+                .frame(width: 180, height: 180)
 
-                VStack(alignment: .leading, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Actual Sales")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                VStack(alignment: .leading, spacing: 32) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Current Sales", systemImage: "arrow.up.right.circle.fill")
+                            .font(.custom("Helvetica", size: 14))
+                            .fontWeight(.bold)
+                            .foregroundColor(.secondary)
                         Text(dashboardVM.actualSales, format: .currency(code: "INR"))
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(RSMSTheme.Colors.success)
+                            .font(.custom("Helvetica", size: 36))
+                            .fontWeight(.bold)
+                            .foregroundColor(.green)
                     }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Daily Target")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Daily Objective", systemImage: "target")
+                            .font(.custom("Helvetica", size: 14))
+                            .fontWeight(.bold)
+                            .foregroundColor(.secondary)
                         Text(dashboardVM.dailyTarget, format: .currency(code: "INR"))
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(RSMSTheme.Colors.textPrimary)
+                            .font(.custom("Helvetica", size: 24))
+                            .fontWeight(.bold)
                     }
                 }
                 Spacer()
             }
+            .padding(40)
+            .background(Color(UIColor.secondarySystemGroupedBackground))
         }
-        .padding(18)
-        .background(RSMSTheme.Colors.backgroundElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
-        .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+        .clipShape(RoundedRectangle(cornerRadius: 32))
+        .overlay(RoundedRectangle(cornerRadius: 32).stroke(.white.opacity(0.1), lineWidth: 0.5))
+        .shadow(color: Color.black.opacity(0.06), radius: 20, x: 0, y: 10)
     }
 
     // MARK: - Team Metrics Row
     private var teamMetricsRow: some View {
-        HStack(spacing: 10) {
-            DashMetricCard(icon: "indianrupeesign.circle.fill", title: "Team Sales",  value: "₹\(fmt(dashboardVM.teamTotalSales))")
-            DashMetricCard(icon: "calendar.circle.fill",        title: "This Month",  value: "₹\(fmt(dashboardVM.teamThisMonthSales))")
-            DashMetricCard(icon: "bag.circle.fill",             title: "Orders",      value: "\(dashboardVM.teamTotalOrders)")
+        HStack(spacing: 24) {
+            DashMetricCard(
+                icon: "indianrupeesign",
+                iconColor: .green,
+                title: "GROSS SALES",
+                value: "₹\(fmt(dashboardVM.teamTotalSales))"
+            )
+            DashMetricCard(
+                icon: "calendar",
+                iconColor: .blue,
+                title: "MONTHLY",
+                value: "₹\(fmt(dashboardVM.teamThisMonthSales))"
+            )
+            DashMetricCard(
+                icon: "bag.fill",
+                iconColor: .purple,
+                title: "VOLUME",
+                value: "\(dashboardVM.teamTotalOrders)"
+            )
         }
     }
 
-    // MARK: - Staff Section (Top 3 + See All)
+    // MARK: - Staff Section
     private var staffSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 24) {
             HStack {
-                Text("Top Performers")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                Text("Specialist Ranking")
+                    .font(.system(size: 24, weight: .black))
                 Spacer()
                 if dashboardVM.staffPerformance.count > 3 {
                     NavigationLink(destination: AllStaffPerformanceView(
                         entries: dashboardVM.staffPerformance,
                         teamTotal: dashboardVM.teamTotalSales)) {
-                        HStack(spacing: 3) {
-                            Text("See All")
-                                .font(.system(size: 14, weight: .medium))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .bold))
+                        ZStack {
+                            Capsule().fill(.ultraThinMaterial).frame(width: 56, height: 40)
+                                .overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 0.5))
+                            Image(systemName: "chevron.right").font(.system(size: 14, weight: .bold))
                         }
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
                     }
                 }
             }
-            .padding(.horizontal, 20)
 
-            if dashboardVM.isLoadingStaff {
-                ProgressView()
-                    .tint(RSMSTheme.Colors.accentGold)
-                    .frame(maxWidth: .infinity).padding(24)
-                    .background(RSMSTheme.Colors.backgroundElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .padding(.horizontal, 20)
-            } else if dashboardVM.staffPerformance.isEmpty {
-                VStack(spacing: 10) {
-                    Image(systemName: "person.3.fill")
-                        .font(.system(size: 36))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.4))
-                    Text("No sales data yet")
-                        .font(.subheadline)
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                }
-                .frame(maxWidth: .infinity).padding(.vertical, 28)
-                .background(RSMSTheme.Colors.backgroundElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .padding(.horizontal, 20)
-            } else {
-                // ✅ Only top 3 on dashboard
-                VStack(spacing: 10) {
+            VStack(spacing: 16) {
+                if dashboardVM.staffPerformance.isEmpty {
+                    NoDataIntelligence(icon: "person.3.fill", message: "No performance data available")
+                } else {
                     ForEach(Array(dashboardVM.staffPerformance.prefix(3).enumerated()), id: \.element.id) { idx, entry in
                         StaffPerfRow(entry: entry, rank: idx + 1, teamTotal: dashboardVM.teamTotalSales)
                     }
                 }
-                .padding(.horizontal, 20)
             }
         }
     }
 
-    // MARK: - Tasks Section (Top 2 + See All)
+    // MARK: - Tasks Section
     private var tasksSection: some View {
         let pending = tasksVM.tasks.filter { $0.status != .verified }
-        return VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: 24) {
             HStack {
-                Text("Store Tasks")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                Text("Strategic Tasks")
+                    .font(.system(size: 24, weight: .black))
                 Spacer()
-                if pending.count > 2 {
-                    NavigationLink(destination: AllTasksView(tasksVM: tasksVM)) {
-                        HStack(spacing: 3) {
-                            Text("See All")
-                                .font(.system(size: 14, weight: .medium))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .bold))
-                        }
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
-                    }
+                if !pending.isEmpty {
+                    Text("\(pending.count)")
+                        .font(.system(size: 14, weight: .black))
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(Color.orange)
+                        .foregroundColor(.white)
+                        .clipShape(Circle())
                 }
             }
 
-            if tasksVM.isLoading && tasksVM.tasks.isEmpty {
-                ProgressView()
-                    .tint(RSMSTheme.Colors.accentGold)
-                    .frame(maxWidth: .infinity).padding(24)
-                    .background(RSMSTheme.Colors.backgroundElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-            } else if pending.isEmpty {
-                HStack(spacing: 12) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(RSMSTheme.Colors.success.opacity(0.7))
-                    Text("All tasks completed!")
-                        .font(.subheadline)
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(18)
-                .background(RSMSTheme.Colors.backgroundElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
-            } else {
-                VStack(spacing: 10) {
+            VStack(spacing: 16) {
+                if pending.isEmpty {
+                    HStack(spacing: 20) {
+                        ZStack {
+                            Circle().fill(Color.green.opacity(0.12)).frame(width: 56, height: 56)
+                            Image(systemName: "checkmark.seal.fill").font(.title2).foregroundColor(.green)
+                        }
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Operational Excellence")
+                                .font(.system(size: 18, weight: .bold))
+                            Text("All boutique tasks are currently finalized.")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(32)
+                    .background(Color(UIColor.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 32))
+                } else {
                     ForEach(pending.prefix(2)) { task in
                         let staffName = tasksVM.staff.first(where: { $0.id == task.assignedTo })?.name
                         TaskRowView(task: task, onToggle: {
                             Task { await tasksVM.cycleTaskStatus(task) }
                         }, staffName: staffName)
+                        .padding(28)
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 24))
+                        .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 6)
                     }
                 }
             }
@@ -362,36 +266,44 @@ struct BMDashboardTab: View {
     }
 }
 
-// MARK: - Dashboard Metric Card (3-up)
+// MARK: - Dashboard Components
+
 struct DashMetricCard: View {
     let icon: String
+    let iconColor: Color
     let title: String
     let value: String
 
     var body: some View {
-        VStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .medium))
-                .foregroundColor(RSMSTheme.Colors.accentGold)
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                ZStack {
+                    Circle().fill(iconColor.opacity(0.12)).frame(width: 48, height: 48)
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(iconColor)
+                }
+                Spacer()
+                Text(title)
+                    .font(.custom("Helvetica", size: 10))
+                    .fontWeight(.black)
+                    .tracking(1.2)
+                    .foregroundColor(.secondary)
+            }
+            
             Text(value)
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundColor(RSMSTheme.Colors.textPrimary)
-                .lineLimit(1).minimumScaleFactor(0.6)
-            Text(title)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(RSMSTheme.Colors.textSecondary)
-                .lineLimit(1)
+                .font(.custom("Helvetica", size: 32))
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background(RSMSTheme.Colors.backgroundElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
-        .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+        .padding(24)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 32))
+        .overlay(RoundedRectangle(cornerRadius: 32).stroke(.white.opacity(0.1), lineWidth: 0.5))
+        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 8)
     }
 }
 
-// MARK: - Staff Performance Row
 struct StaffPerfRow: View {
     let entry: StaffPerformanceEntry
     let rank: Int
@@ -401,69 +313,76 @@ struct StaffPerfRow: View {
 
     private var rankColor: Color {
         switch rank {
-        case 1: return Color(red: 1.0, green: 0.84, blue: 0.0)
-        case 2: return Color(white: 0.75)
-        case 3: return Color(red: 0.8, green: 0.5, blue: 0.2)
-        default: return RSMSTheme.Colors.textSecondary
+        case 1: return Color(red: 1.0, green: 0.75, blue: 0.0)
+        case 2: return Color(white: 0.65)
+        case 3: return Color(red: 0.72, green: 0.45, blue: 0.2)
+        default: return .secondary
         }
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
+        VStack(spacing: 20) {
+            HStack(spacing: 20) {
                 ZStack {
-                    Circle()
-                        .fill(rank <= 3 ? rankColor.opacity(0.18) : RSMSTheme.Colors.surfacePrimary)
-                        .frame(width: 36, height: 36)
-                    if rank <= 3 {
-                        Image(systemName: "medal.fill")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(rankColor)
-                    } else {
-                        Text("#\(rank)")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
-                    }
+                    Circle().fill(.ultraThinMaterial).frame(width: 64, height: 64)
+                        .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
+                    Text(rank <= 3 ? (rank == 1 ? "🥇" : (rank == 2 ? "🥈" : "🥉")) : "#\(rank)")
+                        .font(.custom("Helvetica", size: 24))
+                        .fontWeight(.bold)
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(entry.name)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(RSMSTheme.Colors.textPrimary).lineLimit(1)
-                    Text("\(entry.totalOrders) orders · Avg ₹\(String(format: "%.0f", entry.avgOrderValue))")
-                        .font(.system(size: 12))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary).lineLimit(1)
+                        .font(.custom("Helvetica", size: 20))
+                        .fontWeight(.bold)
+                    Text("\(entry.totalOrders) Transactions · Avg Basket ₹\(Int(entry.avgOrderValue))")
+                        .font(.custom("Helvetica", size: 14))
+                        .foregroundColor(.secondary)
                 }
+
                 Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("₹\(String(format: "%.0f", entry.totalSales))")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(rank <= 3 ? rankColor : RSMSTheme.Colors.textPrimary)
-                    Text("\(Int(pct * 100))% of team")
-                        .font(.system(size: 11))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+
+                VStack(alignment: .trailing, spacing: 6) {
+                    Text("₹\(Int(entry.totalSales).formatted())")
+                        .font(.custom("Helvetica", size: 22))
+                        .fontWeight(.bold)
+                        .foregroundColor(rank <= 3 ? rankColor : .primary)
+                    Text("\(Int(pct * 100))% Portfolio")
+                        .font(.custom("Helvetica", size: 12))
+                        .fontWeight(.bold)
+                        .foregroundColor(.secondary)
                 }
             }
-            .padding(.horizontal, 14).padding(.vertical, 12)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2).fill(RSMSTheme.Colors.surfacePrimary).frame(height: 3)
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(rank <= 3 ? rankColor : RSMSTheme.Colors.accentGold)
-                        .frame(width: geo.size.width * pct, height: 3)
-                        .animation(.easeOut(duration: 0.6), value: pct)
+                    Capsule().fill(Color(UIColor.tertiarySystemGroupedBackground)).frame(height: 10)
+                    Capsule().fill(rank <= 3 ? rankColor : Color.accentColor)
+                        .frame(width: max(0, geo.size.width * pct), height: 10)
                 }
             }
-            .frame(height: 3).padding(.horizontal, 14).padding(.bottom, 12)
+            .frame(height: 10)
         }
-        .background(RSMSTheme.Colors.backgroundElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
-        .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+        .padding(28)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 32))
     }
 }
 
-#Preview {
-    BMDashboardTab().environment(AppState())
+struct AllStaffPerformanceView: View {
+    let entries: [StaffPerformanceEntry]
+    let teamTotal: Double
+
+    var body: some View {
+        List {
+            ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                StaffPerfRow(entry: entry, rank: index + 1, teamTotal: teamTotal)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+            }
+        }
+        .listStyle(.insetGrouped)
+        .background(Color(UIColor.systemGroupedBackground))
+        .navigationTitle("Specialist Analytics")
+    }
 }

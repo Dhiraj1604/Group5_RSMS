@@ -2,7 +2,7 @@
 //  BMReportsTab.swift
 //  Group5_RSMS
 //
-//  Boutique Manager — Reports tab with weekly performance metrics.
+//  Boutique Manager — Reports. iOS 26 Liquid Glass & Segmented Cards.
 //
 
 import SwiftUI
@@ -13,7 +13,7 @@ struct BMReportsTab: View {
     @StateObject private var vm = BMReportsViewModel()
 
     @State private var chartRange: ChartRange = .oneWeek
-    @State private var showFullReport = false
+    @Namespace private var segmentNamespace
 
     private var storeName: String {
         guard let storeId = appState.currentStoreID else { return "My Boutique" }
@@ -23,197 +23,26 @@ struct BMReportsTab: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-
-                        // MARK: - Weekly Performance Header
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Weekly Performance")
-                                    .font(RSMSTheme.Typography.heading3)
-                                    .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                Text("This month's overview")
-                                    .font(RSMSTheme.Typography.caption)
-                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-                            }
-                            Spacer()
-                        }
-
-                        // MARK: - Metric Cards Row
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                NavigationLink(destination: ProductSalesReportView(soldProducts: vm.soldProducts, unsoldProducts: [], mode: .sold)) {
-                                    ReportMetricCard(
-                                        title: "Total Sales",
-                                        value: "₹\(formatNumber(vm.totalSales))",
-                                        icon: "indianrupeesign.circle.fill",
-                                        trendText: "",
-                                        accentColor: RSMSTheme.Colors.accentGold
-                                    )
-                                }
-                                .buttonStyle(.plain)
-
-                                NavigationLink(destination: ProductSalesReportView(soldProducts: [], unsoldProducts: vm.unsoldProducts, mode: .slowMoving)) {
-                                    ReportMetricCard(
-                                        title: "Footfall",
-                                        value: "\(vm.footfall)",
-                                        icon: "figure.walk.circle.fill",
-                                        trendText: "",
-                                        accentColor: RSMSTheme.Colors.accentGoldLight
-                                    )
-                                }
-                                .buttonStyle(.plain)
-
-                                NavigationLink(destination: DormantStaffReportView(dormantStaff: vm.dormantStaffDetails)) {
-                                    ReportMetricCard(
-                                        title: "Dormant Staff",
-                                        value: "\(vm.dormantEmployees)",
-                                        icon: "person.crop.circle.badge.exclamationmark.fill",
-                                        trendText: "",
-                                        accentColor: RSMSTheme.Colors.warning
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-
-                        // MARK: - Targets vs Actual Panel
-                        VStack(alignment: .leading, spacing: 14) {
-                            HStack {
-                                Text("Targets vs Actual")
-                                    .font(RSMSTheme.Typography.heading4)
-                                    .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                Spacer()
-                                HStack(spacing: 8) {
-                                    Circle().fill(RSMSTheme.Colors.accentGold).frame(width: 8, height: 8)
-                                    Text("Met").font(.caption2).foregroundColor(RSMSTheme.Colors.textSecondary)
-                                    Circle().fill(RSMSTheme.Colors.textPrimary).frame(width: 8, height: 8)
-                                    Text("Missed").font(.caption2).foregroundColor(RSMSTheme.Colors.textSecondary)
-                                }
-                            }
-
-                            ForEach(vm.targetMetrics) { metric in
-                                TargetRow(metric: metric)
-                            }
-                        }
-                        .padding()
-                        .background(RSMSTheme.Colors.backgroundElevated)
-                        .cornerRadius(16)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
-                        )
-
-                        // MARK: - Weekly Sales Chart
-                        VStack(alignment: .leading, spacing: 14) {
-                            HStack {
-                                Text("Sales Trend")
-                                    .font(RSMSTheme.Typography.heading4)
-                                    .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                Spacer()
-                                Picker("Range", selection: $chartRange) {
-                                    ForEach(ChartRange.allCases, id: \.self) { range in
-                                        Text(range.rawValue).tag(range)
-                                    }
-                                }
-                                .pickerStyle(.segmented)
-                                .frame(width: 100)
-                            }
-
-                            let data = vm.chartData(for: chartRange)
-
-                            if data.isEmpty || data.allSatisfy({ $0.amount == 0 }) {
-                                VStack(spacing: 10) {
-                                    Image(systemName: "chart.bar.xaxis")
-                                        .font(.system(size: 36))
-                                        .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.4))
-                                    Text("No sales data for this period")
-                                        .font(RSMSTheme.Typography.bodyCopy2)
-                                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 180)
-                            } else {
-                                Chart(data) { point in
-                                    BarMark(
-                                        x: .value("Day", point.date, unit: .day),
-                                        y: .value("Sales", point.amount)
-                                    )
-                                    .foregroundStyle(RSMSTheme.Colors.accentGold.gradient)
-                                    .cornerRadius(4)
-                                }
-                                .chartXAxis {
-                                    AxisMarks(values: .stride(by: .day, count: chartRange == .twoWeeks ? 3 : 1)) { value in
-                                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3))
-                                            .foregroundStyle(RSMSTheme.Colors.border)
-                                        AxisValueLabel(format: .dateTime.day().month(.abbreviated))
-                                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                                            .offset(x: 0, y: 4)
-                                    }
-                                }
-                                .chartYAxis {
-                                    AxisMarks { _ in
-                                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3))
-                                            .foregroundStyle(RSMSTheme.Colors.border)
-                                        AxisValueLabel()
-                                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                                    }
-                                }
-                                .frame(height: 200)
-                                .animation(.easeInOut, value: chartRange)
-                            }
-                        }
-                        .padding()
-                        .background(RSMSTheme.Colors.backgroundElevated)
-                        .cornerRadius(16)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
-                        )
-
-                        // MARK: - View Full Report CTA (Hidden as requested)
-                        /*
-                        Button {
-                            showFullReport = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "doc.text.magnifyingglass")
-                                Text("View Full Report")
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                        .buttonStyle(GoldButtonStyle())
-                        .padding(.top, 4)
-                        */
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 40) {
+                        headerIntelligence
+                        metricCardsSection
+                        goalTrackingSection
+                        revenueTrendSection
+                        Spacer(minLength: 100)
                     }
-                    .padding()
-                    // Inside the ZStack, after ScrollView closing brace
-                    if vm.isLoading {
-                        ZStack {
-                            RSMSTheme.Colors.backgroundPrimary.opacity(0.85)
-                                .ignoresSafeArea()
-                            
-                            VStack(spacing: 16) {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: RSMSTheme.Colors.accentGold))
-                                    .scaleEffect(1.4)
-                                
-                                Text("Loading report...")
-                                    .font(RSMSTheme.Typography.bodyCopy2)
-                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-                            }
-                        }
-                        .transition(.opacity)
-                        .animation(.easeInOut(duration: 0.3), value: vm.isLoading)
-                    }
+                    .padding(.horizontal, 32)
+                    .padding(.top, 24)
+                }
+
+                if vm.isLoading {
+                    loadingOverlay
                 }
             }
-            .navigationTitle("Reports")
+            .navigationTitle("Intelligence Hub")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -223,15 +52,8 @@ struct BMReportsTab: View {
                             }
                         }
                     } label: {
-                        Image(systemName: vm.isLoading ? "arrow.clockwise" : "arrow.clockwise")
-                            .foregroundColor(RSMSTheme.Colors.accentGold)
-                            .rotationEffect(.degrees(vm.isLoading ? 360 : 0))
-                            .animation(
-                                vm.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
-                                value: vm.isLoading
-                            )
+                        LiquidBarButton(icon: "arrow.clockwise")
                     }
-                    .disabled(vm.isLoading)
                 }
             }
             .task {
@@ -239,8 +61,135 @@ struct BMReportsTab: View {
                     await vm.loadReports(boutiqueId: boutiqueId)
                 }
             }
-            .sheet(isPresented: $showFullReport) {
-                FullReportView(storeName: storeName, vm: vm)
+        }
+    }
+
+    // MARK: - Subviews
+
+    private var headerIntelligence: some View {
+        HStack(spacing: 24) {
+            ZStack {
+                Circle().fill(.ultraThinMaterial).frame(width: 72, height: 72)
+                    .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
+                Image(systemName: "chart.pie.fill").font(.title).foregroundColor(.accentColor)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Performance Insight")
+                    .font(.custom("Helvetica", size: 28))
+                    .fontWeight(.bold)
+                Text("Analytical overview for \(storeName)")
+                    .font(.custom("Helvetica", size: 16))
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+        }
+        .padding(32)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 32))
+        .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 6)
+    }
+
+    private var metricCardsSection: some View {
+        HStack(spacing: 24) {
+            ReportMetricSegmentedCard(title: "TOTAL REVENUE", value: "₹\(formatNumber(vm.totalSales))", icon: "indianrupeesign", color: .green)
+            ReportMetricSegmentedCard(title: "STORE TRAFFIC", value: "\(vm.footfall)", icon: "figure.walk", color: .blue)
+            ReportMetricSegmentedCard(title: "DORMANT STAFF", value: "\(vm.dormantEmployees)", icon: "person.badge.minus", color: .orange)
+        }
+    }
+
+    private var goalTrackingSection: some View {
+        VStack(alignment: .leading, spacing: 32) {
+            Text("Strategic Goal Tracking")
+                .font(.custom("Helvetica", size: 24))
+                .fontWeight(.bold)
+                .padding(.horizontal, 8)
+
+            if vm.targetMetrics.isEmpty {
+                NoDataIntelligence(icon: "target", message: "Analyzing goal data…")
+            } else {
+                VStack(spacing: 20) {
+                    ForEach(vm.targetMetrics) { metric in
+                        TargetIntelligenceRow(metric: metric)
+                    }
+                }
+            }
+        }
+        .padding(32)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 32))
+        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 8)
+    }
+
+    private var revenueTrendSection: some View {
+        VStack(alignment: .leading, spacing: 32) {
+            HStack {
+                Text("Revenue Velocity Trend")
+                    .font(.custom("Helvetica", size: 24))
+                    .fontWeight(.bold)
+                Spacer()
+                rangePicker
+            }
+            .padding(.horizontal, 8)
+
+            let data = vm.chartData(for: chartRange)
+            
+            if data.isEmpty || data.allSatisfy({ $0.amount == 0 }) {
+                NoDataIntelligence(icon: "chart.bar.xaxis", message: "Waiting for transactional data signals")
+            } else {
+                Chart(data) { point in
+                    BarMark(x: .value("Day", point.date, unit: .day), y: .value("Sales", point.amount))
+                        .foregroundStyle(Color.accentColor.gradient)
+                        .cornerRadius(8)
+                }
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .day, count: chartRange == .twoWeeks ? 3 : 1)) { _ in
+                        AxisValueLabel()
+                            .font(.custom("Helvetica", size: 12))
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks { _ in
+                        AxisValueLabel()
+                            .font(.custom("Helvetica", size: 12))
+                    }
+                }
+                .frame(height: 300)
+            }
+        }
+        .padding(32)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 32))
+        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 8)
+    }
+
+    private var rangePicker: some View {
+        HStack(spacing: 0) {
+            ForEach(ChartRange.allCases, id: \.self) { range in
+                Button { withAnimation(.spring()) { chartRange = range } } label: {
+                    Text(range.rawValue.prefix(1))
+                        .font(.custom("Helvetica", size: 12))
+                        .fontWeight(.black)
+                        .frame(width: 36, height: 36)
+                        .background(chartRange == range ? Color.accentColor : Color.clear)
+                        .foregroundColor(chartRange == range ? .white : .secondary)
+                        .clipShape(Circle())
+                }
+            }
+        }
+        .padding(4)
+        .background(.ultraThinMaterial)
+        .clipShape(Capsule())
+    }
+
+    private var loadingOverlay: some View {
+        ZStack {
+            Color(UIColor.systemGroupedBackground).opacity(0.8).ignoresSafeArea()
+            VStack(spacing: 24) {
+                ProgressView().scaleEffect(2.0)
+                Text("Aggregating Intelligence…")
+                    .font(.custom("Helvetica", size: 18))
+                    .fontWeight(.bold)
+                    .foregroundColor(.secondary)
             }
         }
     }
@@ -252,103 +201,222 @@ struct BMReportsTab: View {
     }
 }
 
-// MARK: - Report Metric Card
-struct ReportMetricCard: View {
+// MARK: - Global Intelligence Components (Centralized for Stability)
+
+struct LiquidBarButton: View {
+    let icon: String
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(.ultraThinMaterial)
+                .frame(width: 44, height: 44)
+                .overlay(Circle().stroke(.blue.opacity(0.3), lineWidth: 0.5))
+                .overlay(Circle().stroke(.white.opacity(0.1), lineWidth: 0.5))
+            
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.white)
+        }
+        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+    }
+}
+
+struct LiquidActionButton: View {
+    let icon: String
+    let color: Color
+    var body: some View {
+        Button {} label: {
+            ZStack {
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(.ultraThinMaterial)
+                    .frame(height: 72)
+                    .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.2), lineWidth: 0.5))
+                
+                Image(systemName: icon)
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(color)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct NoDataIntelligence: View {
+    let icon: String
+    let message: String
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.system(size: 56))
+                .foregroundColor(.secondary.opacity(0.2))
+            Text(message)
+                .font(.custom("Helvetica", size: 16))
+                .fontWeight(.bold)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
+    }
+}
+
+struct SegmentedMetricCard: View {
     let title: String
     let value: String
     let icon: String
-    let trendText: String
-    let accentColor: Color
-
+    let color: Color
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundColor(accentColor)
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                ZStack {
+                    Circle().fill(color.opacity(0.15)).frame(width: 48, height: 48)
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(color)
+                }
                 Spacer()
-            }
-            Text(value)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundColor(RSMSTheme.Colors.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            HStack(spacing: 4) {
                 Text(title)
-                    .font(RSMSTheme.Typography.caption)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-                Text("·")
-                    .foregroundColor(RSMSTheme.Colors.textTertiary)
-                Text(trendText)
-                    .font(RSMSTheme.Typography.caption)
-                    .foregroundColor(accentColor)
+                    .font(.custom("Helvetica", size: 10))
+                    .fontWeight(.black)
+                    .tracking(1.2)
+                    .foregroundColor(.secondary)
             }
+            
+            Text(value)
+                .font(.custom("Helvetica", size: 32))
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
         }
-        .frame(width: 160)
-        .padding()
-        .background(RSMSTheme.Colors.backgroundElevated)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
-        )
+        .padding(24)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 28))
+        .overlay(RoundedRectangle(cornerRadius: 28).stroke(.white.opacity(0.1), lineWidth: 0.5))
+        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 8)
     }
 }
 
-// MARK: - Target Row
-struct TargetRow: View {
-    let metric: TargetMetric
-
-    private var barColor: Color {
-        metric.isMet ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textPrimary
-    }
-
+struct PerformanceIntelligenceRow: View {
+    let label: String
+    let value: String
+    let icon: String
+    var valueColor: Color = .accentColor
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        HStack(spacing: 20) {
+            ZStack {
+                Circle().fill(.ultraThinMaterial).frame(width: 48, height: 48)
+                Image(systemName: icon).font(.system(size: 20, weight: .bold)).foregroundColor(.accentColor)
+            }
+            Text(label)
+                .font(.custom("Helvetica", size: 18))
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+            Spacer()
+            Text(value)
+                .font(.custom("Helvetica", size: 22))
+                .fontWeight(.bold)
+                .foregroundColor(valueColor)
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 24)
+    }
+}
+
+struct PayoutAuditRow: View {
+    let payout: CommissionPayout
+    var statusColor: Color {
+        switch payout.status {
+        case .pending: return .orange
+        case .approved: return .blue
+        case .paid: return .green
+        }
+    }
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("₹\(payout.commissionAmount.formatted())")
+                    .font(.custom("Helvetica", size: 28))
+                    .fontWeight(.bold)
+                Text("Ending \(payout.periodEnd.formatted(date: .abbreviated, time: .omitted))")
+                    .font(.custom("Helvetica", size: 14))
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Text(payout.status.rawValue.uppercased())
+                .font(.custom("Helvetica", size: 11))
+                .fontWeight(.black)
+                .foregroundColor(statusColor)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(statusColor.opacity(0.12))
+                .clipShape(Capsule())
+        }
+        .padding(.vertical, 12)
+    }
+}
+
+struct ReportMetricSegmentedCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                ZStack {
+                    Circle().fill(color.opacity(0.15)).frame(width: 48, height: 48)
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(color)
+                }
+                Spacer()
+                Text(title)
+                    .font(.custom("Helvetica", size: 10))
+                    .fontWeight(.black)
+                    .tracking(1.2)
+                    .foregroundColor(.secondary)
+            }
+            
+            Text(value)
+                .font(.custom("Helvetica", size: 32))
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+        }
+        .padding(24)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 28))
+        .overlay(RoundedRectangle(cornerRadius: 28).stroke(.white.opacity(0.1), lineWidth: 0.5))
+        .shadow(color: Color.black.opacity(0.04), radius: 15, x: 0, y: 8)
+    }
+}
+
+struct TargetIntelligenceRow: View {
+    let metric: TargetMetric
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text(metric.label)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .font(.custom("Helvetica", size: 20))
+                    .fontWeight(.bold)
                 Spacer()
                 Text("\(Int(metric.progress * 100))%")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(barColor)
-            }
-            HStack {
-                Text("Target: \(shortFormat(metric.target))")
-                    .font(.caption)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-                Spacer()
-                Text("Actual: \(shortFormat(metric.actual))")
-                    .font(.caption)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .font(.custom("Helvetica", size: 24))
+                    .fontWeight(.bold)
+                    .foregroundColor(metric.isMet ? .accentColor : .orange)
             }
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(RSMSTheme.Colors.surfacePrimary)
-                        .frame(height: 5)
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(barColor)
-                        .frame(width: geo.size.width * min(metric.progress, 1.0), height: 5)
-                        .animation(.easeOut(duration: 0.8), value: metric.progress)
+                    Capsule().fill(Color(UIColor.tertiarySystemGroupedBackground)).frame(height: 12)
+                    Capsule().fill(metric.isMet ? Color.accentColor : Color.orange)
+                        .frame(width: max(0, geo.size.width * min(metric.progress, 1.0)), height: 12)
                 }
             }
-            .frame(height: 5)
+            .frame(height: 12)
         }
-        .padding(12)
-        .background(RSMSTheme.Colors.backgroundDeep)
-        .cornerRadius(10)
+        .padding(24)
+        .background(Color(UIColor.tertiarySystemGroupedBackground).opacity(0.4))
+        .clipShape(RoundedRectangle(cornerRadius: 24))
     }
-
-    private func shortFormat(_ val: Double) -> String {
-        if val >= 100_000 { return "₹\(String(format: "%.1fL", val / 100_000))" }
-        if val >= 1_000 { return "₹\(String(format: "%.1fK", val / 1_000))" }
-        return String(format: "%.0f", val)
-    }
-}
-
-#Preview {
-    BMReportsTab()
-        .environment(AppState())
 }

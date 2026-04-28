@@ -17,7 +17,7 @@ struct BMSalesTab: View {
             )
             .navigationTitle("VIP & Events")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
+            .toolbarBackground(Color(UIColor.systemGroupedBackground), for: .navigationBar)
             
         }
     }

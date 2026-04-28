@@ -49,7 +49,7 @@ struct BoutiqueManagerDashboard: View {
                 }
                 .tag(4)
         }
-        .tint(RSMSTheme.Colors.accentGold)
+        .tint(.accentColor)
         .task {
             async let storesLoad: () = appState.loadStores()
             async let productsLoad: () = appState.fetchProducts()

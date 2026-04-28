@@ -2,232 +2,113 @@
 //  AddEmployeeView.swift
 //  Group5_RSMS
 //
+//  Premium Add Employee View - Native iPadOS style.
+//  Enhanced with symbol-only toolbars and professional intelligence styling.
+//
 
 import SwiftUI
 
-// MARK: - Custom Dropdown Sheet (works inside any .sheet presentation)
-struct OptionPickerSheet<T: Hashable>: View {
-    let title: String
-    let options: [T]
-    let displayText: (T) -> String
-    @Binding var selected: T
-    @Binding var isPresented: Bool
-
-    var body: some View {
-        NavigationStack {
-            List(options, id: \.self) { option in
-                Button {
-                    selected = option
-                    isPresented = false
-                } label: {
-                    HStack {
-                        Text(displayText(option))
-                            .foregroundColor(.primary)
-                        Spacer()
-                        if option == selected {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.accentColor)
-                        }
-                    }
-                }
-            }
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { isPresented = false }
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
-    }
-}
-
-// MARK: - Reusable Dropdown Row
-struct DropdownRow: View {
-    let label: String
-    let value: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Text(label)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-                    .font(.subheadline)
-                Spacer()
-                Text(value)
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
-                    .font(.subheadline)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-            }
-            .padding()
-            .background(RSMSTheme.Colors.backgroundDeep)
-            .cornerRadius(12)
-        }
-    }
-}
-
-// MARK: - AddEmployeeView
 struct AddEmployeeView: View {
-    let boutiqueId: UUID
+    @Environment(\.dismiss) private var dismiss
     @ObservedObject var staffVM: StaffViewModel
     @ObservedObject var vm: AddEmployeeViewModel
-
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var showRolePicker = false
-    @State private var showCountryCodePicker = false
-
+    let boutiqueId: UUID
+    
     var body: some View {
         NavigationStack {
-            ZStack {
-                RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 24) {
-
-                        // Avatar
+            SwiftUI.Form {
+                Section {
+                    HStack {
+                        Spacer()
                         ZStack {
                             Circle()
-                                .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
-                                .frame(width: 80, height: 80)
-                            Text(vm.name.prefix(1).uppercased().isEmpty ? "?" : String(vm.name.prefix(1).uppercased()))
-                                .font(.system(size: 36, weight: .bold))
-                                .foregroundColor(RSMSTheme.Colors.accentGold)
+                                .fill(.ultraThinMaterial)
+                                .font(.custom("Helvetica", size: 11))
+                                .fontWeight(.black)
+                                .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
+                            Image(systemName: "person.fill.badge.plus")
+                                .font(.custom("Helvetica", size: 40))
+                                .foregroundColor(.accentColor)
                         }
-                        .padding(.top, 16)
-
-                        // Personal Details
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Personal Details")
-                                .font(.headline)
-                                .foregroundColor(RSMSTheme.Colors.textPrimary)
-
-                            TextField("Full Name *", text: $vm.name)
-                                .padding()
-                                .background(RSMSTheme.Colors.backgroundDeep)
-                                .cornerRadius(12)
-
-                            // Phone with country code
-                            HStack(spacing: 8) {
-                                // Country code tap button
-                                Button {
-                                    showCountryCodePicker = true
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Text(vm.countryCode)
-                                            .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                            .font(.subheadline)
-                                        Image(systemName: "chevron.down")
-                                            .font(.caption2)
-                                            .foregroundColor(RSMSTheme.Colors.textSecondary)
-                                    }
-                                    .padding(.vertical, 14)
-                                    .padding(.horizontal, 10)
-                                    .background(RSMSTheme.Colors.backgroundDeep)
-                                    .cornerRadius(12)
-                                }
-
-                                TextField("Phone Number", text: $vm.phone)
-                                    .keyboardType(.phonePad)
-                                    .padding()
-                                    .background(RSMSTheme.Colors.backgroundDeep)
-                                    .cornerRadius(12)
-                            }
-
-                            TextField("Email", text: $vm.email)
-                                .keyboardType(.emailAddress)
-                                .textInputAutocapitalization(.never)
-                                .padding()
-                                .background(RSMSTheme.Colors.backgroundDeep)
-                                .cornerRadius(12)
-                        }
-
-                        // Employment Details
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Employment Details")
-                                .font(.headline)
-                                .foregroundColor(RSMSTheme.Colors.textPrimary)
-
-                            DropdownRow(label: "Role *", value: vm.role) {
-                                showRolePicker = true
-                            }
-
-                            TextField("Salary (₹)", text: $vm.salary)
-                                .keyboardType(.decimalPad)
-                                .padding()
-                                .background(RSMSTheme.Colors.backgroundDeep)
-                                .cornerRadius(12)
-
-                            DatePicker("Joining Date", selection: $vm.joiningDate, displayedComponents: .date)
-                                .padding()
-                                .background(RSMSTheme.Colors.backgroundDeep)
-                                .cornerRadius(12)
-                                
-                        }
-
-                        if let error = staffVM.errorMessage {
-                            Text(error)
-                                .font(.caption)
-                                .foregroundColor(.red)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-
-                        Spacer(minLength: 40)
-
+                        Spacer()
                     }
-                    .padding()
+                    .padding(.vertical, 20)
+                    .listRowBackground(Color.clear)
+                } header: {
+                    Text("Profile Visual")
+                }
+                
+                Section {
+                    TextField("Full Name", text: $vm.name)
+                        .font(.headline)
+                    
+                    HStack {
+                        Picker("Code", selection: $vm.countryCode) {
+                            ForEach(vm.countryCodes, id: \.self) { code in
+                                Text(code).tag(code)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 80)
+                        
+                        TextField("Primary Contact", text: $vm.phone)
+                            .keyboardType(.phonePad)
+                    }
+                    
+                    TextField("Digital Correspondence", text: $vm.email)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                } header: {
+                    Text("Specialist Intelligence")
+                }
+                
+                Section {
+                    Picker("Functional Role", selection: $vm.role) {
+                        ForEach(vm.roles, id: \.self) { role in
+                            Text(role).tag(role)
+                        }
+                    }
+                    
+                    TextField("Base Salary (₹)", text: $vm.salary)
+                        .keyboardType(.decimalPad)
+                    
+                    DatePicker("Association Date", selection: $vm.joiningDate, displayedComponents: .date)
+                } header: {
+                    Text("Boutique Role & Compensation")
                 }
             }
-            .navigationTitle("Add Employee")
+            .navigationTitle("New Specialist")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    if staffVM.isLoading {
-                        ProgressView()
-                    } else {
-                        Button("Save") {
-                            guard !vm.name.isEmpty else { return }
-                            Task {
-                                let employee = vm.createEmployee(boutiqueId: boutiqueId)
-                                await staffVM.addEmployee(employee, boutiqueId: boutiqueId)
-                                if staffVM.errorMessage == nil {
-                                    dismiss()
-                                }
-                            }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button { dismiss() } label: {
+                        ZStack {
+                            Circle().fill(.ultraThinMaterial).frame(width: 36, height: 36)
+                            Image(systemName: "xmark").font(.custom("Helvetica", size: 14)).fontWeight(.bold)
                         }
-                        .disabled(vm.name.isEmpty)
                     }
+                    .foregroundColor(.primary)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        saveEmployee()
+                    } label: {
+                        ZStack {
+                            Circle().fill(vm.name.isEmpty ? Color.secondary.opacity(0.1) : Color.accentColor).frame(width: 36, height: 36)
+                            Image(systemName: "checkmark").font(.custom("Helvetica", size: 14)).fontWeight(.bold).foregroundColor(.white)
+                        }
+                    }
+                    .disabled(vm.name.isEmpty || vm.role.isEmpty)
                 }
             }
-            // Role picker sheet — presented independently from parent sheet
-            .sheet(isPresented: $showRolePicker) {
-                OptionPickerSheet(
-                    title: "Select Role",
-                    options: vm.roles,
-                    displayText: { $0 },
-                    selected: $vm.role,
-                    isPresented: $showRolePicker
-                )
-            }
-            // Country code picker sheet
-            .sheet(isPresented: $showCountryCodePicker) {
-                OptionPickerSheet(
-                    title: "Country Code",
-                    options: vm.countryCodes,
-                    displayText: { $0 },
-                    selected: $vm.countryCode,
-                    isPresented: $showCountryCodePicker
-                )
-            }
+        }
+    }
+    
+    private func saveEmployee() {
+        let newEmployee = vm.createEmployee(boutiqueId: boutiqueId)
+        Task {
+            await staffVM.addEmployee(newEmployee, boutiqueId: boutiqueId)
+            dismiss()
         }
     }
 }

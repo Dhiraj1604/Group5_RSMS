@@ -14,16 +14,16 @@ struct SoldProductsListView: View {
     
     var body: some View {
         ZStack {
-            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
             
             if products.isEmpty {
                 VStack(spacing: 20) {
                     Image(systemName: "cart.badge.minus")
                         .font(.system(size: 60))
-                        .foregroundStyle(RSMSTheme.Colors.textSecondary.opacity(0.5))
+                        .foregroundStyle(Color.secondary.opacity(0.5))
                     Text("No sales recorded this month")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        .foregroundColor(Color.secondary)
                 }
             } else {
                 ScrollView {
@@ -32,7 +32,7 @@ struct SoldProductsListView: View {
                             soldProductRow(product)
                         }
                     }
-                    .padding(RSMSTheme.Spacing.horizontalMargin)
+                    .padding(20)
                     .padding(.top, 20)
                 }
             }
@@ -52,37 +52,37 @@ struct SoldProductsListView: View {
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
                         } else {
-                            RSMSTheme.Colors.backgroundElevated
+                            Color(UIColor.secondarySystemGroupedBackground)
                         }
                     }
                 } else {
-                    RSMSTheme.Colors.backgroundElevated
+                    Color(UIColor.secondarySystemGroupedBackground)
                 }
             }
             .frame(width: 60, height: 60)
             .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(UIColor.separator).opacity(0.5), lineWidth: 0.5))
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(product.name)
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .foregroundColor(Color.primary)
                 
                 Text(product.displayQuantity)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
+                    .foregroundColor(Color.accentColor)
             }
             
             Spacer()
             
             Text(String(format: "$%.2f", product.totalRevenue))
                 .font(.system(size: 14, weight: .bold))
-                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                .foregroundColor(Color.primary)
         }
         .padding(12)
-        .background(RSMSTheme.Colors.backgroundDeep)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(16)
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(UIColor.separator).opacity(0.5), lineWidth: 0.5))
     }
 }
 
@@ -93,16 +93,16 @@ struct FallbackItemsListView: View {
     
     var body: some View {
         ZStack {
-            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
             
             if items.isEmpty {
                 VStack(spacing: 20) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 60))
-                        .foregroundStyle(RSMSTheme.Colors.success.opacity(0.5))
+                        .foregroundStyle(Color.green.opacity(0.5))
                     Text("Fresh inventory! No fallback items.")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        .foregroundColor(Color.secondary)
                 }
             } else {
                 ScrollView {
@@ -111,7 +111,7 @@ struct FallbackItemsListView: View {
                             fallbackItemRow(item)
                         }
                     }
-                    .padding(RSMSTheme.Spacing.horizontalMargin)
+                    .padding(20)
                     .padding(.top, 20)
                 }
             }
@@ -136,25 +136,25 @@ struct FallbackItemsListView: View {
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
                         } else {
-                            RSMSTheme.Colors.backgroundElevated
+                            Color(UIColor.secondarySystemGroupedBackground)
                         }
                     }
                 } else {
-                    RSMSTheme.Colors.backgroundElevated
+                    Color(UIColor.secondarySystemGroupedBackground)
                 }
             }
             .frame(width: 60, height: 60)
             .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(UIColor.separator).opacity(0.5), lineWidth: 0.5))
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name)
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .foregroundColor(Color.primary)
                 
                 Text(item.sku)
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
+                    .foregroundColor(Color.accentColor)
             }
             
             Spacer()
@@ -162,15 +162,15 @@ struct FallbackItemsListView: View {
             VStack(alignment: .trailing, spacing: 4) {
                 Text("\(daysOnFloor) days")
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(RSMSTheme.Colors.error)
+                    .foregroundColor(Color.red)
                 Text("on floor")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .foregroundColor(Color.secondary)
             }
         }
         .padding(12)
-        .background(RSMSTheme.Colors.backgroundDeep)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(16)
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(UIColor.separator).opacity(0.5), lineWidth: 0.5))
     }
 }

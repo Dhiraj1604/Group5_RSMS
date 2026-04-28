@@ -5,7 +5,7 @@ struct DormantStaffReportView: View {
     
     var body: some View {
         ZStack {
-            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
             
             ScrollView {
                 if dormantStaff.isEmpty {
@@ -13,24 +13,24 @@ struct DormantStaffReportView: View {
                         Spacer().frame(height: 100)
                         Image(systemName: "person.badge.shield.checkmark.fill")
                             .font(.system(size: 60))
-                            .foregroundColor(RSMSTheme.Colors.success)
+                            .foregroundColor(Color.green)
                         Text("All staff are active")
-                            .font(RSMSTheme.Typography.heading3)
-                            .foregroundColor(RSMSTheme.Colors.textPrimary)
+                            .font(Font.title2)
+                            .foregroundColor(Color.primary)
                         Text("Everyone has recorded sales this month.")
-                            .font(RSMSTheme.Typography.bodyCopy2)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            .font(Font.subheadline)
+                            .foregroundColor(Color.secondary)
                     }
                     .padding()
                 } else {
                     VStack(alignment: .leading, spacing: 20) {
                         Text("Dormant Staff")
-                            .font(RSMSTheme.Typography.heading3)
-                            .foregroundColor(RSMSTheme.Colors.textPrimary)
+                            .font(Font.title2)
+                            .foregroundColor(Color.primary)
                         
                         Text("The following staff members have not recorded any sales during the current performance period.")
-                            .font(RSMSTheme.Typography.bodyCopy2)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            .font(Font.subheadline)
+                            .foregroundColor(Color.secondary)
                         
                         LazyVStack(spacing: 12) {
                             ForEach(dormantStaff) { employee in
@@ -53,32 +53,32 @@ struct DormantEmployeeCard: View {
     var body: some View {
         HStack(spacing: 16) {
             Circle()
-                .fill(RSMSTheme.Colors.surfacePrimary)
+                .fill(Color(UIColor.secondarySystemGroupedBackground))
                 .frame(width: 50, height: 50)
                 .overlay(
                     Text(employee.name.prefix(1))
                         .font(.title3.bold())
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                        .foregroundColor(Color.accentColor)
                 )
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(employee.name)
-                    .font(RSMSTheme.Typography.bodyCopy1)
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .font(Font.body)
+                    .foregroundColor(Color.primary)
                 
                 Text(employee.role)
-                    .font(RSMSTheme.Typography.caption)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .font(Font.caption)
+                    .foregroundColor(Color.secondary)
             }
             
             Spacer()
         }
         .padding()
-        .background(RSMSTheme.Colors.backgroundElevated)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+                .stroke(Color(UIColor.separator).opacity(0.5), lineWidth: 1)
         )
     }
 }

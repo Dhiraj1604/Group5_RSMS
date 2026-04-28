@@ -12,7 +12,7 @@ struct FloorQuantitySheet: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     ScrollView {
@@ -38,10 +38,10 @@ struct FloorQuantitySheet: View {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(product.name)
                                         .font(.system(size: 18, weight: .bold))
-                                        .foregroundColor(RSMSTheme.Colors.textPrimary)
+                                        .foregroundColor(Color.primary)
                                     Text(product.sku)
                                         .font(.system(size: 13, weight: .medium, design: .monospaced))
-                                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                                        .foregroundColor(Color.accentColor)
                                 }
                                 Spacer()
                             }
@@ -52,16 +52,16 @@ struct FloorQuantitySheet: View {
                             HStack {
                                 Text(product.isOnFloor ? "Remove from Floor" : "Place on Floor")
                                     .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                                    .foregroundColor(Color.secondary)
                                 Spacer()
                                 HStack(spacing: 4) {
                                     Text("Available Stock:")
                                     Text("\(product.currentStock)")
                                         .fontWeight(.bold)
-                                        .foregroundColor(product.currentStock == 0 ? RSMSTheme.Colors.error : RSMSTheme.Colors.success)
+                                        .foregroundColor(product.currentStock == 0 ? Color.red : Color.green)
                                 }
                                 .font(.system(size: 14))
-                                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                                .foregroundColor(Color.secondary)
                             }
                             .padding(.horizontal, 20)
                             
@@ -69,7 +69,7 @@ struct FloorQuantitySheet: View {
                             VStack(spacing: 16) {
                                 Text("SELECT QUANTITY")
                                     .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(RSMSTheme.Colors.textTertiary)
+                                    .foregroundColor(Color.secondary)
                                     .tracking(1.0)
                                 
                                 HStack(spacing: 30) {
@@ -78,12 +78,12 @@ struct FloorQuantitySheet: View {
                                     } label: {
                                         Image(systemName: "minus.circle.fill")
                                             .font(.system(size: 32))
-                                            .foregroundColor(quantity > 1 ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textTertiary)
+                                            .foregroundColor(quantity > 1 ? Color.accentColor : Color.secondary)
                                     }
                                     
                                     Text("\(quantity)")
                                         .font(.system(size: 40, weight: .black, design: .rounded))
-                                        .foregroundColor(RSMSTheme.Colors.textPrimary)
+                                        .foregroundColor(Color.primary)
                                         .frame(minWidth: 60)
                                     
                                     Button {
@@ -91,23 +91,23 @@ struct FloorQuantitySheet: View {
                                     } label: {
                                         Image(systemName: "plus.circle.fill")
                                             .font(.system(size: 32))
-                                            .foregroundColor(RSMSTheme.Colors.accentGold)
+                                            .foregroundColor(Color.accentColor)
                                     }
                                 }
                             }
                             .padding(.vertical, 32)
                             .frame(maxWidth: .infinity)
-                            .background(RSMSTheme.Colors.backgroundElevated)
+                            .background(Color(UIColor.secondarySystemGroupedBackground))
                             .cornerRadius(20)
                             .padding(.horizontal, 20)
                             
                             if quantity > product.currentStock && !product.isOnFloor {
                                 HStack(spacing: 8) {
                                     Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundColor(RSMSTheme.Colors.error)
+                                        .foregroundColor(Color.red)
                                     Text("Quantity exceeds available stock (\(product.currentStock))")
                                         .font(.system(size: 13, weight: .medium))
-                                        .foregroundColor(RSMSTheme.Colors.error)
+                                        .foregroundColor(Color.red)
                                 }
                                 .padding(.horizontal, 20)
                             }
@@ -132,7 +132,7 @@ struct FloorQuantitySheet: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(RSMSTheme.Colors.goldGradient)
+                        .background(Color.accentColor.gradient)
                         .foregroundColor(.black)
                         .cornerRadius(16)
                     }
@@ -147,7 +147,7 @@ struct FloorQuantitySheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        .foregroundColor(Color.secondary)
                 }
             }
             .alert("Insufficient Stock", isPresented: $showAlert) {

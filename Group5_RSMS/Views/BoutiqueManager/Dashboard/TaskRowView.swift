@@ -22,14 +22,14 @@ struct TaskRowView: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(task.title)
-                    .font(RSMSTheme.Typography.bodyCopy1)
+                    .font(Font.body)
                     .strikethrough(task.status == .verified)
-                    .foregroundColor(task.status == .verified ? RSMSTheme.Colors.textSecondary : RSMSTheme.Colors.textPrimary)
+                    .foregroundColor(task.status == .verified ? Color.secondary : Color.primary)
                 
                 if let desc = task.description, !desc.isEmpty {
                     Text(desc)
-                        .font(RSMSTheme.Typography.bodyCopy2)
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        .font(Font.subheadline)
+                        .foregroundColor(Color.secondary)
                         .lineLimit(2)
                 }
                 
@@ -37,17 +37,17 @@ struct TaskRowView: View {
                     if let staff = staffName {
                         Label(staff, systemImage: "person.text.rectangle")
                             .font(.caption)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            .foregroundColor(Color.secondary)
                     } else {
                         Label("Unassigned", systemImage: "person.crop.circle.badge.questionmark")
                             .font(.caption)
-                            .foregroundColor(RSMSTheme.Colors.error)
+                            .foregroundColor(Color.red)
                     }
                     
                     if let due = task.dueDate {
                         Label(DateFormatter.shortDate.string(from: due), systemImage: "calendar")
                             .font(.caption)
-                            .foregroundColor(task.isOverdue ? RSMSTheme.Colors.error : RSMSTheme.Colors.textSecondary)
+                            .foregroundColor(task.isOverdue ? Color.red : Color.secondary)
                     }
                 }
                 .padding(.top, 4)
@@ -56,7 +56,7 @@ struct TaskRowView: View {
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 16)
-        .background(RSMSTheme.Colors.surfacePrimary)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
@@ -71,9 +71,9 @@ struct TaskRowView: View {
     
     private func iconColor(for status: TaskStatus) -> Color {
         switch status {
-        case .pending: return RSMSTheme.Colors.textSecondary
-        case .completedByStaff: return RSMSTheme.Colors.accentGold
-        case .verified: return RSMSTheme.Colors.success
+        case .pending: return Color.secondary
+        case .completedByStaff: return Color.accentColor
+        case .verified: return Color.green
         }
     }
 }

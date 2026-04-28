@@ -22,10 +22,10 @@ struct TransferSheet: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: RSMSTheme.Spacing.xl) {
+                    VStack(spacing: 24) {
 
                         // Product header
                         productHeader
@@ -53,15 +53,15 @@ struct TransferSheet: View {
                             errorBanner(error)
                         }
 
-                        Spacer().frame(height: RSMSTheme.Spacing.xxl)
+                        Spacer().frame(height: 32)
                     }
-                    .padding(.horizontal, RSMSTheme.Spacing.lg)
-                    .padding(.top, RSMSTheme.Spacing.lg)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
                 }
             }
             .navigationTitle("Request Stock")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
+            .toolbarBackground(Color(UIColor.systemGroupedBackground), for: .navigationBar)
             
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -70,7 +70,7 @@ struct TransferSheet: View {
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            .foregroundColor(Color.secondary)
                     }
                 }
             }
@@ -96,32 +96,32 @@ struct TransferSheet: View {
     // MARK: - Product Header
 
     private var productHeader: some View {
-        VStack(spacing: RSMSTheme.Spacing.md) {
+        VStack(spacing: 12) {
             HStack(spacing: 14) {
                 // Product icon
                 ZStack {
-                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                        .fill(RSMSTheme.Colors.error.opacity(0.10))
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.red.opacity(0.10))
                         .frame(width: 52, height: 52)
                         .overlay(
-                            RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                                .stroke(RSMSTheme.Colors.error.opacity(0.25), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.red.opacity(0.25), lineWidth: 1)
                         )
 
                     Image(systemName: "shippingbox.fill")
                         .font(.system(size: 22, weight: .medium))
-                        .foregroundColor(RSMSTheme.Colors.error)
+                        .foregroundColor(Color.red)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(alert.productName)
                         .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(RSMSTheme.Colors.textPrimary)
+                        .foregroundColor(Color.primary)
                         .lineLimit(2)
 
                     Text(alert.productSku)
                         .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                        .foregroundColor(Color.accentColor)
                 }
 
                 Spacer()
@@ -130,10 +130,10 @@ struct TransferSheet: View {
                 VStack(spacing: 2) {
                     Text("\(alert.stockQuantity)")
                         .font(.system(size: 24, weight: .black, design: .rounded))
-                        .foregroundColor(RSMSTheme.Colors.error)
+                        .foregroundColor(Color.red)
                     Text("in stock")
                         .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(RSMSTheme.Colors.error.opacity(0.7))
+                        .foregroundColor(Color.red.opacity(0.7))
                         .textCase(.uppercase)
                         .tracking(0.4)
                 }
@@ -143,10 +143,10 @@ struct TransferSheet: View {
             HStack(spacing: 6) {
                 Image(systemName: "mappin.circle.fill")
                     .font(.system(size: 11))
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
+                    .foregroundColor(Color.accentColor)
                 Text("Your Boutique: \(currentStoreName)")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .foregroundColor(Color.secondary)
                 Spacer()
             }
         }
@@ -156,18 +156,18 @@ struct TransferSheet: View {
     // MARK: - Source Store Section
 
     private var sourceStoreSection: some View {
-        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 6) {
                 Image(systemName: "building.2.fill")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(RSMSTheme.Colors.goldGradient)
+                    .foregroundStyle(Color.accentColor.gradient)
                 Text("Available Sources")
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .foregroundColor(Color.primary)
                 Spacer()
                 Text("Stock > \(kHighStockThreshold)")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(RSMSTheme.Colors.textTertiary)
+                    .foregroundColor(Color.secondary)
                     .textCase(.uppercase)
                     .tracking(0.5)
             }
@@ -177,12 +177,12 @@ struct TransferSheet: View {
                     Spacer()
                     VStack(spacing: 10) {
                         ProgressView()
-                            .tint(RSMSTheme.Colors.accentGold)
+                            .tint(Color.accentColor)
                         Text("Finding stores with stock…")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            .foregroundColor(Color.secondary)
                     }
-                    .padding(.vertical, RSMSTheme.Spacing.xl)
+                    .padding(.vertical, 24)
                     Spacer()
                 }
             } else if viewModel.transferSources.isEmpty {
@@ -208,13 +208,13 @@ struct TransferSheet: View {
                 ZStack {
                     Circle()
                         .stroke(
-                            isSelected ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.border,
+                            isSelected ? Color.accentColor : Color(UIColor.separator),
                             lineWidth: 2
                         )
                         .frame(width: 22, height: 22)
                     if isSelected {
                         Circle()
-                            .fill(RSMSTheme.Colors.accentGold)
+                            .fill(Color.accentColor)
                             .frame(width: 12, height: 12)
                     }
                 }
@@ -222,10 +222,10 @@ struct TransferSheet: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(source.storeName)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(RSMSTheme.Colors.textPrimary)
+                        .foregroundColor(Color.primary)
                     Text(source.storeCity)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        .foregroundColor(Color.secondary)
                 }
 
                 Spacer()
@@ -234,10 +234,10 @@ struct TransferSheet: View {
                 VStack(spacing: 2) {
                     Text("\(source.availableQuantity)")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(RSMSTheme.Colors.success)
+                        .foregroundColor(Color.green)
                     Text("available")
                         .font(.system(size: 8, weight: .semibold))
-                        .foregroundColor(RSMSTheme.Colors.success.opacity(0.7))
+                        .foregroundColor(Color.green.opacity(0.7))
                         .textCase(.uppercase)
                         .tracking(0.4)
                 }
@@ -245,16 +245,16 @@ struct TransferSheet: View {
             .padding(14)
             .background(
                 isSelected
-                    ? RSMSTheme.Colors.accentGold.opacity(0.06)
-                    : RSMSTheme.Colors.backgroundDeep
+                    ? Color.accentColor.opacity(0.06)
+                    : Color(UIColor.secondarySystemGroupedBackground)
             )
-            .cornerRadius(RSMSTheme.Radius.md)
+            .cornerRadius(12)
             .overlay(
-                RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                RoundedRectangle(cornerRadius: 12)
                     .stroke(
                         isSelected
-                            ? RSMSTheme.Colors.accentGold.opacity(0.4)
-                            : RSMSTheme.Colors.borderLight,
+                            ? Color.accentColor.opacity(0.4)
+                            : Color(UIColor.separator).opacity(0.5),
                         lineWidth: isSelected ? 1.5 : 0.5
                     )
             )
@@ -266,28 +266,28 @@ struct TransferSheet: View {
         VStack(spacing: 12) {
             Image(systemName: "building.2.crop.circle")
                 .font(.system(size: 32, weight: .light))
-                .foregroundColor(RSMSTheme.Colors.textTertiary)
+                .foregroundColor(Color.secondary)
             Text("No stores have enough stock\nfor a transfer right now.")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                .foregroundColor(Color.secondary)
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, RSMSTheme.Spacing.xl)
+        .padding(.vertical, 24)
     }
 
     // MARK: - Quantity Selector
 
     private var quantitySection: some View {
-        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Transfer Quantity")
                 .font(.system(size: 13, weight: .bold))
-                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                .foregroundColor(Color.primary)
                 .textCase(.uppercase)
                 .tracking(0.6)
 
-            HStack(spacing: RSMSTheme.Spacing.lg) {
+            HStack(spacing: 16) {
                 // Decrease
                 Button {
                     if transferQuantity > 1 { transferQuantity -= 1 }
@@ -296,15 +296,15 @@ struct TransferSheet: View {
                         .font(.system(size: 28))
                         .foregroundColor(
                             transferQuantity > 1
-                                ? RSMSTheme.Colors.accentGold
-                                : RSMSTheme.Colors.textTertiary
+                                ? Color.accentColor
+                                : Color.secondary
                         )
                 }
                 .disabled(transferQuantity <= 1)
 
                 Text("\(transferQuantity)")
                     .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .foregroundColor(Color.primary)
                     .frame(minWidth: 50)
 
                 // Increase
@@ -316,7 +316,7 @@ struct TransferSheet: View {
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 28))
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                        .foregroundColor(Color.accentColor)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -339,7 +339,7 @@ struct TransferSheet: View {
                 )
             }
         } label: {
-            HStack(spacing: RSMSTheme.Spacing.sm) {
+            HStack(spacing: 8) {
                 if viewModel.isTransferring {
                     ProgressView()
                         .tint(.black)
@@ -364,23 +364,23 @@ struct TransferSheet: View {
         HStack(spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(RSMSTheme.Colors.success)
+                .foregroundColor(Color.green)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Request Sent")
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(RSMSTheme.Colors.success)
+                    .foregroundColor(Color.green)
                 Text("\(transferQuantity) unit(s) of \(alert.productName) requested.")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .foregroundColor(Color.secondary)
             }
             Spacer()
         }
         .padding(14)
-        .background(RSMSTheme.Colors.success.opacity(0.08))
-        .cornerRadius(RSMSTheme.Radius.md)
+        .background(Color.green.opacity(0.08))
+        .cornerRadius(12)
         .overlay(
-            RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                .stroke(RSMSTheme.Colors.success.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.green.opacity(0.3), lineWidth: 1)
         )
         .transition(.opacity.combined(with: .scale(scale: 0.95)))
     }
@@ -391,18 +391,18 @@ struct TransferSheet: View {
         HStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(RSMSTheme.Colors.error)
+                .foregroundColor(Color.red)
             Text(message)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(RSMSTheme.Colors.error)
+                .foregroundColor(Color.red)
             Spacer()
         }
         .padding(14)
-        .background(RSMSTheme.Colors.error.opacity(0.08))
-        .cornerRadius(RSMSTheme.Radius.md)
+        .background(Color.red.opacity(0.08))
+        .cornerRadius(12)
         .overlay(
-            RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                .stroke(RSMSTheme.Colors.error.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.red.opacity(0.3), lineWidth: 1)
         )
     }
 }

@@ -2,7 +2,8 @@
 //  FullReportView.swift
 //  Group5_RSMS
 //
-//  Created by Apple on 24/04/26.
+//  Premium Weekly Intelligence Report - Native iPadOS style.
+//  Enhanced with symbol-only toolbars and professional intelligence styling.
 //
 
 import SwiftUI
@@ -25,114 +26,125 @@ struct FullReportView: View {
 
     private var shareText: String {
         """
-        📊 Weekly Performance Report
+        📊 Weekly Performance Intelligence
         \(storeName) · \(weekRange)
 
         Total Sales: ₹\(String(format: "%.0f", vm.totalSales))
         Revenue: ₹\(String(format: "%.0f", vm.totalRevenue))
         Footfall: \(vm.footfall)
         Targets Met: \(vm.targetsMet) / \(vm.targetMetrics.count)
-        Targets Missed: \(vm.targetsMissed) / \(vm.targetMetrics.count)
         """
     }
 
     var body: some View {
         NavigationStack {
             ZStack {
-                RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 40) {
 
                         // MARK: - Header
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Text(storeName)
-                                .font(RSMSTheme.Typography.heading2)
-                                .foregroundColor(RSMSTheme.Colors.textPrimary)
-                            Text(weekRange)
-                                .font(RSMSTheme.Typography.bodyCopy1)
-                                .foregroundColor(RSMSTheme.Colors.accentGold)
+                                .font(.custom("Helvetica", size: 40))
+                                .fontWeight(.bold)
+                                .foregroundColor(.primary)
+                            
+                            HStack {
+                                Image(systemName: "calendar")
+                                Text(weekRange)
+                                    .font(.custom("Helvetica", size: 18))
+                                    .fontWeight(.bold)
+                            }
+                            .foregroundColor(.accentColor)
                         }
+                        .padding(.top, 24)
 
-                        Divider().background(RSMSTheme.Colors.border)
+                        // MARK: - Summary Grid (Segmented Style)
+                        VStack(alignment: .leading, spacing: 24) {
+                            Text("Consolidated Intelligence")
+                                .font(.custom("Helvetica", size: 24))
+                                .fontWeight(.bold)
 
-                        // MARK: - Summary Grid
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("Consolidated Summary")
-                                .font(RSMSTheme.Typography.heading4)
-                                .foregroundColor(RSMSTheme.Colors.textPrimary)
-
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                                SummaryMetricCard(title: "Total Sales", value: "₹\(formatLargeNumber(vm.totalSales))", icon: "indianrupeesign.circle.fill", color: RSMSTheme.Colors.accentGold)
-                                SummaryMetricCard(title: "Revenue", value: "₹\(formatLargeNumber(vm.totalRevenue))", icon: "chart.line.uptrend.xyaxis.circle.fill", color: RSMSTheme.Colors.success)
-                                SummaryMetricCard(title: "Footfall", value: "\(vm.footfall)", icon: "figure.walk.circle.fill", color: RSMSTheme.Colors.accentGoldLight)
-                                SummaryMetricCard(title: "Total Orders", value: "\(vm.totalOrders)", icon: "bag.circle.fill", color: RSMSTheme.Colors.warning)
+                            LazyVGrid(columns: [GridItem(.flexible(), spacing: 20), GridItem(.flexible(), spacing: 20)], spacing: 20) {
+                                SummaryIntelligenceCard(title: "TOTAL SALES", value: "₹\(formatLargeNumber(vm.totalSales))", icon: "indianrupeesign", color: .accentColor)
+                                SummaryIntelligenceCard(title: "NET REVENUE", value: "₹\(formatLargeNumber(vm.totalRevenue))", icon: "chart.line.uptrend.xyaxis", color: .green)
+                                SummaryIntelligenceCard(title: "STORE FOOTFALL", value: "\(vm.footfall)", icon: "figure.walk", color: .blue)
+                                SummaryIntelligenceCard(title: "ORDER VOLUME", value: "\(vm.totalOrders)", icon: "bag.fill", color: .orange)
                             }
                         }
 
-                        Divider().background(RSMSTheme.Colors.border)
-
-                        // MARK: - Targets Summary
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("Target Achievement")
-                                .font(RSMSTheme.Typography.heading4)
-                                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                        // MARK: - Target Achievement
+                        VStack(alignment: .leading, spacing: 24) {
+                            Text("Strategic Target Matrix")
+                                .font(.custom("Helvetica", size: 24))
+                                .fontWeight(.bold)
 
                             HStack(spacing: 16) {
-                                TargetResultBadge(label: "Met", count: vm.targetsMet, color: RSMSTheme.Colors.success)
-                                TargetResultBadge(label: "Missed", count: vm.targetsMissed, color: RSMSTheme.Colors.error)
+                                TargetResultBadge(label: "OBJECTIVES MET", count: vm.targetsMet, color: .green)
+                                TargetResultBadge(label: "OBJECTIVES MISSED", count: vm.targetsMissed, color: .red)
                             }
 
-                            ForEach(vm.targetMetrics) { metric in
-                                FullReportTargetRow(metric: metric)
+                            VStack(spacing: 16) {
+                                ForEach(vm.targetMetrics) { metric in
+                                    FullReportTargetRow(metric: metric)
+                                }
                             }
                         }
 
-                        Divider().background(RSMSTheme.Colors.border)
+                        // MARK: - Staff Insights
+                        VStack(alignment: .leading, spacing: 24) {
+                            Text("Specialist Intelligence")
+                                .font(.custom("Helvetica", size: 24))
+                                .fontWeight(.bold)
 
-                        // MARK: - Dormant Staff
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Staff Insights")
-                                .font(RSMSTheme.Typography.heading4)
-                                .foregroundColor(RSMSTheme.Colors.textPrimary)
-
-                            HStack(spacing: 12) {
-                                Image(systemName: "person.crop.circle.badge.exclamationmark.fill")
-                                    .font(.title2)
-                                    .foregroundColor(RSMSTheme.Colors.warning)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("\(vm.dormantEmployees) Dormant")
-                                        .font(RSMSTheme.Typography.heading4)
-                                        .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                    Text("Staff with zero sales this month")
-                                        .font(RSMSTheme.Typography.caption)
-                                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            HStack(spacing: 20) {
+                                ZStack {
+                                    Circle().fill(.ultraThinMaterial).frame(width: 60, height: 60)
+                                    Image(systemName: "person.badge.minus").font(.title2).foregroundColor(.orange)
+                                }
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("\(vm.dormantEmployees) Dormant Specialists")
+                                        .font(.headline.bold())
+                                    Text("Zero revenue contribution signals detected.")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                 }
                                 Spacer()
                             }
-                            .padding()
-                            .background(RSMSTheme.Colors.backgroundElevated)
-                            .cornerRadius(12)
+                            .padding(24)
+                            .background(Color(UIColor.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 24))
                         }
+                        
+                        Spacer(minLength: 60)
                     }
-                    .padding()
+                    .padding(.horizontal, 32)
                 }
             }
-            .navigationTitle("Weekly Report")
+            .navigationTitle("Weekly Intelligence")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button { dismiss() } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        ZStack {
+                            Circle().fill(.ultraThinMaterial).frame(width: 36, height: 36)
+                            Image(systemName: "xmark")
+                                .font(.custom("Helvetica", size: 14))
+                                .fontWeight(.bold)
+                        }
                     }
+                    .foregroundColor(.primary)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     ShareLink(item: shareText) {
-                        Image(systemName: "square.and.arrow.up")
-                            .foregroundColor(RSMSTheme.Colors.accentGold)
+                        ZStack {
+                            Circle().fill(.ultraThinMaterial).frame(width: 36, height: 36)
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.custom("Helvetica", size: 14))
+                                .fontWeight(.bold)
+                        }
                     }
                 }
             }
@@ -146,39 +158,40 @@ struct FullReportView: View {
     }
 }
 
-// MARK: - Summary Metric Card
-struct SummaryMetricCard: View {
+// MARK: - Components
+
+struct SummaryIntelligenceCard: View {
     let title: String
     let value: String
     let icon: String
     let color: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(color)
-            Text(value)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundColor(RSMSTheme.Colors.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            Text(title)
-                .font(RSMSTheme.Typography.caption)
-                .foregroundColor(RSMSTheme.Colors.textSecondary)
+        VStack(alignment: .leading, spacing: 16) {
+            ZStack {
+                Circle().fill(color.opacity(0.12)).frame(width: 44, height: 44)
+                Image(systemName: icon).font(.headline).foregroundColor(color)
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(value)
+                    .font(.custom("Helvetica", size: 28))
+                    .fontWeight(.bold)
+                Text(title)
+                    .font(.custom("Helvetica", size: 10))
+                    .fontWeight(.black)
+                    .tracking(1)
+                    .foregroundColor(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(RSMSTheme.Colors.backgroundElevated)
-        .cornerRadius(14)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
-        )
+        .padding(24)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
     }
 }
 
-// MARK: - Target Result Badge
 struct TargetResultBadge: View {
     let label: String
     let count: Int
@@ -190,64 +203,51 @@ struct TargetResultBadge: View {
                 .fill(color)
                 .frame(width: 10, height: 10)
             Text("\(count) \(label)")
-                .font(RSMSTheme.Typography.bodyCopy2)
-                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                .font(.custom("Helvetica", size: 12))
+                .fontWeight(.black)
+                .foregroundColor(.primary)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .background(color.opacity(0.12))
-        .cornerRadius(20)
+        .clipShape(Capsule())
     }
 }
 
-// MARK: - Full Report Target Row
 struct FullReportTargetRow: View {
     let metric: TargetMetric
 
     private var barColor: Color {
-        metric.isMet ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.error
+        metric.isMet ? Color.accentColor : Color.red
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(metric.label)
-                    .font(RSMSTheme.Typography.bodyCopy1)
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .font(.headline)
                 Spacer()
-                Text(metric.isMet ? "✓ Met" : "✗ Missed")
-                    .font(RSMSTheme.Typography.caption)
+                Text(metric.isMet ? "OBJECTIVE MET" : "OBJECTIVE MISSED")
+                    .font(.custom("Helvetica", size: 10))
+                    .fontWeight(.black)
                     .foregroundColor(barColor)
             }
-            HStack {
-                Text("Target: \(formattedValue(metric.target))")
-                    .font(RSMSTheme.Typography.caption)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-                Spacer()
-                Text("Actual: \(formattedValue(metric.actual))")
-                    .font(RSMSTheme.Typography.caption)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-            }
+            
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(RSMSTheme.Colors.surfacePrimary)
-                        .frame(height: 6)
-                    RoundedRectangle(cornerRadius: 3)
+                    Capsule()
+                        .fill(Color(UIColor.tertiarySystemGroupedBackground))
+                        .frame(height: 8)
+                    Capsule()
                         .fill(barColor)
-                        .frame(width: geo.size.width * min(metric.progress, 1.0), height: 6)
-                        .animation(.easeOut(duration: 0.6), value: metric.progress)
+                        .frame(width: geo.size.width * min(metric.progress, 1.0), height: 8)
+                        .animation(.spring(), value: metric.progress)
                 }
             }
-            .frame(height: 6)
+            .frame(height: 8)
         }
-        .padding()
-        .background(RSMSTheme.Colors.backgroundElevated)
-        .cornerRadius(12)
-    }
-
-    private func formattedValue(_ val: Double) -> String {
-        if val >= 1000 { return "₹\(String(format: "%.1fK", val / 1000))" }
-        return String(format: "%.0f", val)
+        .padding(24)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 }

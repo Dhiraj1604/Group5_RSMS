@@ -315,11 +315,19 @@ final class SupabaseSyncManager {
         let orders = try supabaseDecoder.decode([RawOrder].self, from: response.data)
         
         var salesMap: [UUID: Double] = [:]
+        var transMap: [UUID: Int] = [:]
         for order in orders {
             guard let empId = order.employeeId else { continue }
             salesMap[empId, default: 0.0] += order.totalAmount
+            transMap[empId, default: 0] += 1
         }
-        return salesMap.map { EmployeeSalesSummary(employeeId: $0.key, totalSales: $0.value) }
+        return salesMap.map { 
+            EmployeeSalesSummary(
+                employeeId: $0.key, 
+                totalSales: $0.value, 
+                transactionCount: transMap[$0.key] ?? 0
+            ) 
+        }
     }
     
     // MARK: - Staff Shifts

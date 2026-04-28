@@ -37,9 +37,11 @@ struct Employee: Codable, Identifiable {
 struct EmployeeSalesSummary: Codable {
     let employeeId: UUID
     let totalSales: Double
+    let transactionCount: Int
 
     enum CodingKeys: String, CodingKey {
         case employeeId  = "employee_id"
         case totalSales  = "sum"
+        case transactionCount = "count"
     }
 }

@@ -12,7 +12,7 @@ struct ProductSalesReportView: View {
     
     var body: some View {
         ZStack {
-            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
             
             VStack(spacing: 0) {
                 ScrollView {
@@ -58,34 +58,38 @@ struct SoldProductCard: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(product.name)
-                    .font(RSMSTheme.Typography.bodyCopy1)
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .font(.custom("Helvetica", size: 16))
+                    .fontWeight(.bold)
+                    .foregroundColor(Color.primary)
                 
                 Text(product.sku)
-                    .font(RSMSTheme.Typography.caption)
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
+                    .font(.custom("Helvetica", size: 12))
+                    .fontWeight(.bold)
+                    .foregroundColor(Color.accentColor)
                 
                 Spacer()
                 
                 HStack {
                     Label("\(product.quantitySold) sold", systemImage: "bag.fill")
-                        .font(RSMSTheme.Typography.caption)
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        .font(.custom("Helvetica", size: 12))
+                        .fontWeight(.bold)
+                        .foregroundColor(Color.secondary)
                     
                     Spacer()
                     
                     Text("₹\(Int(product.totalRevenue))")
-                        .font(RSMSTheme.Typography.bodyCopy1)
-                        .foregroundColor(RSMSTheme.Colors.success)
+                        .font(.custom("Helvetica", size: 16))
+                        .fontWeight(.bold)
+                        .foregroundColor(Color.green)
                 }
             }
         }
         .padding()
-        .background(RSMSTheme.Colors.backgroundElevated)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+                .stroke(Color(UIColor.separator).opacity(0.5), lineWidth: 1)
         )
     }
 }
@@ -101,25 +105,29 @@ struct UnsoldProductCard: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(product.name)
-                    .font(RSMSTheme.Typography.bodyCopy1)
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .font(.custom("Helvetica", size: 16))
+                    .fontWeight(.bold)
+                    .foregroundColor(Color.primary)
                 
                 Text(product.sku)
-                    .font(RSMSTheme.Typography.caption)
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
+                    .font(.custom("Helvetica", size: 12))
+                    .fontWeight(.bold)
+                    .foregroundColor(Color.accentColor)
                 
                 Spacer()
                 
                 HStack {
                     Text("In stock")
-                        .font(RSMSTheme.Typography.caption)
-                        .foregroundColor(RSMSTheme.Colors.warning)
+                        .font(.custom("Helvetica", size: 12))
+                    .fontWeight(.bold)
+                        .foregroundColor(Color.orange)
                     
                     if let lastMoved = product.last_moved_to_floor {
                         let days = Calendar.current.dateComponents([.day], from: lastMoved, to: Date()).day ?? 0
                         Text("• \(days) days")
-                            .font(RSMSTheme.Typography.caption)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            .font(.custom("Helvetica", size: 12))
+                            .fontWeight(.bold)
+                            .foregroundColor(Color.secondary)
                     }
                 }
             }
@@ -127,14 +135,14 @@ struct UnsoldProductCard: View {
             Spacer()
             
             Image(systemName: "exclamationmark.circle")
-                .foregroundColor(RSMSTheme.Colors.textTertiary)
+                .foregroundColor(Color.secondary)
         }
         .padding()
-        .background(RSMSTheme.Colors.backgroundElevated)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+                .stroke(Color(UIColor.separator).opacity(0.5), lineWidth: 1)
         )
     }
 }
@@ -167,14 +175,15 @@ struct EmptyStateView: View {
         VStack(spacing: 16) {
             Spacer().frame(height: 100)
             Image(systemName: "tray")
-                .font(.system(size: 48))
-                .foregroundColor(RSMSTheme.Colors.textTertiary)
+                .font(.custom("Helvetica", size: 48))
+                .foregroundColor(Color.secondary)
             Text(title)
-                .font(RSMSTheme.Typography.heading4)
-                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                .font(.custom("Helvetica", size: 18))
+                .fontWeight(.bold)
+                .foregroundColor(Color.secondary)
             Text(message)
-                .font(RSMSTheme.Typography.caption)
-                .foregroundColor(RSMSTheme.Colors.textTertiary)
+                .font(.custom("Helvetica", size: 12))
+                .foregroundColor(Color.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }

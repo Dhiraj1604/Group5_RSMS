@@ -63,14 +63,15 @@ struct SalesLeaderboardView: View {
         Group {
             if staffVM.employees.isEmpty && (staffVM.isLoading || dashVM.isLoadingStaff) {
                 // Only show full-screen loader on very first load
-                ProgressView().tint(RSMSTheme.Colors.accentGold)
+                ProgressView().tint(Color.accentColor)
             } else if staffVM.employees.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "chart.bar.xaxis")
-                        .font(.system(size: 48))
-                        .foregroundColor(RSMSTheme.Colors.accentGold.opacity(0.4))
-                    Text("No staff data yet")
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .font(.custom("Helvetica", size: 48))
+                    .foregroundColor(Color.accentColor.opacity(0.4))
+                Text("No staff data yet")
+                    .font(.custom("Helvetica", size: 16))
+                    .foregroundColor(Color.secondary)
                 }
             } else {
                 leaderboardContent
@@ -98,14 +99,14 @@ struct SalesLeaderboardView: View {
                 HStack {
                     Text(selectedRange.rawValue)
                         .font(.caption.weight(.semibold))
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                        .foregroundColor(Color.accentColor)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(RSMSTheme.Colors.accentGold.opacity(0.12))
+                        .background(Color.accentColor.opacity(0.12))
                         .cornerRadius(8)
                     Text("· \(staffVM.employees.count) staff members")
                         .font(.caption)
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        .foregroundColor(Color.secondary)
                     Spacer()
                 }
                 .padding(.horizontal, 16)
@@ -146,15 +147,16 @@ struct SalesLeaderboardView: View {
         return HStack(spacing: 14) {
             ZStack(alignment: .topTrailing) {
                 Circle()
-                    .fill(RSMSTheme.Colors.accentGold.opacity(0.2))
+                    .fill(Color.accentColor.opacity(0.2))
                     .frame(width: 64, height: 64)
                 Text(top.name.prefix(1).uppercased())
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
+                    .font(.custom("Helvetica", size: 28))
+                    .fontWeight(.bold)
+                    .foregroundColor(Color.accentColor)
                     .frame(width: 64, height: 64)
                 Image(systemName: "crown.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
+                    .font(.custom("Helvetica", size: 16))
+                    .foregroundColor(Color.accentColor)
                     .offset(x: 6, y: -6)
             }
 
@@ -162,13 +164,13 @@ struct SalesLeaderboardView: View {
                 Text("TOP PERFORMER")
                     .font(.caption2.weight(.heavy))
                     .tracking(1.2)
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
+                    .foregroundColor(Color.accentColor)
                 Text(top.name)
                     .font(.headline)
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .foregroundColor(Color.primary)
                 Text(top.role)
                     .font(.caption)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .foregroundColor(Color.secondary)
             }
 
             Spacer()
@@ -176,21 +178,21 @@ struct SalesLeaderboardView: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text("₹\(Int(sales).formatted())")
                     .font(.title3.weight(.bold))
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
+                    .foregroundColor(Color.accentColor)
                 Text("in sales")
                     .font(.caption2)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .foregroundColor(Color.secondary)
             }
         }
         .padding()
         .background(
             LinearGradient(
-                colors: [RSMSTheme.Colors.accentGold.opacity(0.14), RSMSTheme.Colors.backgroundDeep],
+                colors: [Color.accentColor.opacity(0.14), Color(UIColor.secondarySystemGroupedBackground)],
                 startPoint: .leading, endPoint: .trailing
             )
         )
         .cornerRadius(16)
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(RSMSTheme.Colors.accentGold.opacity(0.25), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.accentColor.opacity(0.25), lineWidth: 1))
     }
 
     private var rangePicker: some View {
@@ -241,34 +243,36 @@ struct LeaderboardRow: View {
         case 1: return Color(red: 1.0, green: 0.84, blue: 0.0)
         case 2: return Color(red: 0.75, green: 0.75, blue: 0.75)
         case 3: return Color(red: 0.8, green: 0.5, blue: 0.2)
-        default: return RSMSTheme.Colors.textSecondary
+        default: return Color.secondary
         }
     }
 
     var body: some View {
         HStack(spacing: 12) {
             Text("\(rank)")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundColor(rank <= 3 ? rankColor : RSMSTheme.Colors.textSecondary.opacity(0.6))
+                .font(.custom("Helvetica", size: 15))
+                .fontWeight(.bold)
+                .foregroundColor(rank <= 3 ? rankColor : Color.secondary.opacity(0.6))
                 .frame(width: 24, alignment: .center)
 
             ZStack {
                 Circle()
-                    .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
+                    .fill(Color.accentColor.opacity(0.15))
                     .frame(width: 44, height: 44)
                     .overlay(rank == 1 ? Circle().stroke(rankColor, lineWidth: 2) : nil)
                 Text(employee.name.prefix(1).uppercased())
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
+                    .font(.custom("Helvetica", size: 18))
+                    .fontWeight(.bold)
+                    .foregroundColor(Color.accentColor)
             }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(employee.name)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .foregroundColor(Color.primary)
                 Text(employee.role)
                     .font(.caption)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .foregroundColor(Color.secondary)
             }
 
             Spacer()
@@ -276,19 +280,19 @@ struct LeaderboardRow: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text("₹\(Int(sales).formatted())")
                     .font(.subheadline.weight(.bold))
-                    .foregroundColor(rank == 1 ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textPrimary)
+                    .foregroundColor(rank == 1 ? Color.accentColor : Color.primary)
                 Text("sales")
                     .font(.caption2)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .foregroundColor(Color.secondary)
             }
 
             Image(systemName: "chevron.right")
                 .font(.caption2)
-                .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.35))
+                .foregroundColor(Color.secondary.opacity(0.35))
         }
         .padding(.vertical, 11)
         .padding(.horizontal, 14)
-        .background(RSMSTheme.Colors.backgroundDeep)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(14)
     }
 }

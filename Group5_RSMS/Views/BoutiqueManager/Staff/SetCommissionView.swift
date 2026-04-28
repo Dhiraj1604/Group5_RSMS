@@ -2,7 +2,8 @@
 //  SetCommissionView.swift
 //  Group5_RSMS
 //
-//  Created by Apple on 19/04/26.
+//  Premium Set Commission View - Native iPadOS style.
+//  Enhanced with symbol-only toolbars and professional intelligence styling.
 //
 
 import SwiftUI
@@ -18,117 +19,101 @@ struct SetCommissionView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-
-                VStack(spacing: 24) {
-
-                    // Header
-                    VStack(spacing: 6) {
-                        Text(employee.name)
-                            .font(.title2)
-                            .foregroundColor(RSMSTheme.Colors.textPrimary)
-                        Text("Set Commission Rate")
-                            .font(.body)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
-                    }
-                    .padding(.top)
-
-                    // Rate Input
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Commission Rate (%)")
-                            .font(.caption)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
-                        HStack {
-                            TextField("e.g. 10.5", text: $rateInput)
-                                .keyboardType(.decimalPad)
-                                .font(.body)
-                                .foregroundColor(RSMSTheme.Colors.textPrimary)
-                            Text("%")
-                                .foregroundColor(RSMSTheme.Colors.accentGold)
-                                .font(.headline)
+            SwiftUI.Form {
+                Section {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(employee.name)
+                                .font(.headline.bold())
+                            Text(employee.role.uppercased())
+                                .font(.custom("Helvetica", size: 11))
+                                .fontWeight(.black)
+                                .tracking(1.5)
+                                .foregroundColor(.secondary)
                         }
-                        .padding()
-                        .background(RSMSTheme.Colors.backgroundDeep)
-                        .cornerRadius(10)
+                        Spacer()
+                        ZStack {
+                            Circle()
+                                .fill(.ultraThinMaterial)
+                                .frame(width: 52, height: 52)
+                                .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
+                            Text(employee.name.prefix(1).uppercased())
+                                .font(.headline.bold())
+                                .foregroundColor(.accentColor)
+                        }
                     }
-                    .padding(.horizontal)
-
-                    // Effective From
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Effective From")
-                            .font(.caption)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
-                        DatePicker("", selection: $effectiveFrom, displayedComponents: .date)
-                            .datePickerStyle(.compact)
-                            .labelsHidden()
-                            
-                            .padding()
-                            .background(RSMSTheme.Colors.backgroundDeep)
-                            .cornerRadius(10)
+                    .padding(.vertical, 12)
+                } header: {
+                    Text("Staff Specialist")
+                }
+                
+                Section {
+                    HStack {
+                        Text("Commission Rate")
+                            .font(.headline)
+                        Spacer()
+                        TextField("0.0", text: $rateInput)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .font(.system(.body, design: .rounded).bold())
+                            .frame(width: 80)
+                        Text("%")
+                            .font(.headline)
+                            .foregroundColor(.accentColor)
                     }
-                    .padding(.horizontal)
-
-                    // Error / Success
+                    
+                    DatePicker("Effective Activation", selection: $effectiveFrom, displayedComponents: .date)
+                } header: {
+                    Text("Yield Configuration")
+                } footer: {
                     if let error = commissionVM.errorMessage {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .padding(.horizontal)
+                        Text(error).foregroundColor(.red)
+                    } else {
+                        Text("Strategic commission adjustments impact future payout calculations.")
                     }
-                    if let success = commissionVM.successMessage {
-                        Text(success)
-                            .font(.caption)
-                            .foregroundColor(.green)
-                            .padding(.horizontal)
-                    }
-
-                    Spacer()
-
-                    // Save Button
-                    Button {
-                        guard let rate = Double(rateInput), rate > 0 else { return }
-                        Task {
-                            await commissionVM.setCommissionRate(
-                                boutiqueId: boutiqueId,
-                                employeeId: employee.id,
-                                rate: rate,
-                                effectiveFrom: effectiveFrom,
-                                createdBy: UUID() // replace with session manager id
-                            )
-                            if commissionVM.errorMessage == nil {
-                                dismiss()
-                            }
-                        }
-                    } label: {
-                        Group {
-                            if commissionVM.isLoading {
-                                ProgressView().tint(.black)
-                            } else {
-                                Text("Save Rate")
-                                    .font(.headline)
-                                    .foregroundColor(.black)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(RSMSTheme.Colors.accentGold)
-                        .cornerRadius(12)
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom)
-                    .disabled(rateInput.isEmpty || commissionVM.isLoading)
                 }
             }
-            .navigationTitle("Commission")
+            .navigationTitle("Yield Strategy")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button { dismiss() } label: {
+                        ZStack {
+                            Circle().fill(.ultraThinMaterial).frame(width: 36, height: 36)
+                            Image(systemName: "xmark").font(.custom("Helvetica", size: 14)).fontWeight(.bold)
+                        }
+                    }
+                    .foregroundColor(.primary)
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if commissionVM.isLoading {
+                        ProgressView()
+                    } else {
+                        Button { saveRate() } label: {
+                            ZStack {
+                                Circle().fill(rateInput.isEmpty ? Color.secondary.opacity(0.1) : Color.accentColor).frame(width: 36, height: 36)
+                                Image(systemName: "checkmark").font(.custom("Helvetica", size: 14)).fontWeight(.bold).foregroundColor(.white)
+                            }
+                        }
+                        .disabled(rateInput.isEmpty)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func saveRate() {
+        guard let rate = Double(rateInput), rate > 0 else { return }
+        Task {
+            await commissionVM.setCommissionRate(
+                boutiqueId: boutiqueId,
+                employeeId: employee.id,
+                rate: rate,
+                effectiveFrom: effectiveFrom,
+                createdBy: UUID() 
+            )
+            if commissionVM.errorMessage == nil {
+                dismiss()
             }
         }
     }
