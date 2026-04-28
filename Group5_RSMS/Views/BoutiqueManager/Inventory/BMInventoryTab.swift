@@ -156,17 +156,18 @@ struct BMInventoryTab: View {
     private var merchandisingSegment: some View {
         VStack(spacing: 24) {
             // Header
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Floor Merchandising")
-                    .font(.system(size: 24, weight: .bold))
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Merchandising")
+                    .font(.system(size: 28, weight: .black, design: .rounded))
                     .foregroundColor(RSMSTheme.Colors.textPrimary)
-                Text("Real-time local boutique floor velocity and trends.")
+                Text("Optimize your floor space based on real-time sales velocity.")
                     .font(.system(size: 14))
                     .foregroundColor(RSMSTheme.Colors.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-            .padding(.top, RSMSTheme.Spacing.md)
+            .padding(.top, RSMSTheme.Spacing.lg)
+
 
             if let error = viewModel.insightsError {
                 errorState(error)
@@ -188,26 +189,33 @@ struct BMInventoryTab: View {
     
     private var fastMoversSection: some View {
         VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top) {
+            HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Fastest Selling Right Now")
-                        .font(.system(size: 17, weight: .bold))
+                    Text("Top Performers")
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundColor(RSMSTheme.Colors.textPrimary)
-                    Text("Recent local sales vs the prior 3-day window")
+                    Text("Fastest moving items in this boutique")
                         .font(.system(size: 12))
                         .foregroundColor(RSMSTheme.Colors.textSecondary)
                 }
                 Spacer()
                 
-                let highlightedCount = viewModel.fastMovingProducts.filter { $0.trendDirection == .up }.count
-                Text("\(highlightedCount) rising")
-                    .font(.system(size: 12, weight: .bold))
+                let risingCount = viewModel.fastMovingProducts.filter { $0.trendDirection == .up }.count
+                if risingCount > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 10))
+                        Text("\(risingCount) RISING")
+                            .font(.system(size: 10, weight: .black))
+                    }
                     .foregroundColor(RSMSTheme.Colors.accentGold)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(RSMSTheme.Colors.accentGold.opacity(0.12))
-                    .cornerRadius(999)
+                    .cornerRadius(8)
+                }
             }
+
             
             if viewModel.fastMovingProducts.isEmpty {
                 VStack(spacing: 12) {
@@ -243,83 +251,51 @@ struct BMInventoryTab: View {
 
     
     private func fastMoverRow(_ product: FastMovingProduct) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 14) {
-                Group {
-                    if let urlString = product.imageUrl, let url = URL(string: urlString) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                            case .failure, .empty:
-                                productPlaceholder
-                            @unknown default:
-                                productPlaceholder
-                            }
-                        }
+                // Product image
+                AsyncImage(url: URL(string: product.imageUrl ?? "")) { phase in
+                    if let image = phase.image {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
                     } else {
                         productPlaceholder
                     }
                 }
                 .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
-                )
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
+
                 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(product.name)
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                .lineLimit(2)
-                            
-                            Text(product.sku)
-                                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                .foregroundColor(RSMSTheme.Colors.accentGold)
-                        }
-                        
-                        Spacer(minLength: 8)
-                        trendBadge(for: product)
-                    }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(product.name)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(RSMSTheme.Colors.textPrimary)
+                        .lineLimit(1)
                     
-                    Text(product.recommendationText)
-                        .font(.system(size: 12))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                        .lineLimit(2)
+                    Text(product.sku)
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                    
+                    compactMetricsRow(for: product)
+                        .padding(.top, 4)
                 }
+                
+                Spacer()
+                
+                trendBadge(for: product)
             }
             
-            HStack(spacing: 10) {
-                metricTile(
-                    title: "Recent",
-                    value: "\(product.recentUnitsSold)",
-                    tint: RSMSTheme.Colors.success
-                )
-                metricTile(
-                    title: product.previousUnitsSold > 0 ? "Delta" : "Signal",
-                    value: product.previousUnitsSold > 0
-                        ? "\(product.velocityDelta >= 0 ? "+" : "")\(product.velocityDelta)"
-                        : "New",
-                    tint: product.trendDirection == .down ? RSMSTheme.Colors.error : RSMSTheme.Colors.accentGold
-                )
-                metricTile(
-                    title: "Stock",
-                    value: "\(product.currentStock)",
-                    tint: product.currentStock <= 3 ? RSMSTheme.Colors.warning : RSMSTheme.Colors.textSecondary
-                )
-            }
+            Divider()
+                .background(RSMSTheme.Colors.borderLight.opacity(0.5))
             
             HStack {
                 HStack(spacing: 6) {
                     Circle()
                         .fill(product.isOnFloor ? RSMSTheme.Colors.success : RSMSTheme.Colors.textSecondary.opacity(0.45))
-                        .frame(width: 8, height: 8)
-                    Text(product.isOnFloor ? "Currently on floor" : "Not on floor")
+                        .frame(width: 6, height: 6)
+                    Text(product.isOnFloor ? "On Floor" : "Backstock")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(RSMSTheme.Colors.textSecondary)
                 }
@@ -329,22 +305,22 @@ struct BMInventoryTab: View {
                 Button {
                     productToMove = product
                 } label: {
-                    Text(product.isOnFloor ? "Remove from Floor" : "Place on Floor")
+                    Text(product.isOnFloor ? "Remove" : "Place on Floor")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(product.isOnFloor ? RSMSTheme.Colors.textPrimary : .black)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
                         .background {
                             if product.isOnFloor {
-                                RoundedRectangle(cornerRadius: 12)
+                                RoundedRectangle(cornerRadius: 10)
                                     .fill(RSMSTheme.Colors.backgroundElevated)
                             } else {
-                                RoundedRectangle(cornerRadius: 12)
+                                RoundedRectangle(cornerRadius: 10)
                                     .fill(RSMSTheme.Colors.goldGradient)
                             }
                         }
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
+                            RoundedRectangle(cornerRadius: 10)
                                 .stroke(
                                     product.isOnFloor ? RSMSTheme.Colors.borderLight : .clear,
                                     lineWidth: 1
@@ -355,43 +331,75 @@ struct BMInventoryTab: View {
                 .opacity(viewModel.isUpdatingFloorDisplay ? 0.65 : 1)
             }
         }
-        .padding(14)
+        .padding(12)
         .background(RSMSTheme.Colors.backgroundDeep)
-        .cornerRadius(18)
+        .cornerRadius(16)
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
+            RoundedRectangle(cornerRadius: 16)
                 .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
         )
     }
+
+    private func compactMetricsRow(for product: FastMovingProduct) -> some View {
+        HStack(spacing: 12) {
+            metricItem(icon: "flame.fill", value: "\(product.recentUnitsSold)", color: RSMSTheme.Colors.error)
+            
+            let delta = product.velocityDelta
+            metricItem(
+                icon: delta >= 0 ? "arrow.up.right" : "arrow.down.right",
+                value: delta > 0 ? "+\(delta)" : "\(delta)",
+                color: delta >= 0 ? RSMSTheme.Colors.success : RSMSTheme.Colors.error
+            )
+            
+            metricItem(icon: "box.truck.fill", value: "\(product.currentStock)", color: RSMSTheme.Colors.accentGold)
+        }
+    }
+
+    private func metricItem(icon: String, value: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundColor(color)
+            Text(value)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(RSMSTheme.Colors.textSecondary)
+        }
+    }
+
     
     private func trendBadge(for product: FastMovingProduct) -> some View {
         let color: Color
         let icon: String
+        let label: String
         
         switch product.trendDirection {
         case .up:
             color = RSMSTheme.Colors.success
             icon = "arrow.up.right"
+            label = "High"
         case .steady:
             color = RSMSTheme.Colors.warning
             icon = "minus"
+            label = "Stable"
         case .down:
             color = RSMSTheme.Colors.error
             icon = "arrow.down.right"
+            label = "Low"
         }
         
         return HStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 9, weight: .bold))
-            Text(product.trendDirection.label)
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: 8, weight: .bold))
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .black))
         }
         .foregroundColor(color)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(color.opacity(0.12))
-        .cornerRadius(999)
+        .cornerRadius(6)
     }
+
     
     private func insightPill(label: String, color: Color) -> some View {
         Text(label)
@@ -403,21 +411,8 @@ struct BMInventoryTab: View {
             .cornerRadius(999)
     }
     
-    private func metricTile(title: String, value: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title.uppercased())
-                .font(.system(size: 9, weight: .bold))
-                .foregroundColor(RSMSTheme.Colors.textTertiary)
-            Text(value)
-                .font(.system(size: 16, weight: .black, design: .rounded))
-                .foregroundColor(tint)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(RSMSTheme.Colors.backgroundElevated)
-        .cornerRadius(12)
-    }
+    // Removed metricTile as it's replaced by compactMetricsRow
+
 
     // MARK: - Transfer Segment (Refactored to List for native Swipe Actions)
 

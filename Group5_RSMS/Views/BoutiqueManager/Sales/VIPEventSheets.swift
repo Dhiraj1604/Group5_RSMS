@@ -231,10 +231,9 @@ struct InviteGuestSheet: View {
         Set(vm.selectedEventGuests.compactMap { $0.guestId })
     }
 
-    private var availableGuests: [VIPGuest] {
-        let eligible = vm.allGuests.filter { !alreadyInvitedIds.contains($0.id) }
-        if searchText.isEmpty { return eligible }
-        return eligible.filter {
+    private var filteredGuests: [VIPGuest] {
+        if searchText.isEmpty { return vm.allGuests }
+        return vm.allGuests.filter {
             $0.fullName.localizedCaseInsensitiveContains(searchText) ||
             ($0.email?.localizedCaseInsensitiveContains(searchText) == true)
         }
@@ -244,7 +243,7 @@ struct InviteGuestSheet: View {
         NavigationStack {
             ZStack {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-                if availableGuests.isEmpty && searchText.isEmpty {
+                if vm.allGuests.isEmpty {
                     VStack(spacing: 12) {
                         Image(systemName: "person.slash")
                             .font(.system(size: 44))
@@ -255,11 +254,14 @@ struct InviteGuestSheet: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    List(availableGuests) { guest in
+                    List(filteredGuests) { guest in
+                        let isInvited = alreadyInvitedIds.contains(guest.id)
+                        
                         Button {
-                            Task {
-                                await vm.inviteGuest(eventId: event.id, guestId: guest.id)
-                                dismiss()
+                            if !isInvited {
+                                Task {
+                                    await vm.inviteGuest(eventId: event.id, guestId: guest.id)
+                                }
                             }
                         } label: {
                             HStack(spacing: 12) {
@@ -281,8 +283,8 @@ struct InviteGuestSheet: View {
                                     }
                                 }
                                 Spacer()
-                                Image(systemName: "plus.circle")
-                                    .foregroundStyle(RSMSTheme.Colors.accentGold)
+                                Image(systemName: isInvited ? "checkmark.circle.fill" : "plus.circle")
+                                    .foregroundStyle(isInvited ? .green : RSMSTheme.Colors.accentGold)
                             }
                         }
                         .listRowBackground(RSMSTheme.Colors.backgroundElevated)
@@ -293,11 +295,11 @@ struct InviteGuestSheet: View {
                     .searchable(text: $searchText, prompt: "Search guests")
                 }
             }
-            .navigationTitle("Invite Guest")
+            .navigationTitle("Invite Guests")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }.foregroundStyle(RSMSTheme.Colors.textSecondary)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }.fontWeight(.bold).foregroundStyle(RSMSTheme.Colors.accentGold)
                 }
             }
         }
