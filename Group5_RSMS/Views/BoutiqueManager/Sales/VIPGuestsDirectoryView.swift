@@ -42,8 +42,11 @@ struct VIPGuestsDirectoryView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
-                    ForEach(filtered) { guest in
-                        GuestDirectoryRow(guest: guest)
+                    Section {
+                        ForEach(filtered) { guest in
+                            NavigationLink(destination: VIPGuestDetailView(vm: vm, guest: guest)) {
+                                GuestDirectoryRow(guest: guest)
+                            }
                             .listRowBackground(RSMSTheme.Colors.backgroundElevated)
                             .listRowSeparatorTint(RSMSTheme.Colors.borderLight)
                             .swipeActions(edge: .trailing) {
@@ -53,6 +56,7 @@ struct VIPGuestsDirectoryView: View {
                                     Label("Delete", systemImage: "trash")
                                 }
                             }
+                        }
                     }
                 }
                 .listStyle(.insetGrouped)

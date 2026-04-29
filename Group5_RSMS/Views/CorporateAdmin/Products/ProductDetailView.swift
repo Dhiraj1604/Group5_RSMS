@@ -74,10 +74,9 @@ struct ProductDetailView: View {
             } else {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { startEditing() } label: {
-                        Image(systemName: "pencil.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        Image(systemName: "pencil")
                     }
+                    .foregroundStyle(RSMSTheme.Colors.accentGold)
                 }
             }
         }

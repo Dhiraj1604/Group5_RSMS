@@ -209,6 +209,7 @@ class VIPEventViewModel: ObservableObject {
         }
     }
 
+
     // MARK: - Helpers
 
     var upcomingEvents: [VIPEvent] {

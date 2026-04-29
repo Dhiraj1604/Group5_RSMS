@@ -99,6 +99,7 @@ struct VIPGuest: Codable, Identifiable {
     var tier: String
     var addedBy: UUID?
     var preferences: String?
+    var lastVisit: Date?
     let createdBy: Date?
 
     enum CodingKeys: String, CodingKey {
@@ -110,6 +111,7 @@ struct VIPGuest: Codable, Identifiable {
         case tier
         case addedBy     = "added_by"
         case preferences
+        case lastVisit   = "last_visit"
         case createdBy   = "created_by"
     }
 
@@ -122,11 +124,13 @@ struct VIPGuest: Codable, Identifiable {
         let phone: String?
         let tier: String
         let preferences: String?
+        let last_visit: String?
         let added_by: UUID?
     }
 
     var insertPayload: InsertPayload {
-        InsertPayload(
+        let iso = ISO8601DateFormatter()
+        return InsertPayload(
             id:          id,
             boutique_id: boutiqueId,
             full_name:   fullName,
@@ -134,6 +138,7 @@ struct VIPGuest: Codable, Identifiable {
             phone:       phone,
             tier:        tier,
             preferences: preferences,
+            last_visit:  lastVisit.map { iso.string(from: $0) },
             added_by:    addedBy
         )
     }
