@@ -17,11 +17,12 @@ final class MerchandisingService {
     
     // MARK: - Total Sales (Sold Products)
     
-    /// Fetches products sold for a specific store in the current month.
-    func fetchSoldProducts(forStore storeId: UUID) async throws -> [SoldProduct] {
-        let startOfMonth = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: Date())) ?? Date()
+    /// Fetches products sold for a specific store since a given date.
+    func fetchSoldProducts(forStore storeId: UUID, since fromDate: Date? = nil) async throws -> [SoldProduct] {
+        let calendar = Calendar.current
+        let startOfRange = fromDate ?? calendar.date(from: calendar.dateComponents([.year, .month], from: Date())) ?? Date()
         let formatter = ISO8601DateFormatter()
-        let dateString = formatter.string(from: startOfMonth)
+        let dateString = formatter.string(from: startOfRange)
         
         let response = try await client
             .from("customer_orders")
