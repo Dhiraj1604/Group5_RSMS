@@ -17,6 +17,11 @@ struct ICReportsTab: View {
     @State private var isLoading = true
     @State private var fetchError: String? = nil
     
+    // For Heat Map dropdown
+    @State private var availableCategories: [String] = ["All"] + ProductCategory.allCases.map { $0.rawValue }.sorted()
+    @State private var selectedCategory: String = "All"
+    @State private var categorySearchText: String = ""
+    
     private let service = ICReportsService()
     
     var body: some View {
@@ -91,24 +96,30 @@ struct ICReportsTab: View {
     // MARK: - Variance Section
     private var varianceReportSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
+            HStack(spacing: 12) {
                 Text("Variance Report")
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.white)
                 
                 Spacer()
                 
+                if varianceData.count > 5 {
+                    NavigationLink(destination: VarianceReportListView(varianceData: varianceData)) {
+                        HStack(spacing: 4) {
+                            Text("See All")
+                            Image(systemName: "chevron.right")
+                        }
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                    }
+                }
+                
                 let pdfData = ICReportPDFGenerator.generateVariancePDF(data: varianceData, storeName: varianceData.first?.store?.name ?? "Current Store")
                 let pdfDoc = PDFReportDocument(data: pdfData, filename: "Variance_Report.pdf")
                 
                 ShareLink(item: pdfDoc, preview: SharePreview("Variance Report", image: Image(systemName: "doc.text.fill"))) {
                     Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(RSMSTheme.Colors.accentGold)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(RSMSTheme.Colors.accentGold.opacity(0.1))
-                        .cornerRadius(8)
                 }
             }
             
@@ -163,18 +174,6 @@ struct ICReportsTab: View {
                                 .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
                         )
                     }
-                    if varianceData.count > 5 {
-                        NavigationLink(destination: VarianceReportListView(varianceData: varianceData)) {
-                            HStack(spacing: 4) {
-                                Text("See All \(varianceData.count) Records")
-                                Image(systemName: "chevron.right")
-                            }
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(RSMSTheme.Colors.accentGold)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, 12)
-                        }
-                    }
                 }
             }
         }
@@ -195,12 +194,7 @@ struct ICReportsTab: View {
                 
                 ShareLink(item: pdfDoc, preview: SharePreview("Inventory Heat Map", image: Image(systemName: "grid"))) {
                     Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(RSMSTheme.Colors.accentGold)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(RSMSTheme.Colors.accentGold.opacity(0.1))
-                        .cornerRadius(8)
                 }
             }
             
@@ -208,7 +202,99 @@ struct ICReportsTab: View {
                 .font(.system(size: 13))
                 .foregroundColor(RSMSTheme.Colors.textSecondary)
             
+            // Dropdown for categories
+            let categories = ["All"] + Array(Set(heatmapData.compactMap { $0.product?.category ?? "Other" })).sorted()
+            
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Filter by Category")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                
+                Menu {
+                    // Search bar inside the menu might not be fully native without custom views, but we can do a picker or custom approach. Wait, iOS 15+ allows Menu with primary action or we can just list them. The user wants "typing functionality too so they can type out their category too, with inline suggestions".
+                    // Actually, native SwiftUI Menu doesn't support an embedded textfield easily. A better way is to use a Picker or a DisclosureGroup with a TextField, or maybe just a searchable sheet?
+                    // "we can have a dropdown for selecting the categories... let's have typing functionality too" -> A button that shows a sheet or we can use a native Picker.
+                    // Wait, let's use a standard Picker with searchable modifier if it's in a NavigationLink, or just a simple combo-box style. 
+                    // Let's implement a custom dropdown or simply use a TextField with an inline list of suggestions.
+                    
+                    // Actually, I'll put a custom dropdown component right below this.
+                } label: {
+                    // Placeholder for now, I will fix this up in another replace call to avoid making this chunk too complex.
+                    EmptyView()
+                }
+            }
+            
+            heatMapDropdown
+            
             heatMapGrid
+        }
+    }
+    
+    @State private var isCategoryDropdownExpanded = false
+    
+    private var heatMapDropdown: some View {
+        let filteredCategories = categorySearchText.isEmpty ? availableCategories : availableCategories.filter { $0.localizedCaseInsensitiveContains(categorySearchText) }
+        
+        return VStack(alignment: .leading, spacing: 4) {
+            Button(action: {
+                withAnimation { isCategoryDropdownExpanded.toggle() }
+            }) {
+                HStack {
+                    Text(selectedCategory)
+                        .foregroundColor(.white)
+                    Spacer()
+                    Image(systemName: isCategoryDropdownExpanded ? "chevron.up" : "chevron.down")
+                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                }
+                .padding()
+                .background(RSMSTheme.Colors.backgroundElevated)
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+                )
+            }
+            
+            if isCategoryDropdownExpanded {
+                VStack(spacing: 0) {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(RSMSTheme.Colors.textTertiary)
+                        TextField("Search category...", text: $categorySearchText)
+                            .foregroundColor(.white)
+                            .tint(RSMSTheme.Colors.accentGold)
+                    }
+                    .padding()
+                    .background(RSMSTheme.Colors.backgroundPrimary)
+                    
+                    Divider().background(RSMSTheme.Colors.borderLight)
+                    
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(filteredCategories, id: \.self) { category in
+                                Button(action: {
+                                    selectedCategory = category
+                                    categorySearchText = ""
+                                    withAnimation { isCategoryDropdownExpanded = false }
+                                }) {
+                                    Text(category)
+                                        .foregroundColor(selectedCategory == category ? RSMSTheme.Colors.accentGold : .white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                Divider().background(RSMSTheme.Colors.borderLight)
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 200)
+                }
+                .background(RSMSTheme.Colors.backgroundElevated)
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+                )
+            }
         }
     }
     
@@ -244,7 +330,14 @@ struct ICReportsTab: View {
         }
         
         return VStack(spacing: 12) {
-            ForEach(categories, id: \.self) { category in
+            let filteredCats = categories.filter { selectedCategory == "All" || $0 == selectedCategory }
+            
+            if filteredCats.isEmpty {
+                Text("No data for selected category")
+                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .padding()
+            } else {
+                ForEach(filteredCats, id: \.self) { category in
                 VStack(alignment: .leading, spacing: 14) {
                     Text(category)
                         .font(.system(size: 16, weight: .bold))
@@ -273,6 +366,7 @@ struct ICReportsTab: View {
                     RoundedRectangle(cornerRadius: 16)
                         .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
                 )
+                }
             }
         }
     }
