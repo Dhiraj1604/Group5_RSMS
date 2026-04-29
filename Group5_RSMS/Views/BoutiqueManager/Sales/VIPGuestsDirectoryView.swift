@@ -74,32 +74,16 @@ struct VIPGuestsDirectoryView: View {
 struct GuestDirectoryRow: View {
     let guest: VIPGuest
 
-    private var tierColor: Color {
-        switch (guest.tier ?? "silver").lowercased() {
-        case "platinum": return Color(red: 0.85, green: 0.85, blue: 0.95)
-        case "gold":     return RSMSTheme.Colors.accentGold
-        default:         return Color(white: 0.7)
-        }
-    }
-
-    private var tierIcon: String {
-        switch (guest.tier ?? "silver").lowercased() {
-        case "platinum": return "diamond.fill"
-        case "gold":     return "star.fill"
-        default:         return "star"
-        }
-    }
-
     var body: some View {
         HStack(spacing: 14) {
             // Avatar
             ZStack {
                 Circle()
-                    .fill(tierColor.opacity(0.2))
+                    .fill(RSMSTheme.Colors.accentGold.opacity(0.2))
                     .frame(width: 44, height: 44)
                 Text(guest.initials)
                     .font(.subheadline).fontWeight(.bold)
-                    .foregroundStyle(tierColor)
+                    .foregroundStyle(RSMSTheme.Colors.accentGold)
             }
 
             VStack(alignment: .leading, spacing: 3) {
@@ -121,20 +105,6 @@ struct GuestDirectoryRow: View {
             }
 
             Spacer()
-
-            // Tier badge
-            if let tier = guest.tier, !tier.isEmpty {
-                HStack(spacing: 4) {
-                    Image(systemName: tierIcon)
-                        .font(.caption2)
-                    Text(tier.capitalized)
-                        .font(.caption2).fontWeight(.bold)
-                }
-                .foregroundStyle(tierColor)
-                .padding(.horizontal, 8).padding(.vertical, 3)
-                .background(tierColor.opacity(0.15))
-                .clipShape(Capsule())
-            }
         }
         .padding(.vertical, 4)
     }

@@ -89,10 +89,7 @@ struct VIPEventDetailView: View {
             AddProductToCollectionSheet(vm: vm, event: event)
         }
         .confirmationDialog("Change Event Status", isPresented: $showStatusPicker) {
-            if currentEvent.status == "upcoming" {
-                Button("Mark as Ongoing")  { Task { await vm.updateStatus(event: currentEvent, newStatus: "ongoing") } }
-            }
-            if currentEvent.status == "upcoming" || currentEvent.status == "ongoing" {
+            if currentEvent.status == "upcoming"{
                 Button("Mark as Completed") { Task { await vm.updateStatus(event: currentEvent, newStatus: "completed") } }
                 Button("Cancel Event", role: .destructive) { Task { await vm.updateStatus(event: currentEvent, newStatus: "cancelled") } }
             }

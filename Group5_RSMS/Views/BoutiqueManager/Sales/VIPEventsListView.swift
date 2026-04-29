@@ -88,7 +88,6 @@ struct EventCard: View {
     private var statusColor: Color {
         switch event.status {
         case "upcoming":  return RSMSTheme.Colors.accentGold
-        case "ongoing":   return .green
         case "completed": return RSMSTheme.Colors.textTertiary
         default:          return .red
         }
