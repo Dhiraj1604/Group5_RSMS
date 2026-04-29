@@ -25,6 +25,7 @@ struct TaxSettingsView: View {
             VStack(spacing: 20) {
                 // Custom Large Title
                 HStack {
+//                     Text("Tax Settings")
                     Text("Additional Taxes")
                         .font(.custom("Helvetica-Bold", size: 34))
                         .foregroundStyle(.white)
@@ -40,6 +41,15 @@ struct TaxSettingsView: View {
                     emptyState
                         .padding(.top, 100)
                 } else {
+                    // Summary Header
+//                     summaryHeader
+                    
+//                     // Rules List
+//                     let columns = horizontalSizeClass == .regular
+//                         ? [GridItem(.adaptive(minimum: 220), spacing: RSMSTheme.Spacing.lg)]
+//                         : [GridItem(.flexible())]
+                    
+//                     LazyVGrid(columns: columns, spacing: RSMSTheme.Spacing.lg) {
                     // Category Filter Bar
                     filterBar
                     
@@ -100,6 +110,83 @@ struct TaxSettingsView: View {
 
     // MARK: - Computed Properties
     
+//     private var summaryHeader: some View {
+//         HStack(spacing: 12) {
+//             // Total Rules
+//             summaryCard(
+//                 value: "\(viewModel.taxRules.count)",
+//                 label: "RULES",
+//                 icon: "doc.text.fill",
+//                 color: .white,
+//                 filter: .all
+//             )
+            
+//             // Inclusive Count
+//             summaryCard(
+//                 value: "\(viewModel.taxRules.filter { $0.isInclusive }.count)",
+//                 label: "INCLUSIVE",
+//                 icon: "checkmark.circle.fill",
+//                 color: Color(red: 0.2, green: 0.8, blue: 0.3),
+//                 filter: .inclusive
+//             )
+            
+//             // Exclusive Count
+//             summaryCard(
+//                 value: "\(viewModel.taxRules.filter { !$0.isInclusive }.count)",
+//                 label: "EXCLUSIVE",
+//                 icon: "plus.circle.fill",
+//                 color: Color.orange,
+//                 filter: .exclusive
+//             )
+//         }
+//     }
+
+//     private func summaryCard(value: String, label: String, icon: String, color: Color, filter: TaxSettingsViewModel.TaxFilter) -> some View {
+//         let isSelected = viewModel.selectedFilter == filter
+        
+//         return Button {
+//             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+//                 viewModel.selectedFilter = filter
+//             }
+//         } label: {
+//             VStack(spacing: RSMSTheme.Spacing.xs) {
+//                 Image(systemName: icon)
+//                     .font(.system(size: 14, weight: .bold))
+//                     .foregroundColor(isSelected ? color : color.opacity(0.6))
+//                     .padding(.bottom, 2)
+                
+//                 Text(value)
+//                     .font(.custom("HelveticaNeue-Bold", size: 32))
+//                     .foregroundStyle(isSelected ? color : color.opacity(0.8))
+//                     .shadow(color: isSelected ? color.opacity(0.4) : .clear, radius: 4, x: 0, y: 2)
+                
+//                 Text(label.uppercased())
+//                     .font(.custom("HelveticaNeue-Bold", size: 9))
+//                     .tracking(1.2)
+//                     .foregroundStyle(isSelected ? color : color.opacity(0.6))
+//             }
+//             .frame(maxWidth: .infinity)
+//             .padding(.vertical, 24)
+//             .background(
+//                 LinearGradient(
+//                     colors: isSelected 
+//                         ? [RSMSTheme.Colors.backgroundElevated, RSMSTheme.Colors.backgroundElevated.opacity(0.8)]
+//                         : [RSMSTheme.Colors.backgroundDeep, RSMSTheme.Colors.backgroundDeep.opacity(0.5)],
+//                     startPoint: .topLeading,
+//                     endPoint: .bottomTrailing
+//                 )
+//             )
+//             .cornerRadius(16)
+//             .overlay(
+//                 RoundedRectangle(cornerRadius: 16)
+//                     .stroke(
+//                         isSelected ? color.opacity(0.5) : RSMSTheme.Colors.borderLight,
+//                         lineWidth: isSelected ? 1.5 : 1
+//                     )
+//             )
+//             .shadow(color: isSelected ? color.opacity(0.15) : Color.black.opacity(0.2), radius: 6, x: 0, y: 4)
+//             .scaleEffect(isSelected ? 1.02 : 1.0)
+//         }
     private var gridColumns: [GridItem] {
         horizontalSizeClass == .regular
             ? [GridItem(.adaptive(minimum: 220), spacing: RSMSTheme.Spacing.lg)]
@@ -166,6 +253,7 @@ struct TaxSettingsView: View {
         let isActive = viewModel.activeRuleId == rule.id
         let categoryName = rule.category.rawValue
         let ratePercent = String(format: "%.1f", rule.rate * 100)
+//         let accentColor = rule.isInclusive ? Color(red: 0.2, green: 0.8, blue: 0.3) : Color.orange
         let accentColor = RSMSTheme.Colors.accentGold
 
         return Button {
@@ -174,6 +262,15 @@ struct TaxSettingsView: View {
             ZStack(alignment: .topLeading) {
                 // Base Background
                 RSMSTheme.Colors.backgroundDeep
+                
+//                 // Subtle Radial Glow
+//                 RadialGradient(
+//                     gradient: Gradient(colors: [accentColor.opacity(0.15), .clear]),
+//                     center: .topTrailing,
+//                     startRadius: 0,
+//                     endRadius: 250
+//                 )
+                
                 
                 // Subtle Radial Glow
                 RadialGradient(
@@ -204,6 +301,45 @@ struct TaxSettingsView: View {
                         
                         Spacer()
                         
+                        // Type Badge
+//                         HStack(spacing: 6) {
+//                             Circle()
+//                                 .fill(accentColor)
+//                                 .frame(width: 6, height: 6)
+//                             Text(rule.isInclusive ? "INCLUSIVE" : "EXCLUSIVE")
+//                                 .font(.custom("HelveticaNeue-Bold", size: 10))
+//                                 .foregroundStyle(RSMSTheme.Colors.textSecondary)
+//                         }
+//                         .padding(.horizontal, 10)
+//                         .padding(.vertical, 6)
+//                         .background(Color.black.opacity(0.4))
+//                         .clipShape(Capsule())
+//                         .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+//                     }
+//                     .padding(.horizontal, 16)
+//                     .padding(.top, 16)
+                    
+//                     Spacer()
+                    
+//                     // Rule Name & Location
+//                     VStack(alignment: .leading, spacing: 4) {
+//                         Text(rule.name)
+//                             .font(.custom("HelveticaNeue-Bold", size: 26))
+//                             .foregroundStyle(RSMSTheme.Colors.textPrimary)
+//                             .lineLimit(2)
+//                             .minimumScaleFactor(0.8)
+//                         Text(locationName.uppercased())
+//                             .font(.custom("HelveticaNeue-Medium", size: 12))
+//                             .foregroundStyle(RSMSTheme.Colors.textTertiary)
+//                             .tracking(1.5)
+//                     }
+//                     .padding(.horizontal, 20)
+                    
+//                     Spacer()
+                    
+//                     // Middle: Tax Rate
+//                     VStack(alignment: .leading, spacing: -2) {
+//                         Text("TAX RATE")
                         // Category Icon
                         Image(systemName: rule.category.icon)
                             .font(.system(size: 14))

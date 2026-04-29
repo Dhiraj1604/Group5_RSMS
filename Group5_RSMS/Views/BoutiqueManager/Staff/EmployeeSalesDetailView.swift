@@ -12,8 +12,11 @@ struct EmployeeSalesDetailView: View {
     @StateObject private var staffVM = StaffViewModel()
     @StateObject private var commissionVM = CommissionViewModel()
     @StateObject private var shiftVM = ShiftViewModel()
+    @StateObject private var addEmpVM = AddEmployeeViewModel()
+    
     @State private var showSetCommission = false
     @State private var showCreatePayout = false
+    @State private var showEditEmployee = false
     @State private var showDeleteConfirmation = false
     @State private var optimisticIsActive: Bool? = nil
 
@@ -37,51 +40,64 @@ struct EmployeeSalesDetailView: View {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: 20) {
+                VStack(spacing: 24) {
 
                     // MARK: - Employee Header
-                    VStack(spacing: 8) {
+                    VStack(spacing: 12) {
                         ZStack {
                             Circle()
-                                .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
-                                .frame(width: 80, height: 80)
+                                .fill(RSMSTheme.Colors.accentGold.opacity(0.1))
+                                .frame(width: 90, height: 90)
                             Text(currentEmployee.name.prefix(1).uppercased())
-                                .font(.system(size: 36, weight: .bold))
+                                .font(.system(size: 40, weight: .bold))
                                 .foregroundColor(RSMSTheme.Colors.accentGold)
-                                .frame(width: 80, height: 80)
                         }
 
-                        Text(currentEmployee.name)
-                            .font(.title2)
-                            .foregroundColor(RSMSTheme.Colors.textPrimary)
+                        VStack(spacing: 4) {
+                            Text(currentEmployee.name)
+                                .font(.title3.weight(.bold))
+                                .foregroundColor(RSMSTheme.Colors.textPrimary)
 
-                        Text(currentEmployee.role)
-                            .font(.body)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            Text(currentEmployee.role)
+                                .font(.subheadline)
+                                .foregroundColor(RSMSTheme.Colors.textSecondary)
 
-                        if let joining = employee.joiningDate {
-                            Text("Since \(joining.formatted(date: .abbreviated, time: .omitted))")
-                                .font(.caption)
-                                .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
+                            if let joining = employee.joiningDate {
+                                Text("Joined \(joining.formatted(date: .abbreviated, time: .omitted))")
+                                    .font(.caption)
+                                    .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.6))
+                            }
                         }
 
                         // Active / Inactive toggle
-                        Toggle(isOn: Binding<Bool>(
-                            get: { displayIsActive },
-                            set: { _ in
-                                optimisticIsActive = !displayIsActive
-                                Task {
-                                    await staffVM.toggleEmployeeStatus(currentEmployee, boutiqueId: boutiqueId)
+                        HStack {
+                            Text(displayIsActive ? "Active" : "Inactive")
+                                .font(.caption.weight(.bold))
+                                .foregroundColor(displayIsActive ? RSMSTheme.Colors.success : .red)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background((displayIsActive ? RSMSTheme.Colors.success : Color.red).opacity(0.1))
+                                .cornerRadius(20)
+                            
+                            Spacer()
+                            
+                            Toggle("", isOn: Binding<Bool>(
+                                get: { displayIsActive },
+                                set: { _ in
+                                    optimisticIsActive = !displayIsActive
+                                    Task {
+                                        await staffVM.toggleEmployeeStatus(currentEmployee, boutiqueId: boutiqueId)
+                                    }
                                 }
-                            }
-                        )) {
-                            Text(displayIsActive ? "Active Account" : "Inactive Account")
-                                .font(.subheadline)
-                                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            ))
+                            .labelsHidden()
+                            .tint(RSMSTheme.Colors.success)
                         }
-                        .tint(RSMSTheme.Colors.success)
-                        .padding(.horizontal, 30)
-                        .padding(.top, 8)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(RSMSTheme.Colors.backgroundDeep)
+                        .cornerRadius(14)
+                        .padding(.horizontal, 40)
                     }
                     .padding(.top)
 
@@ -93,71 +109,89 @@ struct EmployeeSalesDetailView: View {
                     .padding(.horizontal)
 
                     // MARK: - Key Stats Row
-                    HStack(spacing: 0) {
-                        EmployeeStatCell(
-                            title: "Salary",
-                            value: employee.salary.map { "₹\(Int($0))" } ?? "N/A",
-                            icon: "indianrupeesign.circle.fill"
-                        )
-                        Divider().frame(height: 40).background(RSMSTheme.Colors.textSecondary.opacity(0.2))
-                        EmployeeStatCell(
-                            title: "Shifts",
-                            value: shiftVM.shifts.isEmpty ? "–" : "\(shiftVM.shifts.filter { $0.employeeId == employee.id }.count)",
-                            icon: "clock.fill"
-                        )
-                        Divider().frame(height: 40).background(RSMSTheme.Colors.textSecondary.opacity(0.2))
-                        EmployeeStatCell(
-                            title: "Commission",
-                            value: currentRate != nil ? String(format: "%.1f", currentRate!.ratePercentage) + "%" : "Not Set",
-                            icon: "percent"
-                        )
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("EMPLOYMENT INFO")
+                            .font(.caption2.weight(.bold))
+                            .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
+                            .padding(.leading, 4)
+                        
+                        VStack(spacing: 0) {
+                            HStack(spacing: 0) {
+                                EmployeeStatCell(
+                                    title: "Salary",
+                                    value: employee.salary.map { "₹\(Int($0))" } ?? "N/A",
+                                    icon: "indianrupeesign"
+                                )
+                                Divider().frame(height: 30).background(RSMSTheme.Colors.textSecondary.opacity(0.1))
+                                EmployeeStatCell(
+                                    title: "Commission",
+                                    value: currentRate != nil ? String(format: "%.1f", currentRate!.ratePercentage) + "%" : "N/A",
+                                    icon: "percent"
+                                )
+                            }
+                            .padding(.vertical, 16)
+                            
+                            Divider().background(RSMSTheme.Colors.textSecondary.opacity(0.1)).padding(.horizontal)
+                            
+                            HStack(spacing: 0) {
+                                EmployeeStatCell(
+                                    title: "Shift",
+                                    value: currentEmployee.assignedShift ?? "N/A",
+                                    icon: "clock"
+                                )
+                                Divider().frame(height: 30).background(RSMSTheme.Colors.textSecondary.opacity(0.1))
+                                EmployeeStatCell(
+                                    title: "Off Day",
+                                    value: currentEmployee.weeklyOff ?? "N/A",
+                                    icon: "calendar.badge.clock"
+                                )
+                            }
+                            .padding(.vertical, 16)
+                        }
+                        .background(RSMSTheme.Colors.backgroundDeep)
+                        .cornerRadius(14)
                     }
-                    .padding()
-                    .background(RSMSTheme.Colors.backgroundDeep)
-                    .cornerRadius(14)
                     .padding(.horizontal)
 
                     // MARK: - Sales Performance Card
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Sales Performance")
-                            .font(.headline)
-                            .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("SALES PERFORMANCE")
+                            .font(.caption2.weight(.bold))
+                            .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
+                            .padding(.leading, 4)
 
-                        VStack(spacing: 10) {
-                            HStack(spacing: 10) {
+                        VStack(spacing: 12) {
+                            HStack(spacing: 12) {
                                 PerformanceMetricBlock(title: "Total Sales", value: "₹0")
                                 PerformanceMetricBlock(title: "This Month", value: "₹0")
                             }
-                            HStack(spacing: 10) {
+                            HStack(spacing: 12) {
                                 PerformanceMetricBlock(title: "Total Orders", value: "0")
                                 PerformanceMetricBlock(title: "Avg Order Value", value: "₹0")
                             }
                         }
 
                         Text("Sales data will appear here once linked to customer orders.")
-                            .font(.caption)
-                            .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity)
+                            .font(.caption2)
+                            .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.5))
+                            .frame(maxWidth: .infinity, alignment: .center)
                     }
-                    .padding()
-                    .background(RSMSTheme.Colors.backgroundDeep)
-                    .cornerRadius(12)
                     .padding(.horizontal)
 
                     // MARK: - Commission Rate Card
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Commission")
-                            .font(.headline)
-                            .foregroundColor(RSMSTheme.Colors.textPrimary)
+                        Text("COMMISSION SETTINGS")
+                            .font(.caption2.weight(.bold))
+                            .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
+                            .padding(.leading, 4)
 
                         HStack {
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text("Current Rate")
-                                    .font(.caption)
+                                    .font(.caption2)
                                     .foregroundColor(RSMSTheme.Colors.textSecondary)
                                 Text(currentRate != nil ? String(format: "%.1f", currentRate!.ratePercentage) + "%" : "Not Set")
-                                    .font(.title2)
+                                    .font(.headline)
                                     .foregroundColor(RSMSTheme.Colors.accentGold)
                             }
                             Spacer()
@@ -168,18 +202,21 @@ struct EmployeeSalesDetailView: View {
                                         await commissionVM.deleteCommissionRate(id: rate.id, boutiqueId: boutiqueId)
                                     }
                                 } label: {
-                                    Image(systemName: "trash.circle.fill")
-                                        .font(.title2)
-                                        .foregroundColor(.red)
-                                        .padding(.trailing, 8)
+                                    Image(systemName: "trash")
+                                        .font(.subheadline)
+                                        .foregroundColor(.red.opacity(0.7))
+                                        .padding(8)
+                                        .background(Color.red.opacity(0.1))
+                                        .clipShape(Circle())
                                 }
+                                .padding(.trailing, 4)
                             }
 
                             Button {
                                 showSetCommission = true
                             } label: {
-                                Text(currentRate != nil ? "Update Rate" : "Set Rate")
-                                    .font(.headline)
+                                Text(currentRate != nil ? "Edit" : "Set")
+                                    .font(.system(size: 14, weight: .bold))
                                     .foregroundColor(.black)
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 8)
@@ -187,76 +224,73 @@ struct EmployeeSalesDetailView: View {
                                     .cornerRadius(8)
                             }
                         }
+                        .padding()
+                        .background(RSMSTheme.Colors.backgroundDeep)
+                        .cornerRadius(14)
                     }
-                    .padding()
-                    .background(RSMSTheme.Colors.backgroundDeep)
-                    .cornerRadius(12)
                     .padding(.horizontal)
 
                     // MARK: - Payouts Section
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Text("Payouts")
-                                .font(.headline)
-                                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                            Text("PAYOUT HISTORY")
+                                .font(.caption2.weight(.bold))
+                                .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
+                                .padding(.leading, 4)
                             Spacer()
                             Button {
                                 showCreatePayout = true
                             } label: {
-                                Image(systemName: "plus.circle.fill")
+                                Image(systemName: "plus")
                                     .foregroundColor(RSMSTheme.Colors.accentGold)
-                                    .font(.title3)
+                                    .font(.caption.weight(.bold))
+                                    .padding(6)
+                                    .background(RSMSTheme.Colors.accentGold.opacity(0.1))
+                                    .clipShape(Circle())
                             }
                         }
 
                         if commissionVM.payouts.isEmpty {
-                            Text("No payouts yet")
-                                .font(.body)
-                                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            Text("No payout records found")
+                                .font(.subheadline)
+                                .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.5))
                                 .frame(maxWidth: .infinity, alignment: .center)
-                                .padding()
+                                .padding(.vertical, 20)
                         } else {
-                            ForEach(commissionVM.payouts) { payout in
-                                PayoutRow(
-                                    payout: payout,
-                                    managerId: appState.managerAuthId ?? UUID(),
-                                    commissionVM: commissionVM
-                                )
+                            VStack(spacing: 1) {
+                                ForEach(commissionVM.payouts) { payout in
+                                    PayoutRow(
+                                        payout: payout,
+                                        managerId: appState.managerAuthId ?? UUID(),
+                                        commissionVM: commissionVM
+                                    )
+                                    
+                                    if payout.id != commissionVM.payouts.last?.id {
+                                        Divider().background(RSMSTheme.Colors.textSecondary.opacity(0.1))
+                                    }
+                                }
                             }
+                            .background(RSMSTheme.Colors.backgroundDeep)
+                            .cornerRadius(14)
                         }
                     }
-                    .padding()
-                    .background(RSMSTheme.Colors.backgroundDeep)
-                    .cornerRadius(12)
                     .padding(.horizontal)
                 }
-                .padding(.bottom, 30)
+                .padding(.bottom, 40)
             }
         }
-        .navigationTitle(employee.name)
+        .navigationTitle(currentEmployee.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
         
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    showDeleteConfirmation = true
+                    showEditEmployee = true
                 } label: {
-                    Image(systemName: "trash")
-                        .foregroundColor(.red)
-                }
-                .confirmationDialog(
-                    "Delete Employee",
-                    isPresented: $showDeleteConfirmation,
-                    titleVisibility: .visible
-                ) {
-                    Button("Delete", role: .destructive) {
-                        dismiss()
-                        Task { await staffVM.deleteEmployee(employee, boutiqueId: boutiqueId) }
-                    }
-                    Button("Cancel", role: .cancel) { }
-                } message: {
-                    Text("Are you sure you want to delete \(currentEmployee.name)?")
+                    Image(systemName: "pencil")
+                        .fontWeight(.semibold)
+                        .foregroundColor(RSMSTheme.Colors.accentGold)
                 }
             }
         }
@@ -265,6 +299,9 @@ struct EmployeeSalesDetailView: View {
             await commissionVM.fetchPayouts(employeeId: employee.id)
             await staffVM.fetchEmployees(boutiqueId: boutiqueId)
             await shiftVM.fetchShifts(boutiqueId: boutiqueId)
+        }
+        .sheet(isPresented: $showEditEmployee) {
+            AddEmployeeView(boutiqueId: boutiqueId, staffVM: staffVM, vm: addEmpVM, employeeToEdit: currentEmployee)
         }
         .sheet(isPresented: $showSetCommission) {
             SetCommissionView(employee: employee, boutiqueId: boutiqueId, commissionVM: commissionVM)
@@ -282,26 +319,26 @@ struct InfoCard: View {
     let icon: String
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .foregroundColor(RSMSTheme.Colors.accentGold)
-                .frame(width: 20)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(RSMSTheme.Colors.accentGold)
                     .font(.caption)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-                Text(value)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .truncationMode(.middle)
+                Text(title)
+                    .font(.caption2.weight(.bold))
+                    .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
             }
+            
+            Text(value)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .padding()
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RSMSTheme.Colors.backgroundDeep)
-        .cornerRadius(12)
+        .cornerRadius(14)
     }
 }
 
@@ -312,16 +349,19 @@ struct EmployeeStatCell: View {
     let icon: String
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 14))
-                .foregroundColor(RSMSTheme.Colors.accentGold)
-            Text(value)
-                .font(.subheadline.weight(.bold))
-                .foregroundColor(RSMSTheme.Colors.textPrimary)
-            Text(title)
-                .font(.caption2)
-                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                .font(.system(size: 16))
+                .foregroundColor(RSMSTheme.Colors.accentGold.opacity(0.8))
+            
+            VStack(spacing: 2) {
+                Text(value)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                Text(title.uppercased())
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.5))
+            }
         }
         .frame(maxWidth: .infinity)
     }
@@ -333,21 +373,19 @@ struct PerformanceMetricBlock: View {
     let value: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.caption)
-                .foregroundColor(RSMSTheme.Colors.textSecondary)
-                .lineLimit(1)
+                .font(.caption2.weight(.bold))
+                .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.6))
+            
             Text(value)
-                .font(.headline)
+                .font(.system(size: 18, weight: .bold))
                 .foregroundColor(RSMSTheme.Colors.accentGold)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(RSMSTheme.Colors.backgroundPrimary)
-        .cornerRadius(8)
+        .padding(16)
+        .background(RSMSTheme.Colors.backgroundDeep)
+        .cornerRadius(12)
     }
 }
 
@@ -366,59 +404,58 @@ struct PayoutRow: View {
     }
 
     var body: some View {
-        HStack {
+        HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("₹\(String(format: "%.2f", payout.commissionAmount))")
-                    .font(.headline)
+                    .font(.system(size: 17, weight: .bold))
                     .foregroundColor(RSMSTheme.Colors.textPrimary)
                 Text("\(payout.periodStart.formatted(date: .abbreviated, time: .omitted)) – \(payout.periodEnd.formatted(date: .abbreviated, time: .omitted))")
                     .font(.caption)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
             }
 
             Spacer()
 
             if payout.status == .pending {
-                Button {
-                    Task {
-                        await commissionVM.deletePayout(id: payout.id, employeeId: payout.employeeId)
+                HStack(spacing: 12) {
+                    Button {
+                        Task {
+                            await commissionVM.deletePayout(id: payout.id, employeeId: payout.employeeId)
+                        }
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.subheadline)
+                            .foregroundColor(.red.opacity(0.6))
                     }
-                } label: {
-                    Image(systemName: "trash.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.red)
-                        .padding(.horizontal, 4)
-                }
 
-                Button {
-                    Task {
-                        await commissionVM.approvePayout(
-                            id: payout.id,
-                            approvedBy: managerId,
-                            employeeId: payout.employeeId
-                        )
+                    Button {
+                        Task {
+                            await commissionVM.approvePayout(
+                                id: payout.id,
+                                approvedBy: managerId,
+                                employeeId: payout.employeeId
+                            )
+                        }
+                    } label: {
+                        Text("Approve")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(RSMSTheme.Colors.accentGold)
+                            .cornerRadius(6)
                     }
-                } label: {
-                    Text("Approve")
-                        .font(.caption)
-                        .foregroundColor(.black)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(RSMSTheme.Colors.accentGold)
-                        .cornerRadius(8)
                 }
             } else {
-                Text(payout.status.rawValue.capitalized)
-                    .font(.caption)
+                Text(payout.status.rawValue.uppercased())
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundColor(statusColor)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(statusColor.opacity(0.15))
-                    .cornerRadius(8)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(statusColor.opacity(0.1))
+                    .cornerRadius(4)
             }
         }
-        .padding()
-        .background(RSMSTheme.Colors.backgroundPrimary)
-        .cornerRadius(10)
+        .padding(16)
     }
 }

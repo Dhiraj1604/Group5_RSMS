@@ -18,7 +18,10 @@ class VIPEventViewModel: ObservableObject {
     @Published var eventError: String?
 
     // MARK: - Guest Directory
+//     @Published var allGuests: [VIPGuest] = []
+    // MARK: - Guest Directory & Appointments
     @Published var allGuests: [VIPGuest] = []
+    @Published var appointments: [VIPAppointment] = []
     @Published var isLoadingGuests = false
 
     // MARK: - Per-event detail (loaded on demand)
@@ -89,9 +92,15 @@ class VIPEventViewModel: ObservableObject {
 
     func deleteEvent(_ event: VIPEvent) async {
         do {
+//             try await service.deleteEvent(eventId: event.id)
+//             events.removeAll { $0.id == event.id }
+//         } catch {
+            print("[VIPEventVM] Deleting event: \(event.id)")
             try await service.deleteEvent(eventId: event.id)
             events.removeAll { $0.id == event.id }
+            print("[VIPEventVM] Event deleted successfully")
         } catch {
+            print("[VIPEventVM] Delete error: \(error)")
             eventError = error.localizedDescription
         }
     }
@@ -108,8 +117,18 @@ class VIPEventViewModel: ObservableObject {
         isLoadingGuests = false
     }
 
+//     func addGuest(boutiqueId: UUID, name: String, email: String?,
+//                   phone: String?, tier: String, preferences: String?,
+    func loadAppointments(boutiqueId: UUID) async {
+        do {
+            appointments = try await service.fetchAppointments(boutiqueId: boutiqueId)
+        } catch {
+            eventError = error.localizedDescription
+        }
+    }
+
     func addGuest(boutiqueId: UUID, name: String, email: String?,
-                  phone: String?, tier: String, preferences: String?,
+                  phone: String?, preferences: String?,
                   addedBy: UUID?) async {
         // Guard: boutiqueId must be a real store — prevents FK violation
         guard boutiqueId.uuidString != "00000000-0000-0000-0000-000000000000" else {
@@ -209,6 +228,36 @@ class VIPEventViewModel: ObservableObject {
         }
     }
 
+    // MARK: - VIP Appointments
+    
+    func scheduleAppointment(guestId: UUID, boutiqueId: UUID, title: String?, date: Date, type: String, notes: String?) async {
+        let payload = VIPAppointment.InsertPayload(
+            guest_id: guestId,
+            boutique_id: boutiqueId,
+            title: title,
+            appointment_date: date,
+            type: type,
+            status: "scheduled",
+            notes: notes
+        )
+        do {
+            try await service.createAppointment(payload)
+            await loadAppointments(boutiqueId: boutiqueId)
+        } catch {
+            eventError = error.localizedDescription
+        }
+    }
+    
+    func updateAppointmentStatus(appointmentId: UUID, newStatus: String) async {
+        do {
+            try await service.updateAppointmentStatus(appointmentId: appointmentId, status: newStatus)
+            if let idx = appointments.firstIndex(where: { $0.id == appointmentId }) {
+                appointments[idx].status = newStatus
+            }
+        } catch {
+            eventError = error.localizedDescription
+        }
+    }
 
     // MARK: - Helpers
 

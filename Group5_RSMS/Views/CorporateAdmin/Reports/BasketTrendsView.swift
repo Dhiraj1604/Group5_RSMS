@@ -435,6 +435,9 @@ struct BasketTrendsView: View {
             if data.count > 5 {
                 Button {
                     withAnimation(.easeInOut(duration: 0.25)) { showAllBasketRows.toggle() }
+//                     withAnimation(.easeInOut(duration: 0.25)) {
+//                         showAllBasketRows.toggle()
+//                     }
                 } label: {
                     HStack {
                         Spacer()

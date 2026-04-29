@@ -42,6 +42,8 @@ struct VIPGuestsDirectoryView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
+//                     ForEach(filtered) { guest in
+//                         GuestDirectoryRow(guest: guest)
                     Section {
                         ForEach(filtered) { guest in
                             NavigationLink(destination: VIPGuestDetailView(vm: vm, guest: guest)) {
@@ -72,12 +74,14 @@ struct VIPGuestsDirectoryView: View {
 struct GuestDirectoryRow: View {
     let guest: VIPGuest
 
-    private var tierColor: Color {
-        switch guest.tier.lowercased() {
-        case "platinum": return Color(red: 0.85, green: 0.85, blue: 0.95)
-        case "gold":     return RSMSTheme.Colors.accentGold
-        default:         return Color(white: 0.7)
-        }
+//     private var tierColor: Color {
+//         switch guest.tier.lowercased() {
+//         case "platinum": return Color(red: 0.85, green: 0.85, blue: 0.95)
+//         case "gold":     return RSMSTheme.Colors.accentGold
+//         default:         return Color(white: 0.7)
+//         }
+    private var defaultColor: Color {
+        RSMSTheme.Colors.accentGold
     }
 
     var body: some View {
@@ -85,11 +89,16 @@ struct GuestDirectoryRow: View {
             // Avatar
             ZStack {
                 Circle()
-                    .fill(tierColor.opacity(0.2))
+//                     .fill(tierColor.opacity(0.2))
+//                     .frame(width: 44, height: 44)
+//                 Text(guest.initials)
+//                     .font(.subheadline).fontWeight(.bold)
+//                     .foregroundStyle(tierColor)
+                    .fill(defaultColor.opacity(0.2))
                     .frame(width: 44, height: 44)
                 Text(guest.initials)
                     .font(.subheadline).fontWeight(.bold)
-                    .foregroundStyle(tierColor)
+                    .foregroundStyle(defaultColor)
             }
 
             VStack(alignment: .leading, spacing: 3) {
@@ -114,16 +123,17 @@ struct GuestDirectoryRow: View {
 
             VStack(alignment: .trailing, spacing: 4) {
                 // Tier badge
-                HStack(spacing: 4) {
-                    Image(systemName: guest.tierIcon)
-                        .font(.caption2)
-                    Text(guest.tier.capitalized)
-                        .font(.caption2).fontWeight(.bold)
-                }
-                .foregroundStyle(tierColor)
-                .padding(.horizontal, 8).padding(.vertical, 3)
-                .background(tierColor.opacity(0.15))
-                .clipShape(Capsule())
+//                 HStack(spacing: 4) {
+//                     Image(systemName: guest.tierIcon)
+//                         .font(.caption2)
+//                     Text(guest.tier.capitalized)
+//                         .font(.caption2).fontWeight(.bold)
+//                 }
+//                 .foregroundStyle(tierColor)
+//                 .padding(.horizontal, 8).padding(.vertical, 3)
+//                 .background(tierColor.opacity(0.15))
+//                 .clipShape(Capsule())
+
             }
         }
         .padding(.vertical, 4)

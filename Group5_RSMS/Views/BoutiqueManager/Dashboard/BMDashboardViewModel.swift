@@ -13,6 +13,8 @@ struct StaffPerformanceEntry: Identifiable {
     let thisMonthSales: Double
     let totalOrders: Int
     let avgOrderValue: Double
+    let potentialCommission: Double // Added for simulation
+    let commissionRate: Double      // Added to show in UI
 }
 
 @MainActor
@@ -98,12 +100,13 @@ final class BMDashboardViewModel: ObservableObject {
             async let employeesFetch = sync.fetchEmployees(boutiqueId: boutiqueId)
             async let yearlySalesFetch = sync.fetchSalesPerEmployee(boutiqueId: boutiqueId, from: startOfYear)
             async let monthlySalesFetch = sync.fetchSalesPerEmployee(boutiqueId: boutiqueId, from: startOfMonth)
+            async let storeMonthlyTotalFetch = sync.fetchStoreTotalSales(boutiqueId: boutiqueId, from: startOfMonth)
+            async let commissionRatesFetch = sync.fetchCommissionRates(boutiqueId: boutiqueId)
             async let totalPerformanceFetch = MerchandisingService.shared.fetchYearlyPerformance(forStore: boutiqueId)
             
-            let employees = try await employeesFetch
-            let yearlySales = try await yearlySalesFetch
-            let monthlySales = try await monthlySalesFetch
-            let totalPerf = try await totalPerformanceFetch
+            let (employees, yearlySales, monthlySales, storeMonthlyTotal, commissionRates, totalPerf) = try await (
+                employeesFetch, yearlySalesFetch, monthlySalesFetch, storeMonthlyTotalFetch, commissionRatesFetch, totalPerformanceFetch
+            )
             
             // Map stats by employee ID
             var yearlyMap: [UUID: EmployeeSalesSummary] = [:]
@@ -114,6 +117,13 @@ final class BMDashboardViewModel: ObservableObject {
             
             var entries: [StaffPerformanceEntry] = []
             
+            // Map commission rates by employee ID
+            var rateMap: [UUID: Double] = [:]
+            for r in commissionRates {
+                // Use the latest effective rate
+                rateMap[r.employeeId] = r.ratePercentage
+            }
+
             for emp in employees {
                 let yStats = yearlyMap[emp.id]
                 let mStats = monthlyMap[emp.id]
@@ -124,19 +134,26 @@ final class BMDashboardViewModel: ObservableObject {
                 
                 let avg = yCount > 0 ? ySales / Double(yCount) : 0
                 
+                // Calculate potential commission: (Store Monthly Total * Rate) / 100
+                let rate = rateMap[emp.id] ?? 0.0
+                let commission = (storeMonthlyTotal * rate) / 100.0
+
                 entries.append(StaffPerformanceEntry(
                     id: emp.id,
                     name: emp.name,
-                    totalSales: ySales,
-                    thisMonthSales: mSales,
+                    // Use individual sales if available, otherwise show the store total for simulation
+                    totalSales: ySales > 0 ? ySales : storeMonthlyTotal, 
+                    thisMonthSales: mSales > 0 ? mSales : storeMonthlyTotal,
                     totalOrders: yCount,
-                    avgOrderValue: avg
+                    avgOrderValue: avg,
+                    potentialCommission: commission,
+                    commissionRate: rate
                 ))
             }
             
-            self.staffPerformance   = entries.sorted { $0.totalSales > $1.totalSales }
+            self.staffPerformance   = entries.sorted { $0.potentialCommission > $1.potentialCommission }
             self.teamTotalSales     = totalPerf.totalSales
-            self.teamThisMonthSales = monthlySales.reduce(0) { $0 + $1.totalSales }
+            self.teamThisMonthSales = storeMonthlyTotal
             self.teamTotalOrders    = totalPerf.totalOrders
             
         } catch {

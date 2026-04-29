@@ -16,6 +16,9 @@ struct RevenueTrendsView: View {
     @StateObject private var viewModel = RevenueTrendsViewModel()
 
     @State private var showDatePicker = false
+    @State private var showExportSheet = false
+    @State private var exportURL: URL?
+    @State private var showExportOptions = false
     @State private var showAllRevenueRows = false
 
     var body: some View {
@@ -316,6 +319,7 @@ struct RevenueTrendsView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(RSMSTheme.Colors.textSecondary)
                 Spacer()
+
                 // Compare toggle
                 HStack(spacing: 6) {
                     Text("Compare")
@@ -326,6 +330,7 @@ struct RevenueTrendsView: View {
                         .labelsHidden()
                         .scaleEffect(0.8)
                 }
+
                 periodDropdown
             }
             if viewModel.showComparison {
@@ -605,7 +610,10 @@ struct RevenueTrendsView: View {
             // See More / See Less
             if data.count > 5 {
                 Button {
-                    withAnimation(.easeInOut(duration: 0.25)) { showAllRevenueRows.toggle() }
+//                     withAnimation(.easeInOut(duration: 0.25)) { showAllRevenueRows.toggle() }
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showAllRevenueRows.toggle()
+                    }
                 } label: {
                     HStack {
                         Spacer()

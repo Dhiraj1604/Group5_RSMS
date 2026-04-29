@@ -78,7 +78,7 @@ struct BMStaffTab: View {
         switch selectedTab {
         case 0:
             Button { showAddEmployee = true } label: {
-                Image(systemName: "person.badge.plus")
+                Image(systemName: "plus")
                     .foregroundColor(RSMSTheme.Colors.accentGold)
             }
         case 1:
@@ -90,7 +90,7 @@ struct BMStaffTab: View {
             }
         case 2:
             Button { showingAddShift = true } label: {
-                Image(systemName: "calendar.badge.plus")
+                Image(systemName: "plus")
                     .foregroundColor(RSMSTheme.Colors.accentGold)
             }
         default:

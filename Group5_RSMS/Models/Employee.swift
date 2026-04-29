@@ -18,19 +18,23 @@ struct Employee: Codable, Identifiable {
     let salary: Double?
     let joiningDate: Date?
     let isActive: Bool?
+    let assignedShift: String?
+    let weeklyOff: String?
     let createdAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case id
-        case boutiqueId  = "boutique_id"
+        case boutiqueId     = "boutique_id"
         case name
         case email
         case phone
         case role
         case salary
-        case joiningDate = "joining_date"
-        case isActive    = "is_active"
-        case createdAt   = "created_at"
+        case joiningDate    = "joining_date"
+        case isActive       = "is_active"
+        case assignedShift  = "assigned_shift"
+        case weeklyOff      = "weekly_off"
+        case createdAt      = "created_at"
     }
     
 }
