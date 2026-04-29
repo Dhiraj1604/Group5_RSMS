@@ -92,11 +92,13 @@ struct VIPGuestDetailView: View {
     
     private var detailsSection: some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-            sectionHeader(title: "Client Details", icon: "person.text.rectangle.fill")
+            sectionHeader(title: "Preferences", icon: "person.text.rectangle.fill")
             
             VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
                 if let prefs = guest.preferences {
-                    detailRow(label: "Preferences", value: prefs)
+                    Text(prefs)
+                        .font(.subheadline)
+                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
                 }
                 if let last = guest.lastVisit {
                     detailRow(label: "Last Visit", value: last.formatted(date: .abbreviated, time: .omitted))
