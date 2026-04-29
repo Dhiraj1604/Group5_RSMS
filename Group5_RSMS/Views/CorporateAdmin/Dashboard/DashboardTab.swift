@@ -918,43 +918,47 @@ struct DashboardTab: View {
             
             layout {
                 NavigationLink { StockAnalysisStorePickerView() } label: {
-                    actionCard(icon: "chart.bar.fill", title: "Stock Analysis", subtitle: "SKU Intelligence", color: RSMSTheme.Colors.accentGold)
+                    actionCard(icon: "chart.bar.fill", title: "Stock Analysis", subtitle: "Monitor inventory levels and SKU performance across all boutiques.", color: RSMSTheme.Colors.accentGold)
                 }
                 NavigationLink { TaxSettingsView() } label: {
-                    actionCard(icon: "shield.checkerboard", title: "Tax Rates", subtitle: "Regional Tax & Compliance", color: RSMSTheme.Colors.accentGold)
+                    actionCard(icon: "shield.checkerboard", title: "Tax Rates", subtitle: "Manage regional tax compliance and jurisdictional rate adjustments.", color: RSMSTheme.Colors.accentGold)
                 }
             }
         }
     }
     
-    private func actionCard(icon: String, title: String, subtitle: String, color: Color) -> some View {
-        VStack(alignment: .center, spacing: 20) {
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.1))
-                    .frame(width: 60, height: 60)
-                Image(systemName: icon)
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundStyle(color)
+    private func actionCard(icon: String, title: String, subtitle: String? = nil, color: Color) -> some View {
+        ZStack(alignment: .bottomTrailing) {
+            VStack(alignment: .center, spacing: 20) {
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.1))
+                        .frame(width: 60, height: 60)
+                    Image(systemName: icon)
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundStyle(color)
+                }
+                
+                VStack(alignment: .center, spacing: 8) {
+                    Text(title)
+                        .font(.custom("Helvetica-Bold", size: 22))
+                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                    if let subtitle = subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.custom("Helvetica", size: 14))
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                }
             }
+            .padding(24)
+            .frame(maxWidth: .infinity)
             
-            VStack(alignment: .center, spacing: 8) {
-                Text(title)
-                    .font(.custom("Helvetica-Bold", size: 22))
-                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                Text(subtitle)
-                    .font(.custom("Helvetica", size: 14))
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-            
-
-            Image(systemName: "arrow.right.circle.fill")
-                .font(.system(size: 20))
-                .foregroundStyle(color.opacity(0.8))
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(color.opacity(0.6))
+                .padding(20)
         }
-        .padding(24)
-        .frame(maxWidth: .infinity)
         .background(RSMSTheme.Colors.backgroundDeep)
         .cornerRadius(24)
         .overlay(

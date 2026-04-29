@@ -36,7 +36,7 @@ struct AllStorePerformanceView: View {
 
         switch sortOption {
         case .revenue:
-            result.sort { $0.revenue > $1.revenue }
+            result.sort { $0.achievementPercentage > $1.achievementPercentage }
         case .orders:
             result.sort { $0.orderCount > $1.orderCount }
         case .inventory:
@@ -186,36 +186,27 @@ struct PremiumStoreCard: View {
                 // Top Right: Status Badge
                 HStack {
                     Spacer()
-                    // Ultra-Minimal Status Dot
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(storeKPI.isActive ? RSMSTheme.Colors.success : .red)
-                            .frame(width: 6, height: 6)
-                            .shadow(color: storeKPI.isActive ? RSMSTheme.Colors.success : .red, radius: 4)
-                        Text(storeKPI.isActive ? "ACTIVE" : "INACTIVE")
-                            .font(.custom("HelveticaNeue-Bold", size: 10))
-                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.black.opacity(0.4))
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                    // Ultra-Minimal Status Dot (Only)
+                    Circle()
+                        .fill(storeKPI.isActive ? RSMSTheme.Colors.success : .red)
+                        .frame(width: 8, height: 8)
+                        .shadow(color: storeKPI.isActive ? RSMSTheme.Colors.success : .red, radius: 4)
+                        .padding(12)
+                        .background(Color.black.opacity(0.4))
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
                 
-                Spacer()
-                
                 // Store Name & City
                 VStack(alignment: .leading, spacing: 4) {
                     Text(storeKPI.storeName)
-                        .font(.custom("HelveticaNeue-Bold", size: 26))
+                        .font(.custom("HelveticaNeue-Bold", size: 24))
                         .foregroundStyle(RSMSTheme.Colors.accentGoldLight)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
+                        .lineLimit(1)
                     Text(storeKPI.storeCity.uppercased())
-                        .font(.custom("HelveticaNeue-Medium", size: 12))
+                        .font(.custom("HelveticaNeue-Medium", size: 11))
                         .foregroundStyle(RSMSTheme.Colors.textTertiary)
                         .tracking(1.5)
                 }
@@ -223,23 +214,52 @@ struct PremiumStoreCard: View {
                 
                 Spacer()
                 
-                // Middle: Muted Revenue
-                VStack(alignment: .leading, spacing: -2) {
-                    Text("TOTAL REVENUE")
-                        .font(.custom("HelveticaNeue-Bold", size: 11))
-                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                        .tracking(2)
+                // Progress Bar & Metrics Section
+                VStack(spacing: 28) {
+                    // Custom Premium Progress Bar
+                    GeometryReader { barGeo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(Color.white.opacity(0.1))
+                                .frame(height: 6)
+                            
+                            Capsule()
+                                .fill(RSMSTheme.Colors.accentGold)
+                                .frame(width: barGeo.size.width * min(storeKPI.achievementPercentage / 100.0, 1.0), height: 6)
+                                .shadow(color: RSMSTheme.Colors.accentGold.opacity(0.3), radius: 4, x: 0, y: 0)
+                        }
+                    }
+                    .frame(height: 6)
                     
-                    Text(viewModel.shortRevenue(storeKPI.revenue))
-                        .font(.custom("HelveticaNeue-Bold", size: 28))
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
-                        .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+                    // Aligned Metrics Below Progress Bar
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("% TO TARGET")
+                                .font(.custom("HelveticaNeue-Bold", size: 10))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.8))
+                                .tracking(1)
+                            
+                            Text(String(format: "%.0f%%", storeKPI.achievementPercentage))
+                                .font(.custom("HelveticaNeue-Bold", size: 22))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text("TOTAL REVENUE")
+                                .font(.custom("HelveticaNeue-Bold", size: 10))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.8))
+                                .tracking(1)
+                            
+                            Text(viewModel.localizedShortRevenue(storeKPI.revenue, currencyCode: storeKPI.currencyCode))
+                                 .font(.custom("HelveticaNeue-Bold", size: 22))
+                                 .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                    }
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 16)
-                
-                Spacer()
-                
+                .padding(.bottom, 20)
             }
         }
         .frame(height: 240)

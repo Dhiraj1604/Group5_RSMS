@@ -79,18 +79,6 @@ struct SetPriceView: View {
                     .foregroundStyle(RSMSTheme.Colors.accentGold)
                     .disabled(!isValidPrice || isLoading)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: { submitPrice() }) {
-                        if isLoading {
-                            ProgressView().tint(RSMSTheme.Colors.accentGold)
-                        } else {
-                            Image(systemName: "checkmark")
-                                .fontWeight(.bold)
-                        }
-                    }
-                    .foregroundStyle(isValidPrice ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textTertiary)
-                    .disabled(!isValidPrice || isLoading)
-                }
             }
             .alert("Error", isPresented: Binding<Bool>(
                 get: { errorMessage != nil },
@@ -102,7 +90,7 @@ struct SetPriceView: View {
             }
         }
         .presentationDragIndicator(.visible)
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
     }
 
     // MARK: - Product Summary
@@ -231,28 +219,15 @@ struct SetPriceView: View {
     // MARK: - Audit Notice
 
     private var auditNotice: some View {
-        HStack(spacing: RSMSTheme.Spacing.md) {
+        HStack(spacing: 6) {
             Image(systemName: "shield.checkered")
-                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7))
-                .font(.title3)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Audit Trail")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                Text("This change will be recorded")
-                    .font(.caption2)
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+                .font(.system(size: 10))
+            Text("This change will be recorded in the audit trail")
+                .font(.system(size: 10, weight: .medium))
         }
-        .padding(RSMSTheme.Spacing.lg)
-        .background(RSMSTheme.Colors.accentGold.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
-        .overlay(
-            RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                .stroke(RSMSTheme.Colors.accentGold.opacity(0.15), lineWidth: 1)
-        )
+        .foregroundStyle(RSMSTheme.Colors.textTertiary)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, RSMSTheme.Spacing.md)
     }
 
     // MARK: - Submit Logic

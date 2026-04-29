@@ -122,11 +122,18 @@ class DashboardViewModel {
         let id: UUID
         let storeName: String
         let storeCity: String
+        let storeCountry: String
+        let currencyCode: String
         let isActive: Bool
         let revenue: Double
+        let target: Double
         let orderCount: Int
         let inventoryUnits: Int
         let staffCount: Int
+
+        var achievementPercentage: Double {
+            target > 0 ? (revenue / target) * 100 : 0
+        }
     }
 
     struct DailyRevenue: Identifiable {
@@ -378,13 +385,16 @@ class DashboardViewModel {
             self.storeKPIs = stores.map { store in
                 StoreKPI(
                     id: store.id, storeName: store.name, storeCity: store.city,
+                    storeCountry: store.country,
+                    currencyCode: store.currencyCode ?? "INR",
                     isActive: store.isActive == true,
                     revenue: revByStore[store.id] ?? 0,
+                    target: store.monthlyRevenueTarget ?? 1_000_000,
                     orderCount: ordByStore[store.id] ?? 0,
                     inventoryUnits: invByStore[store.id] ?? 0,
                     staffCount: staffByStore[store.id] ?? 0
                 )
-            }.sorted { $0.revenue > $1.revenue }
+            }.sorted { $0.achievementPercentage > $1.achievementPercentage }
 
             // Conversion Rate: orders / visitors across all stores
             let totalVisitors = visitorsByStore.values.reduce(0, +)
@@ -822,11 +832,34 @@ class DashboardViewModel {
     var totalCustomers: Int { newCustomers + returningCustomers }
 
     func shortRevenue(_ value: Double) -> String {
-        let s = Self.currencySymbol
-        if value >= 10_000_000 { return String(format: "\(s)%.1fCr", value / 10_000_000) }
-        if value >= 100_000 { return String(format: "\(s)%.1fL", value / 100_000) }
-        if value >= 1_000 { return String(format: "\(s)%.1fK", value / 1_000) }
-        return String(format: "\(s)%.0f", value)
+        return localizedShortRevenue(value, currencyCode: "INR")
+    }
+
+    func localizedShortRevenue(_ value: Double, currencyCode: String) -> String {
+        let symbol: String
+        switch currencyCode {
+        case "USD": symbol = "$"
+        case "EUR": symbol = "€"
+        case "GBP": symbol = "£"
+        case "JPY": symbol = "¥"
+        case "AED": symbol = "د.إ"
+        default: symbol = "₹"
+        }
+        
+        let isIndian = currencyCode == "INR"
+        
+        if isIndian {
+            if value >= 10_000_000 { return String(format: "\(symbol)%.1fCr", value / 10_000_000) }
+            if value >= 100_000 { return String(format: "\(symbol)%.1fL", value / 100_000) }
+            if value >= 1_000 { return String(format: "\(symbol)%.1fK", value / 1_000) }
+            return String(format: "\(symbol)%.0f", value)
+        } else {
+            // International
+            if value >= 1_000_000_000 { return String(format: "\(symbol)%.1fB", value / 1_000_000_000) }
+            if value >= 1_000_000 { return String(format: "\(symbol)%.1fM", value / 1_000_000) }
+            if value >= 1_000 { return String(format: "\(symbol)%.1fK", value / 1_000) }
+            return String(format: "\(symbol)%.0f", value)
+        }
     }
 
     var formattedTotalRevenue: String { shortRevenue(totalRevenue) }

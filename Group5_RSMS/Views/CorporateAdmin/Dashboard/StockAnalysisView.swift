@@ -789,7 +789,7 @@ struct StockAnalysisStorePickerView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(store.name)
                         .font(.custom("HelveticaNeue-Bold", size: 26))
-                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                        .foregroundStyle(RSMSTheme.Colors.accentGoldLight)
                         .lineLimit(2)
                         .minimumScaleFactor(0.8)
                     Text(locationForStore(store).uppercased())

@@ -214,7 +214,7 @@ struct StoreDetailView: View {
                                 if selectedCurrency != "INR" {
                                     let conversionRate = selectedCurrency == "AED" ? 22.7 : 83.0
                                     let rupeeValue = currentRevenue * conversionRate
-                                    Text("(₹ \(formatCurrencyValue(rupeeValue)))")
+                                    Text("(₹ \(formatCurrencyValue(rupeeValue, forceIndian: true)))")
                                         .font(.custom("HelveticaNeue-Medium", size: 18))
                                         .foregroundStyle(RSMSTheme.Colors.textSecondary)
                                 }
@@ -470,15 +470,30 @@ struct StoreDetailView: View {
             )
     }
 
-    private func formatCurrencyValue(_ value: Double) -> String {
-        if value >= 10000000 {
-            return String(format: "%.1f Cr", value / 10000000)
-        } else if value >= 100000 {
-            return String(format: "%.1f L", value / 100000)
-        } else if value >= 1000 {
-            return String(format: "%.1f K", value / 1000)
+    private func formatCurrencyValue(_ value: Double, forceIndian: Bool = false) -> String {
+        let isIndian = forceIndian || (selectedCurrency == "INR")
+        
+        if isIndian {
+            if value >= 10_000_000 {
+                return String(format: "%.1f Cr", value / 10_000_000)
+            } else if value >= 100_000 {
+                return String(format: "%.1f L", value / 100_000)
+            } else if value >= 1_000 {
+                return String(format: "%.1f K", value / 1_000)
+            } else {
+                return String(format: "%.0f", value)
+            }
         } else {
-            return String(format: "%.0f", value)
+            // International standards
+            if value >= 1_000_000_000 {
+                return String(format: "%.1f B", value / 1_000_000_000)
+            } else if value >= 1_000_000 {
+                return String(format: "%.1f M", value / 1_000_000)
+            } else if value >= 1_000 {
+                return String(format: "%.1f K", value / 1_000)
+            } else {
+                return String(format: "%.0f", value)
+            }
         }
     }
 
