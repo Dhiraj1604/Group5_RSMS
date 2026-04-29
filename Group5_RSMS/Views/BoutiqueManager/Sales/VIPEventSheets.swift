@@ -43,7 +43,7 @@ struct CreateEventSheet: View {
                         // Date picker
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Event Date").font(.caption).foregroundStyle(RSMSTheme.Colors.textSecondary)
-                            DatePicker("", selection: $eventDate, in: Date()..., displayedComponents: [.date, .hourAndMinute])
+                            DatePicker("", selection: $eventDate, in: Calendar.current.startOfDay(for: Date())..., displayedComponents: [.date, .hourAndMinute])
                                 .datePickerStyle(.compact)
                                 .tint(RSMSTheme.Colors.accentGold)
                                 .padding()
@@ -151,7 +151,6 @@ struct AddGuestSheet: View {
     @State private var name         = ""
     @State private var email        = ""
     @State private var phone        = ""
-    @State private var tier         = "silver"
     @State private var preferences  = ""
     @State private var isSaving     = false
     private var isPhoneValid: Bool {
@@ -180,17 +179,6 @@ struct AddGuestSheet: View {
                         }
                         fieldRow("Style Preferences", text: $preferences, placeholder: "e.g. Prefers minimalist cuts")
 
-                        // Tier picker
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("VIP Tier").font(.caption).foregroundStyle(RSMSTheme.Colors.textSecondary)
-                            Picker("Tier", selection: $tier) {
-                                Text("🥈 Silver").tag("silver")
-                                Text("🥇 Gold").tag("gold")
-                                Text("💎 Platinum").tag("platinum")
-                            }
-                            .pickerStyle(.segmented)
-                        }
-
                         Button {
                             isSaving = true
                             Task {
@@ -199,7 +187,6 @@ struct AddGuestSheet: View {
                                     name:         name.trimmingCharacters(in: .whitespaces),
                                     email:        email.isEmpty ? nil : email,
                                     phone:        phone.isEmpty ? nil : phone,
-                                    tier:         tier,
                                     preferences:  preferences.isEmpty ? nil : preferences,
                                     addedBy:      appState.managerAuthId // Fix for added_by_fkey
                                 )
@@ -327,7 +314,7 @@ struct InviteGuestSheet: View {
                     }
                     .listStyle(.insetGrouped)
                     .scrollContentBackground(.hidden)
-                    .searchable(text: $searchText, prompt: "Search guests")
+                    .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search guests")
                 }
             }
 //             .navigationTitle("Invite Guest")
@@ -355,7 +342,8 @@ struct AddProductToCollectionSheet: View {
     let event: VIPEvent
 
     @State private var searchText    = ""
-    @State private var specialPrice  = ""
+    @State private var selectedProductIds: Set<UUID> = []
+    @State private var isSaving      = false
 
     private var alreadyAddedIds: Set<UUID> {
         Set(vm.selectedEventCollection.compactMap { $0.productId })
@@ -375,25 +363,13 @@ struct AddProductToCollectionSheet: View {
             ZStack {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
                 VStack(spacing: 0) {
-                    // Optional event price field
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Optional: Event-night special price (₹)")
-                            .font(.caption)
-                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                        FocusableTextField(placeholder: "Leave blank to use base price", text: $specialPrice, keyboard: .decimalPad)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-
                     List(availableProducts) { product in
+                        let isSelected = selectedProductIds.contains(product.id)
                         Button {
-                            Task {
-                                await vm.addToCollection(
-                                    eventId:      event.id,
-                                    productId:    product.id,
-                                    specialPrice: Double(specialPrice)
-                                )
-                                dismiss()
+                            if isSelected {
+                                selectedProductIds.remove(product.id)
+                            } else {
+                                selectedProductIds.insert(product.id)
                             }
                         } label: {
                             HStack(spacing: 12) {
@@ -413,8 +389,8 @@ struct AddProductToCollectionSheet: View {
                                         .foregroundStyle(RSMSTheme.Colors.textTertiary)
                                 }
                                 Spacer()
-                                Image(systemName: "plus.circle")
-                                    .foregroundStyle(RSMSTheme.Colors.accentGold)
+                                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(isSelected ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textTertiary)
                             }
                         }
                         .listRowBackground(RSMSTheme.Colors.backgroundElevated)
@@ -422,7 +398,7 @@ struct AddProductToCollectionSheet: View {
                     }
                     .listStyle(.insetGrouped)
                     .scrollContentBackground(.hidden)
-                    .searchable(text: $searchText, prompt: "Search by name or SKU")
+                    .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search by name or SKU")
                 }
             }
             .navigationTitle("Add to Collection")
@@ -430,6 +406,32 @@ struct AddProductToCollectionSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }.foregroundStyle(RSMSTheme.Colors.textSecondary)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isSaving = true
+                        Task {
+                            for productId in selectedProductIds {
+                                await vm.addToCollection(
+                                    eventId: event.id,
+                                    productId: productId,
+                                    specialPrice: nil
+                                )
+                            }
+                            isSaving = false
+                            dismiss()
+                        }
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                        } else {
+                            Text("Add")
+                                .fontWeight(.bold)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                    }
+                    .disabled(selectedProductIds.isEmpty || isSaving)
+                    .opacity(selectedProductIds.isEmpty ? 0.6 : 1.0)
                 }
             }
         }

@@ -71,7 +71,6 @@ struct VIPEvent: Codable, Identifiable {
     var statusDisplay: String {
         switch status.lowercased() {
         case "upcoming":   return "Upcoming"
-        case "ongoing":    return "Ongoing"
         case "completed":  return "Completed"
         case "cancelled":  return "Cancelled"
         default:           return status.capitalized
@@ -79,7 +78,7 @@ struct VIPEvent: Codable, Identifiable {
     }
 
     var isEditable: Bool {
-        status == "upcoming" || status == "ongoing"
+        status == "upcoming" 
     }
 
     var formattedDate: String {
@@ -96,7 +95,6 @@ struct VIPGuest: Codable, Identifiable {
     var fullName: String
     var email: String?
     var phone: String?
-    var tier: String?
     var addedBy: UUID?
     var preferences: String?
     var lastVisit: Date?
@@ -108,7 +106,6 @@ struct VIPGuest: Codable, Identifiable {
         case fullName    = "full_name"
         case email
         case phone
-        case tier
         case addedBy     = "added_by"
         case preferences
         case lastVisit   = "last_visit"
@@ -122,7 +119,6 @@ struct VIPGuest: Codable, Identifiable {
         let full_name: String
         let email: String?
         let phone: String?
-        let tier: String?
         let preferences: String?
         let last_visit: String?
         let added_by: UUID?
@@ -136,7 +132,6 @@ struct VIPGuest: Codable, Identifiable {
             full_name:   fullName,
             email:       email,
             phone:       phone,
-            tier:        tier,
             preferences: preferences,
             last_visit:  lastVisit.map { iso.string(from: $0) },
             added_by:    addedBy
@@ -150,14 +145,6 @@ struct VIPGuest: Codable, Identifiable {
         let first = parts.first?.prefix(1) ?? ""
         let last  = parts.dropFirst().first?.prefix(1) ?? ""
         return (first + last).uppercased()
-    }
-
-    var tierIcon: String {
-        switch (tier ?? "standard").lowercased() {
-        case "gold": return "crown.fill"
-        case "platinum": return "diamond.fill"
-        default: return "medal.fill"
-        }
     }
 }
 
