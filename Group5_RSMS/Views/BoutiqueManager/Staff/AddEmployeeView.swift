@@ -122,6 +122,7 @@ struct StaffFormPickerRow: View {
 struct AddEmployeeView: View {
     let boutiqueId: UUID
     @ObservedObject var staffVM: StaffViewModel
+    @ObservedObject var shiftVM: ShiftViewModel
     @ObservedObject var vm: AddEmployeeViewModel
     let employeeToEdit: Employee?
 
@@ -131,9 +132,10 @@ struct AddEmployeeView: View {
     @State private var showCountryCodePicker = false
     @State private var showOffDayPicker = false
     
-    init(boutiqueId: UUID, staffVM: StaffViewModel, vm: AddEmployeeViewModel, employeeToEdit: Employee? = nil) {
+    init(boutiqueId: UUID, staffVM: StaffViewModel, shiftVM: ShiftViewModel, vm: AddEmployeeViewModel, employeeToEdit: Employee? = nil) {
         self.boutiqueId = boutiqueId
         self.staffVM = staffVM
+        self.shiftVM = shiftVM
         self.vm = vm
         self.employeeToEdit = employeeToEdit
     }
@@ -308,12 +310,55 @@ struct AddEmployeeView: View {
                             guard !vm.name.isEmpty else { return }
                             Task {
                                 let employee = vm.createEmployee(boutiqueId: boutiqueId, existingId: employeeToEdit?.id)
+                                let empId = employee.id
+                                
+                                // 1. Save Employee details
                                 if employeeToEdit == nil {
                                     await staffVM.addEmployee(employee, boutiqueId: boutiqueId)
                                 } else {
                                     await staffVM.updateEmployee(employee, boutiqueId: boutiqueId)
                                 }
+                                
+                                // 2. Create/Update Shift for today (so it reflects in Info)
                                 if staffVM.errorMessage == nil {
+                                    let calendar = Calendar.current
+                                    let today = Date()
+                                    
+                                    // Construct shift start/end for today
+                                    let startComp = calendar.dateComponents([.hour, .minute], from: vm.shiftStartTime)
+                                    let endComp = calendar.dateComponents([.hour, .minute], from: vm.shiftEndTime)
+                                    
+                                    if let startDate = calendar.date(bySettingHour: startComp.hour ?? 9, minute: startComp.minute ?? 0, second: 0, of: today),
+                                       var endDate = calendar.date(bySettingHour: endComp.hour ?? 18, minute: endComp.minute ?? 0, second: 0, of: today) {
+                                        
+                                        // Handle overnight shifts
+                                        if endDate <= startDate {
+                                            endDate = calendar.date(byAdding: .day, value: 1, to: endDate) ?? endDate
+                                        }
+                                        
+                                        // Check if a shift already exists for this employee today
+                                        let existingShift = shiftVM.shifts.first { 
+                                            $0.employeeId == empId && calendar.isDate($0.startTime, inSameDayAs: today) 
+                                        }
+                                        
+                                        if let existing = existingShift {
+                                            var updated = existing
+                                            updated.startTime = startDate
+                                            updated.endTime = endDate
+                                            _ = await shiftVM.updateShift(updated, boutiqueId: boutiqueId)
+                                        } else {
+                                            let newShift = Shift(
+                                                id: UUID(),
+                                                boutiqueId: boutiqueId,
+                                                employeeId: empId,
+                                                startTime: startDate,
+                                                endTime: endDate,
+                                                createdAt: Date()
+                                            )
+                                            _ = await shiftVM.createShift(newShift, boutiqueId: boutiqueId)
+                                        }
+                                    }
+                                    
                                     dismiss()
                                 }
                             }
@@ -328,6 +373,15 @@ struct AddEmployeeView: View {
             .onAppear {
                 if let employee = employeeToEdit {
                     vm.setupForEditing(employee)
+                    
+                    // Also find actual shift from shifts table to pre-populate timing
+                    if let lastShift = shiftVM.shifts
+                        .filter({ $0.employeeId == employee.id })
+                        .sorted(by: { $0.startTime > $1.startTime })
+                        .first {
+                        vm.shiftStartTime = lastShift.startTime
+                        vm.shiftEndTime = lastShift.endTime
+                    }
                 }
             }
             // Role picker sheet — presented independently from parent sheet

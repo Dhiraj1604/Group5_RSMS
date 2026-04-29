@@ -10,8 +10,12 @@ struct VIPAppointmentsListView: View {
     let boutiqueId: UUID
     @State private var searchText = ""
 
+    var boutiqueFilteredAppointments: [VIPAppointment] {
+        vm.appointments.filter { $0.boutiqueId == boutiqueId }
+    }
+
     var filteredAppointments: [VIPAppointment] {
-        let list = vm.appointments.filter { $0.boutiqueId == boutiqueId }
+        let list = boutiqueFilteredAppointments
         if searchText.isEmpty {
             return list.sorted { $0.appointmentDate < $1.appointmentDate }
         } else {
@@ -37,7 +41,8 @@ struct VIPAppointmentsListView: View {
         ZStack {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
             
-            if vm.appointments.isEmpty {
+            // Use boutiqueFilteredAppointments so customer-booked ones appear
+            if boutiqueFilteredAppointments.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "calendar.badge.plus")
                         .font(.system(size: 52))
@@ -74,8 +79,12 @@ struct VIPAppointmentsListView: View {
                 }
                 .listStyle(.insetGrouped)
                 .scrollContentBackground(.hidden)
+                .refreshable { await vm.loadAppointments(boutiqueId: boutiqueId) }
                 .searchable(text: $searchText, prompt: "Search by guest or type")
             }
+        }
+        .onAppear {
+            Task { await vm.loadAppointments(boutiqueId: boutiqueId) }
         }
     }
 
@@ -96,7 +105,7 @@ struct VIPAppointmentsListView: View {
                 .frame(width: 50)
                 .padding(.vertical, 4)
                 .background(RSMSTheme.Colors.accentGold.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(guest?.fullName ?? "Unknown Guest")

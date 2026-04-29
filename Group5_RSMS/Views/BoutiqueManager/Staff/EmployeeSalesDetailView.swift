@@ -343,7 +343,7 @@ struct EmployeeSalesDetailView: View {
             }
         }
         .sheet(isPresented: $showEditEmployee) {
-            AddEmployeeView(boutiqueId: boutiqueId, staffVM: staffVM, vm: addEmpVM, employeeToEdit: currentEmployee)
+            AddEmployeeView(boutiqueId: boutiqueId, staffVM: staffVM, shiftVM: shiftVM, vm: addEmpVM, employeeToEdit: currentEmployee)
         }
         .sheet(isPresented: $showSetCommission) {
             SetCommissionView(employee: employee, boutiqueId: boutiqueId, commissionVM: commissionVM)

@@ -103,7 +103,7 @@ struct StaffListView: View {
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
                     .background(RSMSTheme.Colors.accentGold)
-                    .cornerRadius(10)
+                    .cornerRadius(12)
             }
             Spacer()
         }

@@ -3,7 +3,7 @@
 //  Group5_RSMS
 //
 //  Premium Staff Module for Boutique Managers.
-//  Separates Directory and Schedule into a clean, single-header layout.
+//  Uses native .searchable for iOS-consistent search UX.
 //
 
 import SwiftUI
@@ -15,7 +15,7 @@ struct BMStaffTab: View {
     @StateObject private var staffVM = StaffViewModel()
     @StateObject private var addEmpVM = AddEmployeeViewModel()
     @StateObject private var shiftVM = ShiftViewModel()
-    
+
     @State private var searchText = ""
     @State private var showAddEmployee = false
     @State private var showingAddShift = false
@@ -26,7 +26,7 @@ struct BMStaffTab: View {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // ── PREMIUM TAB PICKER ──
+                    // ── SEGMENT PICKER ──
                     Picker("Staff Section", selection: $selectedTab) {
                         Text("Directory").tag(0)
                         Text("Schedule").tag(1)
@@ -34,52 +34,41 @@ struct BMStaffTab: View {
                     .pickerStyle(.segmented)
                     .padding(.horizontal)
                     .padding(.vertical, 8)
-                    .background(RSMSTheme.Colors.backgroundPrimary)
-
-                    // ── CONSISTENT SEARCH BAR (Luxury Style) ──
-                    if selectedTab == 0 {
-                        HStack {
-                            HStack {
-                                Image(systemName: "magnifyingglass")
-                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-                                TextField("Search staff members...", text: $searchText)
-                                    .textFieldStyle(.plain)
-                                    .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                if !searchText.isEmpty {
-                                    Button { searchText = "" } label: {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundColor(RSMSTheme.Colors.textSecondary)
-                                    }
-                                }
-                            }
-                            .padding(10)
-                            .background(RSMSTheme.Colors.backgroundElevated)
-                            .cornerRadius(12)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(RSMSTheme.Colors.backgroundPrimary)
-                    }
 
                     // ── CONTENT ──
-                    Group {
-                        if selectedTab == 0 {
-                            StaffListView(boutiqueId: boutiqueId, staffVM: staffVM, searchText: $searchText, showAddEmployee: $showAddEmployee)
-                        } else {
-                            ShiftScheduleView(shiftVM: shiftVM, staffVM: staffVM, showingAddShift: $showingAddShift, boutiqueId: boutiqueId)
-                        }
+                    if selectedTab == 0 {
+                        StaffListView(
+                            boutiqueId: boutiqueId,
+                            staffVM: staffVM,
+                            searchText: $searchText,
+                            showAddEmployee: $showAddEmployee
+                        )
+                    } else {
+                        ShiftScheduleView(
+                            shiftVM: shiftVM,
+                            staffVM: staffVM,
+                            showingAddShift: $showingAddShift,
+                            boutiqueId: boutiqueId
+                        )
                     }
                 }
             }
             .navigationTitle("Staff Management")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     trailingToolbarContent
                 }
             }
+            // ── Native iOS search bar — Directory tab ──
+            .searchable(
+                text: $searchText,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "Search staff members..."
+            )
             .sheet(isPresented: $showAddEmployee) {
-                AddEmployeeView(boutiqueId: boutiqueId, staffVM: staffVM, vm: addEmpVM)
+                AddEmployeeView(boutiqueId: boutiqueId, staffVM: staffVM, shiftVM: shiftVM, vm: addEmpVM)
             }
             .task {
                 await staffVM.fetchEmployees(boutiqueId: boutiqueId)

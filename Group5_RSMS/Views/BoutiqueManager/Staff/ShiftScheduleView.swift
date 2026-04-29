@@ -43,6 +43,21 @@ struct ShiftScheduleView: View {
         shiftVM.shiftsForDay(selectedDate).sorted { $0.startTime < $1.startTime }
     }
 
+    struct ShiftGroup: Identifiable {
+        let id = UUID()
+        let timeLabel: String
+        let shifts: [Shift]
+    }
+
+    private var groupedDailyShifts: [ShiftGroup] {
+        let grouped = Dictionary(grouping: dailyShifts) { shift in
+            let f = DateFormatter(); f.dateFormat = "HH:mm"
+            return "\(f.string(from: shift.startTime)) – \(f.string(from: shift.endTime))"
+        }
+        return grouped.map { ShiftGroup(timeLabel: $0.key, shifts: $0.value) }
+            .sorted { $0.timeLabel < $1.timeLabel }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
 
@@ -80,7 +95,7 @@ struct ShiftScheduleView: View {
                 .padding(.horizontal, 12).padding(.vertical, 10)
             }
             .background(RSMSTheme.Colors.backgroundDeep)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
             .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 4)
 
             // ── Day header ──────────────────────────────────────────────
@@ -124,24 +139,41 @@ struct ShiftScheduleView: View {
                 Spacer()
             } else {
                 List {
-                    ForEach(dailyShifts) { shift in
-                        SimpleShiftRow(
-                            shift: shift,
-                            staffName: employeeName(for: shift.employeeId),
-                            staffRole: staffRole(for: shift.employeeId)
-                        )
-                        .listRowBackground(RSMSTheme.Colors.backgroundDeep)
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                        .listRowSeparator(.hidden)
-                        .onTapGesture { shiftToEdit = shift }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) { confirmDelete(shift) } label: {
-                                Label("Delete", systemImage: "trash")
+                    ForEach(groupedDailyShifts) { group in
+                        Section {
+                            ForEach(group.shifts) { shift in
+                                SimpleShiftRow(
+                                    shift: shift,
+                                    staffName: employeeName(for: shift.employeeId),
+                                    staffRole: staffRole(for: shift.employeeId)
+                                )
+                                .listRowBackground(RSMSTheme.Colors.backgroundPrimary)
+                                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                                .listRowSeparator(.hidden)
+                                .onTapGesture { shiftToEdit = shift }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) { confirmDelete(shift) } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
                             }
+                        } header: {
+                            HStack {
+                                Image(systemName: "clock.fill")
+                                    .font(.caption)
+                                Text(group.timeLabel)
+                                    .font(.system(size: 13, weight: .bold))
+                                Spacer()
+                                Text("\(group.shifts.count) working")
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundColor(RSMSTheme.Colors.accentGold)
+                            .padding(.vertical, 8)
+                            .textCase(nil)
                         }
                     }
                 }
-                .listStyle(.plain)
+                .listStyle(.grouped)
                 .scrollContentBackground(.hidden)
                 .background(RSMSTheme.Colors.backgroundPrimary)
             }
@@ -236,27 +268,13 @@ struct SimpleShiftRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            // Time column
-            VStack(alignment: .center, spacing: 2) {
-                Text(timeStr(shift.startTime))
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
-                Rectangle()
-                    .fill(RSMSTheme.Colors.accentGold.opacity(0.3))
-                    .frame(width: 1.5, height: 12)
-                Text(timeStr(shift.endTime))
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
-                    .foregroundColor(RSMSTheme.Colors.accentGold)
-            }
-            .frame(width: 60)
-
             // Avatar
             ZStack {
                 Circle()
                     .fill(RSMSTheme.Colors.accentGold.opacity(0.12))
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                 Text(staffName.prefix(1).uppercased())
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundColor(RSMSTheme.Colors.accentGold)
             }
 
@@ -281,7 +299,7 @@ struct SimpleShiftRow: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(RSMSTheme.Colors.accentGold)
-                .cornerRadius(8)
+                .cornerRadius(12)
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
