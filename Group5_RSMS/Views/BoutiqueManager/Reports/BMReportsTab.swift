@@ -12,7 +12,7 @@ struct BMReportsTab: View {
     @Environment(AppState.self) private var appState
     @StateObject private var vm = BMReportsViewModel()
 
-    @State private var chartRange: ChartRange = .oneWeek
+    @State private var chartRange: ChartRange = .yearly
     @State private var showFullReport = false
 
     private var storeName: String {
@@ -28,13 +28,13 @@ struct BMReportsTab: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
 
-                        // MARK: - Weekly Performance Header
+                        // MARK: - Yearly Performance Header
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("Weekly Performance")
+                                Text("Yearly Performance")
                                     .font(RSMSTheme.Typography.heading3)
                                     .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                Text("This month's overview")
+                                Text("This year's overview")
                                     .font(RSMSTheme.Typography.caption)
                                     .foregroundColor(RSMSTheme.Colors.textSecondary)
                             }
@@ -44,27 +44,38 @@ struct BMReportsTab: View {
                         // MARK: - Metric Cards Row
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
-                                ReportMetricCard(
-                                    title: "Total Sales",
-                                    value: "₹\(formatNumber(vm.totalSales))",
-                                    icon: "indianrupeesign.circle.fill",
-                                    trendText: "\(vm.totalOrders) orders",
-                                    accentColor: RSMSTheme.Colors.accentGold
-                                )
-                                ReportMetricCard(
-                                    title: "Footfall",
-                                    value: "\(vm.footfall)",
-                                    icon: "figure.walk.circle.fill",
-                                    trendText: "This month",
-                                    accentColor: RSMSTheme.Colors.accentGoldLight
-                                )
-                                ReportMetricCard(
-                                    title: "Dormant Staff",
-                                    value: "\(vm.dormantEmployees)",
-                                    icon: "person.crop.circle.badge.exclamationmark.fill",
-                                    trendText: "No sales",
-                                    accentColor: RSMSTheme.Colors.warning
-                                )
+                                NavigationLink(destination: ProductSalesReportView(soldProducts: vm.soldProducts, unsoldProducts: [], mode: .sold)) {
+                                    ReportMetricCard(
+                                        title: "Total Sales",
+                                        value: "₹\(formatNumber(vm.totalSales))",
+                                        icon: "indianrupeesign.circle.fill",
+                                        trendText: "",
+                                        accentColor: RSMSTheme.Colors.accentGold
+                                    )
+                                }
+                                .buttonStyle(.plain)
+
+                                NavigationLink(destination: ProductSalesReportView(soldProducts: [], unsoldProducts: vm.unsoldProducts, mode: .slowMoving)) {
+                                    ReportMetricCard(
+                                        title: "Footfall",
+                                        value: "\(vm.footfall)",
+                                        icon: "figure.walk.circle.fill",
+                                        trendText: "",
+                                        accentColor: RSMSTheme.Colors.accentGoldLight
+                                    )
+                                }
+                                .buttonStyle(.plain)
+
+                                NavigationLink(destination: DormantStaffReportView(dormantStaff: vm.dormantStaffDetails)) {
+                                    ReportMetricCard(
+                                        title: "Dormant Staff",
+                                        value: "\(vm.dormantEmployees)",
+                                        icon: "person.crop.circle.badge.exclamationmark.fill",
+                                        trendText: "",
+                                        accentColor: RSMSTheme.Colors.warning
+                                    )
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
 
@@ -78,7 +89,7 @@ struct BMReportsTab: View {
                                 HStack(spacing: 8) {
                                     Circle().fill(RSMSTheme.Colors.accentGold).frame(width: 8, height: 8)
                                     Text("Met").font(.caption2).foregroundColor(RSMSTheme.Colors.textSecondary)
-                                    Circle().fill(RSMSTheme.Colors.error).frame(width: 8, height: 8)
+                                    Circle().fill(RSMSTheme.Colors.textPrimary).frame(width: 8, height: 8)
                                     Text("Missed").font(.caption2).foregroundColor(RSMSTheme.Colors.textSecondary)
                                 }
                             }
@@ -97,21 +108,31 @@ struct BMReportsTab: View {
 
                         // MARK: - Weekly Sales Chart
                         VStack(alignment: .leading, spacing: 14) {
-                            HStack {
+                            let data = vm.chartData(for: chartRange)
+                            let periodTotal = data.reduce(0) { $0 + $1.amount }
+
+                            // Chart Summary Header
+                            VStack(alignment: .leading, spacing: 6) {
                                 Text("Sales Trend")
                                     .font(RSMSTheme.Typography.heading4)
                                     .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                Spacer()
-                                Picker("Range", selection: $chartRange) {
-                                    ForEach(ChartRange.allCases, id: \.self) { range in
-                                        Text(range.rawValue).tag(range)
-                                    }
+                                
+                                Text("Visualizing your boutique's monthly revenue flow for the current year.")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                
+                                HStack(spacing: 4) {
+                                    Text("Yearly Total:")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                                    Text("₹\(formatNumber(periodTotal))")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(RSMSTheme.Colors.accentGold)
                                 }
-                                .pickerStyle(.segmented)
-                                .frame(width: 100)
+                                .padding(.top, 2)
                             }
 
-                            let data = vm.chartData(for: chartRange)
 
                             if data.isEmpty || data.allSatisfy({ $0.amount == 0 }) {
                                 VStack(spacing: 10) {
@@ -127,23 +148,25 @@ struct BMReportsTab: View {
                             } else {
                                 Chart(data) { point in
                                     BarMark(
-                                        x: .value("Day", point.date, unit: .day),
+                                        x: .value("Month", point.date, unit: .month),
                                         y: .value("Sales", point.amount)
                                     )
+
                                     .foregroundStyle(RSMSTheme.Colors.accentGold.gradient)
                                     .cornerRadius(4)
                                 }
                                 .chartXAxis {
-                                    AxisMarks(values: .stride(by: .day, count: chartRange == .twoWeeks ? 3 : 1)) { value in
+                                    AxisMarks(values: .stride(by: .month)) { _ in
                                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3))
                                             .foregroundStyle(RSMSTheme.Colors.border)
-                                        AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                                        AxisValueLabel(format: .dateTime.month(.abbreviated))
                                             .foregroundStyle(RSMSTheme.Colors.textSecondary)
                                             .offset(x: 0, y: 4)
                                     }
                                 }
+
                                 .chartYAxis {
-                                    AxisMarks { _ in
+                                    AxisMarks(position: .leading) { _ in
                                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3))
                                             .foregroundStyle(RSMSTheme.Colors.border)
                                         AxisValueLabel()
@@ -151,8 +174,10 @@ struct BMReportsTab: View {
                                     }
                                 }
                                 .frame(height: 200)
+                                .padding(.top, 10)
                                 .animation(.easeInOut, value: chartRange)
                             }
+
                         }
                         .padding()
                         .background(RSMSTheme.Colors.backgroundElevated)
@@ -162,7 +187,8 @@ struct BMReportsTab: View {
                                 .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
                         )
 
-                        // MARK: - View Full Report CTA
+                        // MARK: - View Full Report CTA (Hidden as requested)
+                        /*
                         Button {
                             showFullReport = true
                         } label: {
@@ -174,6 +200,7 @@ struct BMReportsTab: View {
                         }
                         .buttonStyle(GoldButtonStyle())
                         .padding(.top, 4)
+                        */
                     }
                     .padding()
                     // Inside the ZStack, after ScrollView closing brace
@@ -287,7 +314,7 @@ struct TargetRow: View {
     let metric: TargetMetric
 
     private var barColor: Color {
-        metric.isMet ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.error
+        metric.isMet ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textPrimary
     }
 
     var body: some View {

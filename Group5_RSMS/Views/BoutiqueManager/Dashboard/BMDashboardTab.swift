@@ -56,7 +56,7 @@ struct AllTasksView: View {
                         ForEach(tasksVM.tasks) { task in
                             let staffName = tasksVM.staff.first(where: { $0.id == task.assignedTo })?.name
                             TaskRowView(task: task, onToggle: {
-                                Task { await tasksVM.toggleTaskCompletion(task) }
+                                Task { await tasksVM.cycleTaskStatus(task) }
                             }, staffName: staffName)
                         }
                     }
@@ -302,7 +302,7 @@ struct BMDashboardTab: View {
 
     // MARK: - Tasks Section (Top 2 + See All)
     private var tasksSection: some View {
-        let pending = tasksVM.tasks.filter { !$0.isCompleted }
+        let pending = tasksVM.tasks.filter { $0.status != .verified }
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Store Tasks")
@@ -347,7 +347,7 @@ struct BMDashboardTab: View {
                     ForEach(pending.prefix(2)) { task in
                         let staffName = tasksVM.staff.first(where: { $0.id == task.assignedTo })?.name
                         TaskRowView(task: task, onToggle: {
-                            Task { await tasksVM.toggleTaskCompletion(task) }
+                            Task { await tasksVM.cycleTaskStatus(task) }
                         }, staffName: staffName)
                     }
                 }

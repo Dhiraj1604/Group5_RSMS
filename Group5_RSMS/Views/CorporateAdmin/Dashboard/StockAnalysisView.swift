@@ -109,7 +109,7 @@ struct StockAnalysisView: View {
                 .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.5))
             Text("No Products Listed")
                 .font(.system(.title2, design: .serif))
-                .foregroundStyle(.white)
+                .foregroundStyle(RSMSTheme.Colors.textSecondary)
         }
         .padding(.horizontal, RSMSTheme.Spacing.xxl)
     }
@@ -125,7 +125,7 @@ struct StockAnalysisView: View {
         return LazyVGrid(columns: columns, spacing: RSMSTheme.Spacing.md) {
             summaryCard(title: "Total SKUs", value: "\(s.total)", icon: "shippingbox.fill", color: .white, filter: .all)
             summaryCard(title: "Low Stock", value: "\(s.low)", icon: "exclamationmark.triangle.fill", color: Color.orange, filter: .low)
-            summaryCard(title: "Overstock", value: "\(s.overstock)", icon: "arrow.up.circle.fill", color: Color(red: 0.2, green: 0.8, blue: 0.3), filter: .overstock)
+            summaryCard(title: "In Stock", value: "\(s.overstock)", icon: "arrow.up.circle.fill", color: Color(red: 0.2, green: 0.8, blue: 0.3), filter: .overstock)
             summaryCard(title: "Out of Stock", value: "\(s.outOfStock)", icon: "xmark.circle.fill", color: Color(red: 0.9, green: 0.2, blue: 0.2), filter: .outOfStock)
         }
     }
@@ -259,7 +259,7 @@ struct StockAnalysisView: View {
                             
                         Text(item.productName)
                             .font(.custom("HelveticaNeue-Bold", size: 26))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(RSMSTheme.Colors.textPrimary)
                             .lineLimit(3)
                             .minimumScaleFactor(0.6)
                             .multilineTextAlignment(.leading)
@@ -279,12 +279,12 @@ struct StockAnalysisView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text("\(item.stockQuantity)")
                             .font(.custom("HelveticaNeue-Bold", size: 58))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(RSMSTheme.Colors.textPrimary)
                             .shadow(color: .black.opacity(0.8), radius: 5)
                         
                         Text("UNITS")
                             .font(.custom("HelveticaNeue-Bold", size: 14))
-                            .foregroundStyle(.white.opacity(0.8))
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
                             .tracking(1.5)
                             .shadow(color: .black.opacity(0.8), radius: 2)
                     }
@@ -474,7 +474,7 @@ struct TransferActionSheet: View {
                                 .foregroundStyle(.white)
                                 .multilineTextAlignment(.center)
                                 
-                            Text("OVERSTOCK: \(item.stockQuantity) UNITS AVAILABLE")
+                            Text("\(item.stockQuantity) UNITS AVAILABLE")
                                 .font(.system(size: 11, design: .monospaced))
                                 .foregroundStyle(.cyan)
                         }
@@ -688,145 +688,144 @@ struct StockAnalysisStorePickerView: View {
     @State private var storeSKUCounts: [UUID: Int] = [:]
 
     var body: some View {
-        ZStack {
-            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-            
-            // Ambient luxury lighting
-            Ellipse()
-                .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
-                .blur(radius: 120)
-                .frame(width: 600, height: 400)
-                .offset(y: -200)
-
-            if appState.stores.isEmpty {
-                VStack(spacing: RSMSTheme.Spacing.xl) {
-                    Image(systemName: "building.2")
-                        .font(.system(size: 64, weight: .ultraLight))
-                        .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.4))
-                    Text("No Boutiques Available")
-                        .font(.system(.title2, design: .serif))
-                        .foregroundStyle(.white)
-                }
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xl) {
-                        // Store Grid
-                        let columns = horizontalSizeClass == .regular
-                            ? [GridItem(.adaptive(minimum: 220), spacing: RSMSTheme.Spacing.lg)]
-                            : [GridItem(.flexible())]
-                        
-                        LazyVGrid(columns: columns, spacing: RSMSTheme.Spacing.lg) {
-                            ForEach(appState.stores) { store in
-                                NavigationLink(destination: StockAnalysisView(store: store)) {
-                                    storeCard(store)
-                                }
-                                .buttonStyle(.plain)
+        ScrollView {
+            VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xl) {
+                // Custom Large Title
+                Text("Stock Analysis")
+                    .font(.custom("Helvetica-Bold", size: 34))
+                    .foregroundStyle(.white)
+                    .padding(.top, 20)
+                
+                if appState.stores.isEmpty {
+                    VStack(spacing: RSMSTheme.Spacing.xl) {
+                        Image(systemName: "building.2")
+                            .font(.system(size: 64, weight: .ultraLight))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.4))
+                        Text("No Boutiques Available")
+                            .font(.system(.title2, design: .serif))
+                            .foregroundStyle(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 100)
+                } else {
+                    // Store Grid
+                    let columns = horizontalSizeClass == .regular
+                        ? [GridItem(.adaptive(minimum: 220), spacing: RSMSTheme.Spacing.lg)]
+                        : [GridItem(.flexible())]
+                    
+                    LazyVGrid(columns: columns, spacing: RSMSTheme.Spacing.lg) {
+                        ForEach(appState.stores) { store in
+                            NavigationLink(destination: StockAnalysisView(store: store)) {
+                                storeCard(store)
                             }
+                            .buttonStyle(.plain)
                         }
                     }
-                    .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-                    .padding(.top, RSMSTheme.Spacing.lg)
-                    .padding(.bottom, 120)
                 }
             }
+            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+            .padding(.top, RSMSTheme.Spacing.lg)
+            .padding(.bottom, 120)
         }
-        .navigationTitle("Stock Analysis")
-        .navigationBarTitleDisplayMode(.large)
-        .toolbarBackground(.automatic, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        .background {
+            ZStack {
+                RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+                
+                // Ambient luxury lighting
+                Ellipse()
+                    .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
+                    .blur(radius: 120)
+                    .frame(width: 600, height: 400)
+                    .offset(y: -200)
+            }
+            .ignoresSafeArea()
+        }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .task { await fetchSKUCounts() }
     }
 
     private func storeCard(_ store: Store) -> some View {
         let skuCount = storeSKUCounts[store.id] ?? 0
-        return ZStack {
-            // Premium Obsidian Material Gradient
-            LinearGradient(
-                colors: [Color(white: 0.08), Color(white: 0.04)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+        
+        return ZStack(alignment: .topLeading) {
+            // Base Background
+            RSMSTheme.Colors.backgroundDeep
+            
+            // Subtle Radial Glow
+            RadialGradient(
+                gradient: Gradient(colors: [RSMSTheme.Colors.accentGold.opacity(0.15), .clear]),
+                center: .topTrailing,
+                startRadius: 0,
+                endRadius: 250
             )
             
-            // High-Visibility 'Guilloché' Dot Texture
-            Canvas { context, size in
-                let spacing: CGFloat = 14
-                let dotSize: CGFloat = 1.5
-                for y in stride(from: spacing/2, through: size.height, by: spacing) {
-                    for x in stride(from: spacing/2, through: size.width, by: spacing) {
-                        let rect = CGRect(x: x, y: y, width: dotSize, height: dotSize)
-                        context.fill(Path(ellipseIn: rect), with: .color(RSMSTheme.Colors.accentGold.opacity(0.3)))
-                    }
-                }
-            }
-            .blendMode(.plusLighter)
-            
-            // Soft Gold Dispersion (Under-glow)
-            VStack {
-                Spacer()
-                LinearGradient(
-                    colors: [RSMSTheme.Colors.accentGold.opacity(0.1), .clear],
-                    startPoint: .bottom,
-                    endPoint: .top
-                )
-                .frame(height: 80)
-            }
-
             VStack(alignment: .leading, spacing: 0) {
-                // Top Header: Name and Badge
-                HStack(alignment: .top) {
-                    Text(store.name)
-                        .font(.custom("HelveticaNeue-Bold", size: 22))
-                        .foregroundStyle(.white)
-                        .lineLimit(nil)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                    
+                // Top Right: Status Badge
+                HStack {
                     Spacer()
-                    
-                    // Status Badge
-                    if store.isActive == true {
-                        statusBadge(text: "ACTIVE", color: Color(red: 0.2, green: 0.8, blue: 0.3))
-                    } else {
-                        statusBadge(text: "INACTIVE", color: Color(red: 0.9, green: 0.2, blue: 0.2))
+                    // Ultra-Minimal Status Dot
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(store.isActive == true ? RSMSTheme.Colors.success : .red)
+                            .frame(width: 6, height: 6)
+                            .shadow(color: store.isActive == true ? RSMSTheme.Colors.success : .red, radius: 4)
+                        Text(store.isActive == true ? "ACTIVE" : "INACTIVE")
+                            .font(.custom("HelveticaNeue-Bold", size: 10))
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
                     }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.black.opacity(0.4))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
                 }
-                .padding(24)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
                 
-                Spacer(minLength: 0)
+                Spacer()
                 
-                // Location and SKUs
-                VStack(alignment: .leading, spacing: 10) {
+                // Store Name & City
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(store.name)
+                        .font(.custom("HelveticaNeue-Bold", size: 26))
+                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
                     Text(locationForStore(store).uppercased())
-                        .font(.custom("HelveticaNeue-Bold", size: 14))
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
-                        .tracking(3)
-                    
-                    HStack(alignment: .bottom) {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text("ACTIVE SKUs")
-                                .font(.custom("HelveticaNeue-Bold", size: 11))
-                                .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                                .tracking(1.5)
-                            Text("\(skuCount)")
-                                .font(.custom("HelveticaNeue-Bold", size: 40))
-                                .foregroundStyle(.white)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundStyle(RSMSTheme.Colors.accentGold)
-                    }
+                        .font(.custom("HelveticaNeue-Medium", size: 12))
+                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                        .tracking(1.5)
                 }
-                .padding(24)
+                .padding(.horizontal, 20)
+                
+                Spacer()
+                
+                // Middle: SKU Count
+                VStack(alignment: .leading, spacing: -2) {
+                    Text("MANAGED SKUS")
+                        .font(.custom("HelveticaNeue-Bold", size: 11))
+                        .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.8))
+                        .tracking(2)
+                    
+                    Text("\(skuCount)")
+                        .font(.custom("HelveticaNeue-Bold", size: 28))
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                        .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
+                
+                Spacer()
             }
         }
-        .frame(height: 220)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .frame(height: 240)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(RSMSTheme.Colors.accentGold.opacity(0.15), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.4), radius: 15, y: 10)
+        .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
     }
 
     private func statusBadge(text: String, color: Color) -> some View {

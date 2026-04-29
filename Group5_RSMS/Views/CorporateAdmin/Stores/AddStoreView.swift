@@ -342,9 +342,6 @@ struct AddStoreView: View {
                 }
             }
             HStack(spacing: RSMSTheme.Spacing.sm) {
-                Image(systemName: icon)
-                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7))
-                    .frame(width: 20)
                 TextField("", text: text, prompt: Text(placeholder).foregroundStyle(RSMSTheme.Colors.textTertiary))
                     .foregroundStyle(RSMSTheme.Colors.textPrimary)
                     .autocorrectionDisabled()

@@ -13,12 +13,22 @@ struct ProductDetailView: View {
     private let bucketName = "product-images"
 
     // MARK: - State
+    @State private var isEditing: Bool = false
     @State private var showSetPrice: Bool = false
-    @State private var showEditSheet: Bool = false
     @State private var showDeleteConfirm: Bool = false
     @State private var updateError: String? = nil
 
-    // Always read the live version from AppState so UI reflects updates
+    // MARK: - Editable Fields
+    @State private var sku: String = ""
+    @State private var selectedCategory: ProductCategory = .other
+    @State private var material: String = ""
+    @State private var originCountry: String = ""
+    @State private var selectedCraftsmanship: CraftsmanshipLevel = .handcrafted
+    @State private var craftsmanshipNotes: String = ""
+    @State private var collectionName: String = ""
+    @State private var artisanStudio: String = ""
+    @State private var isGloballyListed: Bool = true
+
     private var currentProduct: Product {
         appState.products.first(where: { $0.id == product.id }) ?? product
     }
@@ -26,42 +36,52 @@ struct ProductDetailView: View {
     var body: some View {
         ZStack {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+
             ScrollView {
-                VStack(spacing: RSMSTheme.Spacing.xl) {
-                    productHeroImage
-                    productInfoCard
-                    activeStatusSection
-                    priceSection
-                    statusCard
-                    craftsmanshipCard
-                    heritageCard
-                    actionButtons
-                    Spacer().frame(height: RSMSTheme.Spacing.xxl)
+                HStack(alignment: .top, spacing: RSMSTheme.Spacing.xl) {
+                    // ── LEFT COLUMN: Image + Name + SKU + Price ──
+                    leftColumn
+                        .frame(width: 320)
+                        .frame(maxHeight: .infinity, alignment: .top)
+
+                    // ── RIGHT COLUMN: All detail sections ──
+                    rightColumn
                 }
                 .padding(.horizontal, RSMSTheme.Spacing.lg)
                 .padding(.top, RSMSTheme.Spacing.md)
+                .padding(.bottom, RSMSTheme.Spacing.xxl)
             }
         }
-        .navigationTitle(currentProduct.name)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(isEditing)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { showEditSheet = true } label: {
-                    Image(systemName: "pencil.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+            if isEditing {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { cancelEditing() } label: {
+                        Image(systemName: "xmark").font(.body.weight(.semibold))
+                    }
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { saveProduct() } label: {
+                        Image(systemName: "checkmark").font(.body.weight(.semibold))
+                    }
+                    .foregroundStyle(RSMSTheme.Colors.accentGold)
+                }
+            } else {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { startEditing() } label: {
+                        Image(systemName: "pencil")
+                    }
+                    .foregroundStyle(RSMSTheme.Colors.accentGold)
                 }
             }
         }
-        .sheet(isPresented: $showSetPrice, onDismiss: {
-            onPriceUpdated?()
-        }) {
+        .sheet(isPresented: $showSetPrice, onDismiss: { onPriceUpdated?() }) {
             SetPriceView(product: currentProduct)
-        }
-        .sheet(isPresented: $showEditSheet) {
-            AddProductView(existingProduct: currentProduct)
         }
         .alert("Update Failed", isPresented: Binding<Bool>(
             get: { updateError != nil },
@@ -71,231 +91,245 @@ struct ProductDetailView: View {
         } message: {
             Text(updateError ?? "Unknown error")
         }
+        .onAppear { populateFields() }
     }
 
-    // MARK: - Hero Image
-    private var productHeroImage: some View {
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // MARK: - LEFT COLUMN
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    private var leftColumn: some View {
+        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.lg) {
+            // Product Image
+            productImage
+
+            // Product Name
+            Text(currentProduct.name)
+                .font(.title2).fontWeight(.bold)
+                .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            // SKU + Category
+            HStack(spacing: RSMSTheme.Spacing.sm) {
+                TextField("SKU", text: $sku)
+                    .font(.subheadline).fontWeight(.medium)
+                    .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    .textInputAutocapitalization(.characters)
+                    .disabled(!isEditing)
+
+                Text("·")
+                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
+
+                if isEditing {
+                    Picker("", selection: $selectedCategory) {
+                        ForEach(ProductCategory.allCases) { cat in
+                            Text(cat.rawValue).tag(cat)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(RSMSTheme.Colors.textSecondary)
+                } else {
+                    Text(currentProduct.category.rawValue)
+                        .font(.subheadline)
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                }
+            }
+
+            Divider().background(RSMSTheme.Colors.borderLight)
+
+            // Price
+            priceBlock
+
+            Spacer(minLength: RSMSTheme.Spacing.sm)
+
+            // Action buttons
+            actionButtons
+        }
+    }
+
+    private var productImage: some View {
         ZStack {
             RSMSTheme.Colors.backgroundDeep
 
             if let path = currentProduct.imageUrl,
-               let detailURL = path.hasPrefix("http")
+               let url = path.hasPrefix("http")
                    ? URL(string: path)
                    : URL(string: "\(supabaseURL)/storage/v1/object/public/\(bucketName)/\(path)") {
-                AsyncImage(url: detailURL) { phase in
+                AsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 300)
+                        image.resizable().scaledToFill()
+                            .frame(width: 320, height: 320)
+                            .clipped()
                     case .failure:
                         categoryPlaceholder
+                            .frame(width: 320, height: 320)
                     case .empty:
                         ProgressView().tint(RSMSTheme.Colors.accentGold)
+                            .frame(width: 320, height: 320)
                     @unknown default:
                         EmptyView()
                     }
                 }
             } else {
                 categoryPlaceholder
+                    .frame(width: 320, height: 320)
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 300)
-        .padding(RSMSTheme.Spacing.sm)
-        .background(RSMSTheme.Colors.backgroundDeep)
+        .frame(width: 320, height: 320)
         .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
         .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
             .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
     }
 
     private var categoryPlaceholder: some View {
-        Image(systemName: currentProduct.category.icon)
-            .font(.system(size: 60))
-            .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.2))
-    }
-
-    // MARK: - Product Info Card
-    private var productInfoCard: some View {
-        HStack(spacing: RSMSTheme.Spacing.lg) {
-            ZStack {
-                RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                    .fill(RSMSTheme.Colors.accentGold.opacity(0.12))
-                    .frame(width: 60, height: 60)
-                Image(systemName: currentProduct.category.icon)
-                    .font(.system(size: 26))
-                    .foregroundStyle(RSMSTheme.Colors.accentGold)
-            }
-            VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
-                Text(currentProduct.name)
-                    .font(.title3).fontWeight(.bold).foregroundStyle(RSMSTheme.Colors.textPrimary)
-                Text(currentProduct.sku)
-                    .font(.subheadline).foregroundStyle(RSMSTheme.Colors.accentGold)
-                Text(currentProduct.category.rawValue)
-                    .font(.caption).foregroundStyle(RSMSTheme.Colors.textSecondary)
-            }
-            Spacer()
-        }
-        .padding(RSMSTheme.Spacing.lg)
-        .background(RSMSTheme.Colors.backgroundDeep)
-        .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
-        .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
-            .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
-    }
-
-    // MARK: - Active Status Section
-    private var activeStatusSection: some View {
-        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-            Label("Global Visibility", systemImage: "globe")
-                .font(.headline)
-                .foregroundStyle(RSMSTheme.Colors.textPrimary)
-
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Active Status")
-                        .font(.subheadline).fontWeight(.semibold)
-                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                    Text(currentProduct.isActive ? "Available across all boutiques" : "Hidden from staff and customers")
-                        .font(.caption)
-                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                }
-                Spacer()
-                Toggle("", isOn: Binding(
-                    get: { currentProduct.isActive },
-                    set: { newValue in
-                        Task { await updateActiveStatus(newState: newValue) }
-                    }
-                ))
-                .labelsHidden()
-                .tint(RSMSTheme.Colors.accentGold)
-            }
-            .padding(RSMSTheme.Spacing.lg)
-            .background(RSMSTheme.Colors.backgroundDeep)
-            .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
-            .overlay(
-                RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
-                    .stroke(currentProduct.isActive ? RSMSTheme.Colors.borderLight : RSMSTheme.Colors.warning.opacity(0.3), lineWidth: 1)
-            )
+        ZStack {
+            RSMSTheme.Colors.backgroundDeep
+            Image(systemName: currentProduct.category.icon)
+                .font(.system(size: 60))
+                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.2))
         }
     }
 
-    // MARK: - Price Section
-    private var priceSection: some View {
-        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-            Label("Official Retail Price", systemImage: "indianrupeesign.circle.fill")
-                .font(.headline).foregroundStyle(RSMSTheme.Colors.textPrimary)
+    private var priceBlock: some View {
+        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
+            Text("RETAIL PRICE")
+                .font(.caption2).fontWeight(.bold)
+                .foregroundStyle(RSMSTheme.Colors.textTertiary).textCase(.uppercase)
 
             if currentProduct.basePrice > 0 {
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
-                        Text("CURRENT PRICE")
-                            .font(.caption).fontWeight(.bold)
-                            .foregroundStyle(RSMSTheme.Colors.textSecondary).textCase(.uppercase)
-                        Text("₹\(String(format: "%.0f", currentProduct.basePrice))")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(RSMSTheme.Colors.accentGold)
-                            .minimumScaleFactor(0.6)
-                            .lineLimit(1)
-                    }
+                HStack {
+                    Text(currentProduct.formattedPrice)
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+
                     Spacer()
+
                     Button { showSetPrice = true } label: {
-                        Label("Update", systemImage: "pencil")
+                        Image(systemName: "pencil")
+                            .font(.caption).fontWeight(.semibold)
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                            .padding(8)
+                            .background(RSMSTheme.Colors.accentGold.opacity(0.12))
+                            .clipShape(Circle())
+                    }
+                }
+            } else {
+                Button { showSetPrice = true } label: {
+                    HStack(spacing: RSMSTheme.Spacing.sm) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(RSMSTheme.Colors.warning)
+                        Text("Set Price")
                             .font(.subheadline).fontWeight(.semibold)
                             .foregroundStyle(RSMSTheme.Colors.accentGold)
-                            .padding(.horizontal, RSMSTheme.Spacing.lg)
-                            .padding(.vertical, RSMSTheme.Spacing.md)
-                            .background(RSMSTheme.Colors.accentGold.opacity(0.12))
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(RSMSTheme.Colors.accentGold.opacity(0.3), lineWidth: 1))
                     }
                 }
-                .padding(RSMSTheme.Spacing.xl)
-                .background(RSMSTheme.Colors.backgroundDeep)
-                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
-                .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
-                    .stroke(RSMSTheme.Colors.accentGold.opacity(0.25), lineWidth: 1))
-            } else {
-                VStack(spacing: RSMSTheme.Spacing.lg) {
-                    HStack(spacing: RSMSTheme.Spacing.md) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(RSMSTheme.Colors.warning).font(.title3)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("No Price Set").font(.subheadline).fontWeight(.semibold)
-                                .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                            Text("This product cannot be sold until a retail price is set.")
-                                .font(.caption).foregroundStyle(RSMSTheme.Colors.textSecondary)
-                        }
-                        Spacer()
-                    }
-                    Button { showSetPrice = true } label: {
-                        Label("Set Retail Price", systemImage: "indianrupeesign.circle")
-                    }
-                    .buttonStyle(GoldButtonStyle())
-                }
-                .padding(RSMSTheme.Spacing.lg)
-                .background(RSMSTheme.Colors.warning.opacity(0.06))
-                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
-                .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
-                    .stroke(RSMSTheme.Colors.warning.opacity(0.25), lineWidth: 1))
             }
+        }
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // MARK: - RIGHT COLUMN
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    private var rightColumn: some View {
+        VStack(spacing: RSMSTheme.Spacing.xl) {
+            statusCard
+            craftsmanshipCard
+            heritageCard
         }
     }
 
     // MARK: - Status Card
     private var statusCard: some View {
         detailSection(title: "Visibility & Status") {
-            infoRow(icon: "checkmark.circle.fill", label: "Active Status",
-                    value: currentProduct.isActive ? "Active" : "Inactive",
-                    valueColor: currentProduct.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.error)
+            staticRow(icon: "checkmark.circle.fill", label: "Active Status",
+                      value: currentProduct.isActive ? "Active" : "Inactive",
+                      valueColor: currentProduct.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.error)
             Divider().background(RSMSTheme.Colors.borderLight)
-            infoRow(icon: "globe", label: "Global Listing",
-                    value: currentProduct.isGloballyListed ? "Listed on all boutiques" : "Unlisted",
-                    valueColor: currentProduct.isGloballyListed ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.warning)
+
+            HStack(spacing: RSMSTheme.Spacing.md) {
+                Image(systemName: "globe").font(.caption)
+                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
+                Text("Global Listing").font(.subheadline)
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                Spacer()
+                if isEditing {
+                    Toggle("", isOn: $isGloballyListed)
+                        .tint(RSMSTheme.Colors.accentGold)
+                        .labelsHidden()
+                } else {
+                    Text(currentProduct.isGloballyListed ? "Listed on all boutiques" : "Unlisted")
+                        .font(.subheadline).fontWeight(.medium)
+                        .foregroundStyle(currentProduct.isGloballyListed ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.warning)
+                }
+            }
+            .padding(.vertical, RSMSTheme.Spacing.md)
         }
     }
 
     // MARK: - Craftsmanship Card
     private var craftsmanshipCard: some View {
         detailSection(title: "Materials & Craftsmanship") {
-            if !currentProduct.material.isEmpty {
-                infoRow(icon: "atom", label: "Materials", value: currentProduct.material)
-                Divider().background(RSMSTheme.Colors.borderLight)
+            editableRow(icon: "atom", label: "Materials", text: $material)
+            Divider().background(RSMSTheme.Colors.borderLight)
+            editableRow(icon: "globe.europe.africa", label: "Country of Origin", text: $originCountry)
+            Divider().background(RSMSTheme.Colors.borderLight)
+
+            HStack(spacing: RSMSTheme.Spacing.md) {
+                Image(systemName: "star.fill").font(.caption)
+                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
+                Text("Craftsmanship").font(.subheadline)
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                Spacer()
+                if isEditing {
+                    Picker("", selection: $selectedCraftsmanship) {
+                        ForEach(CraftsmanshipLevel.allCases, id: \.self) { level in
+                            Text(level.rawValue).tag(level)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(RSMSTheme.Colors.accentGold)
+                } else {
+                    Text(currentProduct.craftsmanshipLevel.rawValue)
+                        .font(.subheadline).fontWeight(.medium)
+                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                }
             }
-            if !currentProduct.originCountry.isEmpty {
-                infoRow(icon: "globe.europe.africa", label: "Country of Origin", value: currentProduct.originCountry)
-                Divider().background(RSMSTheme.Colors.borderLight)
-            }
-            infoRow(icon: "star.fill", label: "Craftsmanship", value: currentProduct.craftsmanshipLevel.rawValue)
-            if !currentProduct.craftsmanshipNotes.isEmpty {
-                Divider().background(RSMSTheme.Colors.borderLight)
-                VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
-                    Label("Artisan Notes", systemImage: "text.quote")
+            .padding(.vertical, RSMSTheme.Spacing.md)
+
+            Divider().background(RSMSTheme.Colors.borderLight)
+
+            // Artisan Notes
+            HStack(alignment: .top, spacing: RSMSTheme.Spacing.md) {
+                Image(systemName: "text.quote").font(.caption)
+                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
+                    .padding(.top, 2)
+                VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
+                    Text("Artisan Notes")
                         .font(.caption).fontWeight(.semibold)
                         .foregroundStyle(RSMSTheme.Colors.textSecondary).textCase(.uppercase)
-                    Text(currentProduct.craftsmanshipNotes)
+                    TextField("Artisan notes", text: $craftsmanshipNotes, axis: .vertical)
                         .font(.subheadline).foregroundStyle(RSMSTheme.Colors.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1...5)
+                        .disabled(!isEditing)
                 }
-                .padding(.vertical, RSMSTheme.Spacing.sm)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, RSMSTheme.Spacing.sm)
         }
     }
 
     // MARK: - Heritage Card
     private var heritageCard: some View {
         detailSection(title: "Heritage & Provenance") {
-            if !currentProduct.collectionName.isEmpty {
-                infoRow(icon: "crown.fill", label: "Collection", value: currentProduct.collectionName)
-                Divider().background(RSMSTheme.Colors.borderLight)
-            }
-            if !currentProduct.artisanStudio.isEmpty {
-                infoRow(icon: "paintpalette.fill", label: "Artisan Studio", value: currentProduct.artisanStudio)
-                Divider().background(RSMSTheme.Colors.borderLight)
-            }
-            infoRow(icon: "calendar", label: "Added",
-                    value: currentProduct.createdAt.formatted(date: .abbreviated, time: .shortened))
+            editableRow(icon: "crown.fill", label: "Collection", text: $collectionName)
+            Divider().background(RSMSTheme.Colors.borderLight)
+            editableRow(icon: "paintpalette.fill", label: "Artisan Studio", text: $artisanStudio)
+            Divider().background(RSMSTheme.Colors.borderLight)
+            staticRow(icon: "calendar", label: "Added",
+                      value: currentProduct.createdAt.formatted(date: .abbreviated, time: .shortened))
         }
     }
 
@@ -328,10 +362,7 @@ struct ProductDetailView: View {
             .confirmationDialog("Delete \(currentProduct.name)?",
                                 isPresented: $showDeleteConfirm, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) {
-                    Task {
-                        dismiss()  // dismiss instantly
-                        await appState.deleteProduct(currentProduct)  // runs in background
-                    }
+                    Task { dismiss(); await appState.deleteProduct(currentProduct) }
                 }
             } message: {
                 Text("This cannot be undone. The product will be permanently removed.")
@@ -340,7 +371,10 @@ struct ProductDetailView: View {
         .padding(.top, RSMSTheme.Spacing.sm)
     }
 
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // MARK: - Reusable Components
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
     private func detailSection(title: String, @ViewBuilder content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
             HStack(spacing: RSMSTheme.Spacing.sm) {
@@ -357,8 +391,26 @@ struct ProductDetailView: View {
         }
     }
 
-    private func infoRow(icon: String, label: String, value: String,
-                         valueColor: Color = RSMSTheme.Colors.textPrimary) -> some View {
+    private func editableRow(icon: String, label: String, text: Binding<String>,
+                             keyboard: UIKeyboardType = .default) -> some View {
+        HStack(spacing: RSMSTheme.Spacing.md) {
+            Image(systemName: icon).font(.caption)
+                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
+            Text(label).font(.subheadline).foregroundStyle(RSMSTheme.Colors.textSecondary)
+            Spacer()
+            TextField("—", text: text)
+                .font(.subheadline).fontWeight(.medium)
+                .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                .multilineTextAlignment(.trailing)
+                .keyboardType(keyboard)
+                .autocorrectionDisabled()
+                .disabled(!isEditing)
+        }
+        .padding(.vertical, RSMSTheme.Spacing.md)
+    }
+
+    private func staticRow(icon: String, label: String, value: String,
+                           valueColor: Color = RSMSTheme.Colors.textPrimary) -> some View {
         HStack(spacing: RSMSTheme.Spacing.md) {
             Image(systemName: icon).font(.caption)
                 .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
@@ -370,38 +422,59 @@ struct ProductDetailView: View {
         .padding(.vertical, RSMSTheme.Spacing.md)
     }
 
-    // MARK: - Active Status Update
-    // Uses AppState so the computed currentProduct auto-refreshes via @Observable
-    @MainActor
-    private func updateActiveStatus(newState: Bool) async {
-        do {
-            try await SupabaseManager.shared.client
-                .from("products")
-                .update(["is_active": newState])
-                .eq("id", value: currentProduct.id)
-                .execute()
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // MARK: - Editing Actions
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-            print("✅ Active status updated")
+    private func populateFields() {
+        sku = currentProduct.sku
+        selectedCategory = currentProduct.category
+        material = currentProduct.material
+        originCountry = currentProduct.originCountry
+        selectedCraftsmanship = currentProduct.craftsmanshipLevel
+        craftsmanshipNotes = currentProduct.craftsmanshipNotes
+        collectionName = currentProduct.collectionName
+        artisanStudio = currentProduct.artisanStudio
+        isGloballyListed = currentProduct.isGloballyListed
+    }
 
-            // Audit log
-            ActivityLogService.shared.log(
-                userEmail: appState.userEmail,
-                action: newState ? .activated : .deactivated,
-                entity: .product,
-                entityName: currentProduct.name,
-                entityId: currentProduct.id.uuidString,
-                details: "Product \(newState ? "activated" : "deactivated")"
-            )
+    private func startEditing() {
+        populateFields()
+        isEditing = true
+    }
 
-            // Refresh AppState so currentProduct computed var picks up new value
-            await appState.fetchProducts()
+    private func cancelEditing() {
+        populateFields()
+        isEditing = false
+    }
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                onPriceUpdated?()
+    private func saveProduct() {
+        let productToSave = Product(
+            id: currentProduct.id,
+            sku: sku.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(),
+            name: currentProduct.name,
+            imageUrl: currentProduct.imageUrl,
+            category: selectedCategory,
+            isActive: currentProduct.isActive,
+            isGloballyListed: isGloballyListed,
+            createdAt: currentProduct.createdAt,
+            updatedAt: Date(),
+            basePrice: currentProduct.basePrice,
+            material: material.trimmingCharacters(in: .whitespacesAndNewlines),
+            originCountry: originCountry.trimmingCharacters(in: .whitespacesAndNewlines),
+            craftsmanshipLevel: selectedCraftsmanship,
+            craftsmanshipNotes: craftsmanshipNotes.trimmingCharacters(in: .whitespacesAndNewlines),
+            collectionName: collectionName.trimmingCharacters(in: .whitespacesAndNewlines),
+            artisanStudio: artisanStudio.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+
+        Task {
+            await appState.updateProduct(productToSave)
+            if appState.productError == nil {
+                isEditing = false
+            } else {
+                updateError = appState.productError
             }
-        } catch {
-            print("❌ Failed to update active status: \(error)")
-            updateError = error.localizedDescription
         }
     }
 }

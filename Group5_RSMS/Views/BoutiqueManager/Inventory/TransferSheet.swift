@@ -75,6 +75,11 @@ struct TransferSheet: View {
                 }
             }
             .task {
+                // Reset state from any previous transfer so the
+                // "Request Sent" alert doesn't fire immediately.
+                viewModel.transferSuccess = false
+                viewModel.transferError = nil
+
                 await viewModel.loadTransferSources(
                     forProduct: alert.productId,
                     excluding: currentStoreId

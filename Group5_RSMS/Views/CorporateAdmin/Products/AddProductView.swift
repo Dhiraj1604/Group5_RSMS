@@ -76,7 +76,7 @@ struct AddProductView: View {
                         craftsmanshipSection
                         heritageSection
                         
-                        saveButton
+//                        saveButton
                         
                         Spacer().frame(height: RSMSTheme.Spacing.xxl)
                     }
@@ -93,6 +93,20 @@ struct AddProductView: View {
                     Button("Cancel") { dismiss() }
                         .foregroundStyle(RSMSTheme.Colors.textSecondary)
                         .disabled(isLoading || isUploadingImage)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        saveProduct()
+                    } label: {
+                        if isLoading || isUploadingImage {
+                            ProgressView().tint(RSMSTheme.Colors.accentGold)
+                        } else {
+                            Text(isEditing ? "Save" : "Add")
+                                .fontWeight(.semibold)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                    }
+                    .disabled(isLoading || isUploadingImage)
                 }
             }
             .confirmationDialog("Product Image", isPresented: $showImageSourceDialog) {
@@ -235,8 +249,6 @@ struct AddProductView: View {
 
     private var statusSection: some View {
         formSection(title: "Visibility & Status") {
-            toggleRow(icon: "checkmark.circle.fill", label: "Active", sublabel: "POS only shows active products", isOn: $isActive, color: RSMSTheme.Colors.success)
-            Divider().background(RSMSTheme.Colors.borderLight)
             toggleRow(icon: "globe", label: "Globally Listed", sublabel: "Visible across all boutiques", isOn: $isGloballyListed, color: RSMSTheme.Colors.accentGold)
         }
     }
@@ -322,7 +334,6 @@ struct AddProductView: View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
             fieldLabel(label, required: required)
             HStack(spacing: RSMSTheme.Spacing.sm) {
-                Image(systemName: icon).foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 20)
                 TextField("", text: text, prompt: Text(placeholder).foregroundStyle(RSMSTheme.Colors.textTertiary))
                     .foregroundStyle(RSMSTheme.Colors.textPrimary)
             }

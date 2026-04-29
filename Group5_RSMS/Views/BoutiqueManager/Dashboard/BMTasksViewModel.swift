@@ -48,9 +48,18 @@ final class BMTasksViewModel: ObservableObject {
         isLoading = false
     }
 
-    func toggleTaskCompletion(_ task: StoreTask) async {
+    func cycleTaskStatus(_ task: StoreTask) async {
         guard let index = tasks.firstIndex(where: { $0.id == task.id }) else { return }
-        tasks[index].isCompleted.toggle()
+        
+        // Cycle: pending -> completedByStaff -> verified -> pending
+        switch tasks[index].status {
+        case .pending:
+            tasks[index].status = .completedByStaff
+        case .completedByStaff:
+            tasks[index].status = .verified
+        case .verified:
+            tasks[index].status = .pending
+        }
         
         do {
             try await sync.updateTask(tasks[index])

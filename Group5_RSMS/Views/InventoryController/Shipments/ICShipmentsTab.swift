@@ -36,28 +36,51 @@ struct ICShipmentsTab: View {
             ZStack {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    // Segmented Control
-                    segmentedControl
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        // Native Segmented Picker (Scrolling along with content)
+                        Picker("Shipment View", selection: $selectedTab) {
+                            ForEach(ShipmentTab.allCases) { tab in
+                                Text(tab.rawValue).tag(tab)
+                            }
+                        }
+                        .pickerStyle(.segmented)
                         .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-                        .padding(.top, RSMSTheme.Spacing.sm)
+                        .padding(.top, RSMSTheme.Spacing.md)
                         .padding(.bottom, RSMSTheme.Spacing.md)
 
-                    if isLoading {
-                        Spacer()
-                        loadingState
-                        Spacer()
-                    } else if let error = fetchError {
-                        Spacer()
-                        errorState(error)
-                        Spacer()
-                    } else if orders.isEmpty {
-                        Spacer()
-                        emptyState
-                        Spacer()
-                    } else {
-                        ordersList
+                        if isLoading && orders.isEmpty {
+                            VStack {
+                                Spacer(minLength: 100)
+                                loadingState
+                                Spacer()
+                            }
+                        } else if let error = fetchError {
+                            VStack {
+                                Spacer(minLength: 100)
+                                errorState(error)
+                                Spacer()
+                            }
+                        } else if orders.isEmpty {
+                            VStack {
+                                Spacer(minLength: 100)
+                                emptyState
+                                Spacer()
+                            }
+                        } else {
+                            // Orders List
+                            LazyVStack(spacing: 16) {
+                                ForEach(orders) { order in
+                                    orderCard(for: order)
+                                }
+                            }
+                            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+                            .padding(.bottom, 40)
+                        }
                     }
+                }
+                .refreshable {
+                    await loadOrders()
                 }
             }
             .navigationTitle("Shipments")
@@ -80,9 +103,6 @@ struct ICShipmentsTab: View {
             .onChange(of: selectedTab) { _ in
                 Task { await loadOrders() }
             }
-            .refreshable {
-                await loadOrders()
-            }
             .sheet(item: $selectedOrderForDetails) { order in
                 OrderDetailsSheet(order: order)
                     .presentationDetents([.medium, .large])
@@ -96,41 +116,6 @@ struct ICShipmentsTab: View {
                 .presentationDragIndicator(.visible)
             }
         }
-    }
-
-    private var segmentedControl: some View {
-        HStack(spacing: 0) {
-            ForEach(ShipmentTab.allCases) { tab in
-                Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        selectedTab = tab
-                    }
-                }) {
-                    Text(tab.rawValue)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(selectedTab == tab ? .black : .white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(
-                            ZStack {
-                                if selectedTab == tab {
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(RSMSTheme.Colors.accentGold)
-                                        .matchedGeometryEffect(id: "TAB_BG", in: animation)
-                                }
-                            }
-                        )
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-        }
-        .padding(4)
-        .background(RSMSTheme.Colors.backgroundElevated)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
-        )
     }
 
     private var filterSheetContent: some View {
@@ -215,22 +200,14 @@ struct ICShipmentsTab: View {
                 
                 self.orders = try await shipmentService.fetchShipments(for: selectedTab, storeId: appState.currentStoreID, fromDate: fDate, toDate: tDate)
             } catch {
-                self.fetchError = error.localizedDescription
+                if !(error is CancellationError) {
+                    self.fetchError = error.localizedDescription
+                }
             }
             isLoading = false
         }
 
-    private var ordersList: some View {
-        ScrollView(showsIndicators: false) {
-            LazyVStack(spacing: 16) {
-                ForEach(orders) { order in
-                    orderCard(for: order)
-                }
-            }
-            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-            .padding(.bottom, 40)
-        }
-    }
+
 
     private func orderCard(for order: CustomerOrder) -> some View {
         VStack(spacing: 16) {

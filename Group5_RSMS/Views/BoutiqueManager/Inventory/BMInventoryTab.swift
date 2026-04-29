@@ -16,10 +16,14 @@ struct BMInventoryTab: View {
     @State private var selectedAlert: LowStockAlert? = nil
     @State private var hasFetchedStores = false
     @State private var selectedTabSegment = 0 // 0 = Transfer, 1 = Insights
-    
-    @State private var isShowingIncomingRequests = false
-    @State private var isShowingMyRequests = false
     @State private var productToMove: FastMovingProduct? = nil
+    @State private var navigationPath = NavigationPath()
+
+    // Navigation destination enum
+    enum RequestDestination: Hashable {
+        case incoming
+        case myRequests
+    }
 
     // Resolved current store from AppState
 
@@ -33,7 +37,7 @@ struct BMInventoryTab: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
@@ -102,11 +106,13 @@ struct BMInventoryTab: View {
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
-            .navigationDestination(isPresented: $isShowingIncomingRequests) {
-                IncomingRequestsView(currentStoreName: currentStoreName, viewModel: viewModel)
-            }
-            .navigationDestination(isPresented: $isShowingMyRequests) {
-                MyRequestsView(currentStoreName: currentStoreName, viewModel: viewModel)
+            .navigationDestination(for: RequestDestination.self) { destination in
+                switch destination {
+                case .incoming:
+                    IncomingRequestsView(currentStoreName: currentStoreName, viewModel: viewModel)
+                case .myRequests:
+                    MyRequestsView(currentStoreName: currentStoreName, viewModel: viewModel)
+                }
             }
             .sheet(item: $productToMove) { product in
                 FloorQuantitySheet(
@@ -124,37 +130,23 @@ struct BMInventoryTab: View {
     // MARK: - Inventory Content (after store is selected)
 
     private var inventoryContent: some View {
-        // Single ScrollView for the whole screen — no fixed top section
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 0) {
-                // Store context header
-                storeHeader
-                    .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-                    .padding(.top, RSMSTheme.Spacing.sm)
-                    .padding(.bottom, RSMSTheme.Spacing.md)
+        VStack(spacing: 0) {
+            // Tab Picker
+            Picker("Inventory View", selection: $selectedTabSegment) {
+                Text("Transfer").tag(0)
+                Text("Merchandising Insights").tag(1)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+            .padding(.vertical, RSMSTheme.Spacing.md)
 
-                Divider()
-
-                // Tab Picker
-                Picker("Inventory View", selection: $selectedTabSegment) {
-                    Text("Transfer").tag(0)
-                    Text("Merchandising Insights").tag(1)
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-                .padding(.vertical, RSMSTheme.Spacing.md)
-
-                // Content (non-scrolling inner views)
-                if selectedTabSegment == 0 {
-                    transferSegment
-                } else {
+            // Content
+            if selectedTabSegment == 0 {
+                transferList
+            } else {
+                ScrollView(showsIndicators: false) {
                     merchandisingSegment
                 }
-            }
-        }
-        .refreshable {
-            if let storeId = appState.currentStoreID {
-                await viewModel.loadAlerts(forStore: storeId)
             }
         }
     }
@@ -164,17 +156,18 @@ struct BMInventoryTab: View {
     private var merchandisingSegment: some View {
         VStack(spacing: 24) {
             // Header
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Floor Merchandising")
-                    .font(.system(size: 24, weight: .bold))
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Merchandising")
+                    .font(.system(size: 28, weight: .black, design: .rounded))
                     .foregroundColor(RSMSTheme.Colors.textPrimary)
-                Text("Real-time local boutique floor velocity and trends.")
+                Text("Optimize your floor space based on real-time sales velocity.")
                     .font(.system(size: 14))
                     .foregroundColor(RSMSTheme.Colors.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-            .padding(.top, RSMSTheme.Spacing.md)
+            .padding(.top, RSMSTheme.Spacing.lg)
+
 
             if let error = viewModel.insightsError {
                 errorState(error)
@@ -196,26 +189,33 @@ struct BMInventoryTab: View {
     
     private var fastMoversSection: some View {
         VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top) {
+            HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Fastest Selling Right Now")
-                        .font(.system(size: 17, weight: .bold))
+                    Text("Top Performers")
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundColor(RSMSTheme.Colors.textPrimary)
-                    Text("Recent local sales vs the prior 3-day window")
+                    Text("Fastest moving items in this boutique")
                         .font(.system(size: 12))
                         .foregroundColor(RSMSTheme.Colors.textSecondary)
                 }
                 Spacer()
                 
-                let highlightedCount = viewModel.fastMovingProducts.filter { $0.trendDirection == .up }.count
-                Text("\(highlightedCount) rising")
-                    .font(.system(size: 12, weight: .bold))
+                let risingCount = viewModel.fastMovingProducts.filter { $0.trendDirection == .up }.count
+                if risingCount > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 10))
+                        Text("\(risingCount) RISING")
+                            .font(.system(size: 10, weight: .black))
+                    }
                     .foregroundColor(RSMSTheme.Colors.accentGold)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(RSMSTheme.Colors.accentGold.opacity(0.12))
-                    .cornerRadius(999)
+                    .cornerRadius(8)
+                }
             }
+
             
             if viewModel.fastMovingProducts.isEmpty {
                 VStack(spacing: 12) {
@@ -251,83 +251,51 @@ struct BMInventoryTab: View {
 
     
     private func fastMoverRow(_ product: FastMovingProduct) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 14) {
-                Group {
-                    if let urlString = product.imageUrl, let url = URL(string: urlString) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                            case .failure, .empty:
-                                productPlaceholder
-                            @unknown default:
-                                productPlaceholder
-                            }
-                        }
+                // Product image
+                AsyncImage(url: URL(string: product.imageUrl ?? "")) { phase in
+                    if let image = phase.image {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
                     } else {
                         productPlaceholder
                     }
                 }
                 .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
-                )
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
+
                 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(product.name)
-                                .font(.system(size: 15, weight: .bold))
-                                .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                .lineLimit(2)
-                            
-                            Text(product.sku)
-                                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                .foregroundColor(RSMSTheme.Colors.accentGold)
-                        }
-                        
-                        Spacer(minLength: 8)
-                        trendBadge(for: product)
-                    }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(product.name)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(RSMSTheme.Colors.textPrimary)
+                        .lineLimit(1)
                     
-                    Text(product.recommendationText)
-                        .font(.system(size: 12))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                        .lineLimit(2)
+                    Text(product.sku)
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                    
+                    compactMetricsRow(for: product)
+                        .padding(.top, 4)
                 }
+                
+                Spacer()
+                
+                trendBadge(for: product)
             }
             
-            HStack(spacing: 10) {
-                metricTile(
-                    title: "Recent",
-                    value: "\(product.recentUnitsSold)",
-                    tint: RSMSTheme.Colors.success
-                )
-                metricTile(
-                    title: product.previousUnitsSold > 0 ? "Delta" : "Signal",
-                    value: product.previousUnitsSold > 0
-                        ? "\(product.velocityDelta >= 0 ? "+" : "")\(product.velocityDelta)"
-                        : "New",
-                    tint: product.trendDirection == .down ? RSMSTheme.Colors.error : RSMSTheme.Colors.accentGold
-                )
-                metricTile(
-                    title: "Stock",
-                    value: "\(product.currentStock)",
-                    tint: product.currentStock <= 3 ? RSMSTheme.Colors.warning : RSMSTheme.Colors.textSecondary
-                )
-            }
+            Divider()
+                .background(RSMSTheme.Colors.borderLight.opacity(0.5))
             
             HStack {
                 HStack(spacing: 6) {
                     Circle()
                         .fill(product.isOnFloor ? RSMSTheme.Colors.success : RSMSTheme.Colors.textSecondary.opacity(0.45))
-                        .frame(width: 8, height: 8)
-                    Text(product.isOnFloor ? "Currently on floor" : "Not on floor")
+                        .frame(width: 6, height: 6)
+                    Text(product.isOnFloor ? "On Floor" : "Backstock")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(RSMSTheme.Colors.textSecondary)
                 }
@@ -337,22 +305,22 @@ struct BMInventoryTab: View {
                 Button {
                     productToMove = product
                 } label: {
-                    Text(product.isOnFloor ? "Remove from Floor" : "Place on Floor")
+                    Text(product.isOnFloor ? "Remove" : "Place on Floor")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(product.isOnFloor ? RSMSTheme.Colors.textPrimary : .black)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
                         .background {
                             if product.isOnFloor {
-                                RoundedRectangle(cornerRadius: 12)
+                                RoundedRectangle(cornerRadius: 10)
                                     .fill(RSMSTheme.Colors.backgroundElevated)
                             } else {
-                                RoundedRectangle(cornerRadius: 12)
+                                RoundedRectangle(cornerRadius: 10)
                                     .fill(RSMSTheme.Colors.goldGradient)
                             }
                         }
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
+                            RoundedRectangle(cornerRadius: 10)
                                 .stroke(
                                     product.isOnFloor ? RSMSTheme.Colors.borderLight : .clear,
                                     lineWidth: 1
@@ -363,43 +331,75 @@ struct BMInventoryTab: View {
                 .opacity(viewModel.isUpdatingFloorDisplay ? 0.65 : 1)
             }
         }
-        .padding(14)
+        .padding(12)
         .background(RSMSTheme.Colors.backgroundDeep)
-        .cornerRadius(18)
+        .cornerRadius(16)
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
+            RoundedRectangle(cornerRadius: 16)
                 .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
         )
     }
+
+    private func compactMetricsRow(for product: FastMovingProduct) -> some View {
+        HStack(spacing: 12) {
+            metricItem(icon: "flame.fill", value: "\(product.recentUnitsSold)", color: RSMSTheme.Colors.error)
+            
+            let delta = product.velocityDelta
+            metricItem(
+                icon: delta >= 0 ? "arrow.up.right" : "arrow.down.right",
+                value: delta > 0 ? "+\(delta)" : "\(delta)",
+                color: delta >= 0 ? RSMSTheme.Colors.success : RSMSTheme.Colors.error
+            )
+            
+            metricItem(icon: "box.truck.fill", value: "\(product.currentStock)", color: RSMSTheme.Colors.accentGold)
+        }
+    }
+
+    private func metricItem(icon: String, value: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundColor(color)
+            Text(value)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(RSMSTheme.Colors.textSecondary)
+        }
+    }
+
     
     private func trendBadge(for product: FastMovingProduct) -> some View {
         let color: Color
         let icon: String
+        let label: String
         
         switch product.trendDirection {
         case .up:
             color = RSMSTheme.Colors.success
             icon = "arrow.up.right"
+            label = "High"
         case .steady:
             color = RSMSTheme.Colors.warning
             icon = "minus"
+            label = "Stable"
         case .down:
             color = RSMSTheme.Colors.error
             icon = "arrow.down.right"
+            label = "Low"
         }
         
         return HStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 9, weight: .bold))
-            Text(product.trendDirection.label)
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: 8, weight: .bold))
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .black))
         }
         .foregroundColor(color)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(color.opacity(0.12))
-        .cornerRadius(999)
+        .cornerRadius(6)
     }
+
     
     private func insightPill(label: String, color: Color) -> some View {
         Text(label)
@@ -411,129 +411,178 @@ struct BMInventoryTab: View {
             .cornerRadius(999)
     }
     
-    private func metricTile(title: String, value: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title.uppercased())
-                .font(.system(size: 9, weight: .bold))
-                .foregroundColor(RSMSTheme.Colors.textTertiary)
-            Text(value)
-                .font(.system(size: 16, weight: .black, design: .rounded))
-                .foregroundColor(tint)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(RSMSTheme.Colors.backgroundElevated)
-        .cornerRadius(12)
-    }
+    // Removed metricTile as it's replaced by compactMetricsRow
 
-    // MARK: - Transfer Segment (non-scrolling, embedded in parent ScrollView)
 
-    private var transferSegment: some View {
-        VStack(spacing: 0) {
-            // Quick action cards
-            HStack(spacing: 16) {
-                Button { isShowingIncomingRequests = true } label: {
-                    transferCard(title: "Incoming Requests", icon: "tray.fill",
-                                 hasNotification: viewModel.incomingRequests.count > 0)
-                }
-                Button { isShowingMyRequests = true } label: {
-                    transferCard(title: "My Requests", icon: "paperplane.fill",
-                                 hasNotification: false)
-                }
+    // MARK: - Transfer Segment (Refactored to List for native Swipe Actions)
+
+    private var transferList: some View {
+        List {
+            // 1. Store Header (Exclusive to Transfer)
+            Section {
+                storeHeader
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
-            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-            .padding(.bottom, RSMSTheme.Spacing.md)
 
-            if viewModel.isLoading {
-                loadingState
-            } else if viewModel.alerts.isEmpty {
-                emptyState
-            } else {
-                // List items laid out in VStack so parent ScrollView controls all scrolling
-                LazyVStack(spacing: 14) {
-                    ForEach(Array(viewModel.alerts.enumerated()), id: \.element.id) { index, alert in
+            // 2. Management Header & Cards
+            Section {
+                Text("Management")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .padding(.top, 4)
+                    .padding(.bottom, 8)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+
+                HStack(spacing: 16) {
+                    Button {
+                        navigationPath.append(RequestDestination.incoming)
+                    } label: {
+                        transferCard(title: "Incoming Requests", icon: "tray.fill",
+                                     hasNotification: viewModel.incomingRequests.count > 0)
+                    }
+                    .buttonStyle(.plain)
+                    Button {
+                        navigationPath.append(RequestDestination.myRequests)
+                    } label: {
+                        transferCard(title: "My Requests", icon: "paperplane.fill",
+                                     hasNotification: viewModel.myRequests.contains { $0.status == .pending })
+                    }
+                    .buttonStyle(.plain)
+                }
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 24, trailing: 16))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+
+            // 3. Low Stock Alerts Section
+            Section {
+                Text("Stock Alerts")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .padding(.bottom, 8)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+
+                if viewModel.isLoading {
+                    HStack {
+                        Spacer()
+                        ProgressView().tint(RSMSTheme.Colors.accentGold)
+                        Spacer()
+                    }
+                    .listRowBackground(Color.clear)
+                } else if viewModel.alerts.isEmpty {
+                    emptyState
+                        .listRowBackground(Color.clear)
+                } else {
+                    ForEach(viewModel.alerts) { alert in
                         inventoryItemCard(alert)
-                            .opacity(animateIn ? 1 : 0)
-                            .offset(y: animateIn ? 0 : 20)
-                            .animation(.easeOut(duration: 0.4).delay(Double(index) * 0.07), value: animateIn)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button {
+                                    selectedAlert = alert
+                                } label: {
+                                    Label("Transfer", systemImage: "arrow.triangle.swap")
+                                }
+                                .tint(RSMSTheme.Colors.accentGold)
+                            }
                     }
                 }
-                .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-                .padding(.bottom, 40)
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .refreshable {
+            if let storeId = appState.currentStoreID {
+                await viewModel.loadAlerts(forStore: storeId)
             }
         }
     }
 
     private func transferCard(title: String, icon: String, hasNotification: Bool) -> some View {
-        VStack(spacing: 12) {
+        HStack(spacing: 10) {
             ZStack(alignment: .topTrailing) {
                 ZStack {
                     Circle()
                         .fill(RSMSTheme.Colors.accentGold.opacity(0.15))
-                        .frame(width: 48, height: 48)
+                        .frame(width: 36, height: 36)
                     Image(systemName: icon)
-                        .font(.system(size: 20))
+                        .font(.system(size: 16))
                         .foregroundStyle(RSMSTheme.Colors.goldGradient)
                 }
+                
                 if hasNotification {
                     Circle()
-                        .fill(RSMSTheme.Colors.error)
-                        .frame(width: 14, height: 14)
-                        .overlay(Circle().stroke(RSMSTheme.Colors.backgroundDeep, lineWidth: 2))
-                        .offset(x: 4, y: -4)
+                        .fill(RSMSTheme.Colors.accentGold)
+                        .frame(width: 10, height: 10)
+                        .overlay(Circle().stroke(RSMSTheme.Colors.backgroundElevated, lineWidth: 1.5))
                 }
             }
+            
             Text(title)
-                .font(.system(size: 13, weight: .bold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(RSMSTheme.Colors.textPrimary)
-                .multilineTextAlignment(.center)
+                .lineLimit(2)
+            
+            Spacer(minLength: 4)
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(RSMSTheme.Colors.textTertiary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
-        .padding(.horizontal, 10)
+        .padding(.vertical, 14)
+        .padding(.horizontal, 14)
         .background(RSMSTheme.Colors.backgroundElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
     }
 
     // MARK: - Store Header
 
     private var storeHeader: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(RSMSTheme.Colors.accentGold.opacity(0.10))
-                    .frame(width: 44, height: 44)
-                Image(systemName: "storefront.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(RSMSTheme.Colors.goldGradient)
-            }
+        HStack(spacing: 8) {
+            Image(systemName: "storefront.fill")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(RSMSTheme.Colors.goldGradient)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(currentStoreName)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
-                    .lineLimit(1)
-            }
+            Text(currentStoreName)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                .lineLimit(1)
 
             Spacer()
 
-            // Alert count badge
-            if viewModel.alertCount > 0 {
-                HStack(spacing: 4) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 11, weight: .bold))
-                    Text("\(viewModel.alertCount)")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+            // Alert count badges
+            HStack(spacing: 8) {
+                if viewModel.criticalAlertsCount > 0 {
+                    alertBadge(count: viewModel.criticalAlertsCount, color: RSMSTheme.Colors.error)
                 }
-                .foregroundColor(RSMSTheme.Colors.error)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(RSMSTheme.Colors.error.opacity(0.10))
-                .cornerRadius(50)
+                if viewModel.warningAlertsCount > 0 {
+                    alertBadge(count: viewModel.warningAlertsCount, color: RSMSTheme.Colors.warning)
+                }
             }
         }
+    }
+
+    private func alertBadge(count: Int, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 11, weight: .bold))
+            Text("\(count)")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+        }
+        .foregroundColor(color)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(color.opacity(0.10))
+        .cornerRadius(50)
     }
 
     // MARK: - Inventory List
@@ -565,88 +614,66 @@ struct BMInventoryTab: View {
     // MARK: - Inventory Item Card
 
     private func inventoryItemCard(_ alert: LowStockAlert) -> some View {
-        let quantityColor: Color = alert.stockQuantity <= 1
+        let quantityColor: Color = alert.stockQuantity <= 2
             ? RSMSTheme.Colors.error
             : RSMSTheme.Colors.warning
 
-        return VStack(spacing: 0) {
-            // Top section — product info
-            HStack(alignment: .top, spacing: 14) {
-                // Product image / fallback
-                Group {
-                    if let urlString = alert.productImageUrl,
-                       let url = URL(string: urlString) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                            case .failure, .empty:
-                                productPlaceholder
-                            @unknown default:
-                                productPlaceholder
-                            }
+        return HStack(alignment: .top, spacing: 14) {
+            // Product image / fallback
+            Group {
+                if let urlString = alert.productImageUrl,
+                   let url = URL(string: urlString) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        case .failure, .empty:
+                            productPlaceholder
+                        @unknown default:
+                            productPlaceholder
                         }
-                    } else {
-                        productPlaceholder
                     }
-                }
-                .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm))
-                .overlay(
-                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
-                        .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
-                )
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(alert.productName)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(RSMSTheme.Colors.textPrimary)
-                        .lineLimit(2)
-
-                    Text(alert.productSku)
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
-
-                    Text(String(format: "$%.2f", alert.productBasePrice))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                }
-
-                Spacer()
-
-                // Quantity
-                VStack(spacing: 2) {
-                    Text("\(alert.stockQuantity)")
-                        .font(.system(size: 26, weight: .black, design: .rounded))
-                        .foregroundColor(quantityColor)
-                    Text("left")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundColor(quantityColor.opacity(0.7))
-                        .textCase(.uppercase)
-                        .tracking(0.4)
+                } else {
+                    productPlaceholder
                 }
             }
+            .frame(width: 56, height: 56)
+            .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm))
+            .overlay(
+                RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
+                    .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
+            )
 
-            Divider()
-                .background(RSMSTheme.Colors.borderLight)
-                .padding(.vertical, RSMSTheme.Spacing.md)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(alert.productName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                    .lineLimit(2)
 
-            // Bottom section — Transfer button
-            Button {
-                selectedAlert = alert
-            } label: {
-                HStack(spacing: RSMSTheme.Spacing.sm) {
-                    Image(systemName: "arrow.triangle.swap")
-                        .font(.system(size: 15, weight: .semibold))
-                    Text("Initiate Transfer")
-                        .font(.system(size: 15, weight: .bold))
-                }
-                .frame(maxWidth: .infinity)
+                Text(alert.productSku)
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundColor(RSMSTheme.Colors.accentGold)
+
+                Text(String(format: "$%.2f", alert.productBasePrice))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(RSMSTheme.Colors.textSecondary)
             }
-            .buttonStyle(GoldButtonStyle())
-            .padding(.top, RSMSTheme.Spacing.xs)
+
+            Spacer()
+
+            // Quantity
+            VStack(spacing: 2) {
+                Text("\(alert.stockQuantity)")
+                    .font(.system(size: 26, weight: .black, design: .rounded))
+                    .foregroundColor(quantityColor)
+                Text("left")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(quantityColor.opacity(0.7))
+                    .textCase(.uppercase)
+                    .tracking(0.4)
+            }
         }
         .padding(16)
         .background(RSMSTheme.Colors.backgroundDeep)

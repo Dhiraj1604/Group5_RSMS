@@ -58,7 +58,7 @@ struct AddTaskSheet: View {
                             title: title,
                             description: description.isEmpty ? nil : description,
                             assignedTo: assignedTo,
-                            isCompleted: false,
+                            status: .pending,
                             dueDate: dueDate
                         )
                         onSave(newTask)
