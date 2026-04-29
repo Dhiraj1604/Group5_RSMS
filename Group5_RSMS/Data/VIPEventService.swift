@@ -182,4 +182,35 @@ final class VIPEventService {
             .eq("id", value: itemId)
             .execute()
     }
+
+    // MARK: - vip_appointments
+
+    /// Fetch all appointments for a boutique.
+    func fetchAppointments(boutiqueId: UUID) async throws -> [VIPAppointment] {
+        let result: [VIPAppointment] = try await client
+            .from("vip_appointments")
+            .select("*")
+            .eq("boutique_id", value: boutiqueId)
+            .order("appointment_date", ascending: true)
+            .execute()
+            .value
+        return result
+    }
+
+    /// Create a new appointment.
+    func createAppointment(_ payload: VIPAppointment.InsertPayload) async throws {
+        try await client
+            .from("vip_appointments")
+            .insert(payload)
+            .execute()
+    }
+
+    /// Update appointment status (scheduled -> completed/cancelled).
+    func updateAppointmentStatus(appointmentId: UUID, status: String) async throws {
+        try await client
+            .from("vip_appointments")
+            .update(["status": status])
+            .eq("id", value: appointmentId)
+            .execute()
+    }
 }

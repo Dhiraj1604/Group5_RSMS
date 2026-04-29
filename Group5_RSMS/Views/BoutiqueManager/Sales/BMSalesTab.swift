@@ -10,9 +10,10 @@ import SwiftUI
 struct BMSalesTab: View {
     @Environment(AppState.self) private var appState
     @StateObject private var vm = VIPEventViewModel()
-    @State private var selectedSeg = 0          // 0 = Events, 1 = Guests
+    @State private var selectedSeg = 0          // 0 = Events, 1 = Guests, 2 = Appointments
     @State private var showCreateEvent = false
     @State private var showAddGuest    = false
+    @State private var showScheduleAppointment = false
 
     var boutiqueId: UUID {
         appState.currentStoreID ?? UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
@@ -27,6 +28,7 @@ struct BMSalesTab: View {
                     Picker("Section", selection: $selectedSeg) {
                         Text("Events").tag(0)
                         Text("VIP Guests").tag(1)
+                        Text("Appointments").tag(2)
                     }
                     .pickerStyle(.segmented)
                     .padding(.horizontal)
@@ -35,12 +37,14 @@ struct BMSalesTab: View {
 
                     if selectedSeg == 0 {
                         VIPEventsListView(vm: vm, boutiqueId: boutiqueId)
-                    } else {
+                    } else if selectedSeg == 1 {
                         VIPGuestsDirectoryView(vm: vm, boutiqueId: boutiqueId)
+                    } else {
+                        VIPAppointmentsListView(vm: vm, boutiqueId: boutiqueId)
                     }
                 }
             }
-            .navigationTitle(selectedSeg == 0 ? "VIP Events" : "Guest Directory")
+            .navigationTitle(selectedSeg == 0 ? "VIP Events" : (selectedSeg == 1 ? "Guest Directory" : "Appointments"))
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -48,7 +52,8 @@ struct BMSalesTab: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         if selectedSeg == 0 { showCreateEvent = true }
-                        else { showAddGuest = true }
+                        else if selectedSeg == 1 { showAddGuest = true }
+                        else { showScheduleAppointment = true }
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title3)
@@ -62,9 +67,13 @@ struct BMSalesTab: View {
             .sheet(isPresented: $showAddGuest) {
                 AddGuestSheet(vm: vm, boutiqueId: boutiqueId)
             }
+            .sheet(isPresented: $showScheduleAppointment) {
+                ScheduleAppointmentSheet(vm: vm, boutiqueId: boutiqueId, preselectedGuest: nil)
+            }
             .task {
                 await vm.loadEvents(boutiqueId: boutiqueId)
                 await vm.loadGuests(boutiqueId: boutiqueId)
+                await vm.loadAppointments(boutiqueId: boutiqueId)
             }
             .alert("Error", isPresented: Binding(
                 get: { vm.eventError != nil },
