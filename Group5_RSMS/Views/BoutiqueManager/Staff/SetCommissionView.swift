@@ -126,8 +126,10 @@ struct SetCommissionView: View {
             
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .foregroundColor(RSMSTheme.Colors.accentGold)
+                    }
                 }
             }
         }

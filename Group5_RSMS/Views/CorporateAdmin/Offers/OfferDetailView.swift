@@ -14,6 +14,7 @@ struct OfferDetailView: View {
     @State private var isDeleting = false
     @State private var actionError: String? = nil
     @State private var showErrorAlert = false
+    @State private var showAllStores = false
     
     var currentOffer: Offer {
         service.offers.first(where: { $0.id == offer.id }) ?? offer
@@ -30,7 +31,6 @@ struct OfferDetailView: View {
         ScrollView {
             VStack(spacing: RSMSTheme.Spacing.xl) {
                 headerSection
-                statusSection
                 if currentOffer.computedStatus != .scheduled {
                     metricsSection
                     chartSection
@@ -86,54 +86,45 @@ struct OfferDetailView: View {
     // MARK: - Sections
     
     private var headerSection: some View {
-        VStack(spacing: RSMSTheme.Spacing.sm) {
-            OfferStatusPill(status: currentOffer.computedStatus)
-            
-            Text(currentOffer.name)
-                .font(.custom("Helvetica", size: 28).weight(.bold))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(RSMSTheme.Colors.textPrimary)
-            
-            Text(currentOffer.discountLabel)
-                .font(.custom("Helvetica", size: 40).weight(.heavy))
-                .foregroundStyle(RSMSTheme.Colors.goldGradient)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, RSMSTheme.Spacing.md)
-    }
-    
-    private var statusSection: some View {
-        HStack {
-            VStack(alignment: .center, spacing: 4) {
-                Text("APPLICABLE TO")
-                    .font(.caption)
-                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                Text(currentOffer.applicableTo ?? "All Products")
-                    .font(.title3)
-                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
-            }
-            Spacer()
-            Divider().background(RSMSTheme.Colors.borderLight).frame(height: 30)
-            Spacer()
-            VStack(alignment: .center, spacing: 4) {
-                Text("REMAINING")
-                    .font(.caption)
-                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                HStack(spacing: 4) {
-                    Image(systemName: "clock.fill")
-                        .font(.caption)
-                    Text("\(daysRemaining(for: currentOffer)) Days")
-                        .font(.subheadline)
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Text(currentOffer.name)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                    Circle()
+                        .fill(currentOffer.computedStatus == .active ? RSMSTheme.Colors.success : 
+                              currentOffer.computedStatus == .scheduled ? RSMSTheme.Colors.warning : 
+                              RSMSTheme.Colors.textSecondary)
+                        .frame(width: 10, height: 10)
                 }
-                .foregroundStyle(RSMSTheme.Colors.warning)
+                
+                Text("APPLICABLE TO: \(currentOffer.applicableTo ?? "All Products")".uppercased())
+                    .font(.caption.weight(.bold))
+                    .tracking(1)
+                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
+            }
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 6) {
+                Text(currentOffer.discountLabel)
+                    .font(.system(size: 32, weight: .heavy, design: .rounded))
+                    .foregroundStyle(RSMSTheme.Colors.goldGradient)
+                
+                if currentOffer.computedStatus != .expired {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.fill")
+                        Text("\(daysRemaining(for: currentOffer)) Days Left")
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(RSMSTheme.Colors.warning)
+                }
             }
         }
-        .padding()
+        .padding(RSMSTheme.Spacing.lg)
         .background(RSMSTheme.Colors.backgroundDeep)
         .cornerRadius(RSMSTheme.Radius.lg)
         .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
-        .padding(.bottom, currentOffer.computedStatus == .scheduled ? 0 : 0)
-        .scaleEffect(currentOffer.computedStatus == .scheduled ? CGSize(width: 1, height: 0.85) : CGSize(width: 1, height: 1), anchor: .top)
     }
     
     private var metricsSection: some View {
@@ -218,9 +209,21 @@ struct OfferDetailView: View {
                     .background(RSMSTheme.Colors.backgroundDeep)
                     .cornerRadius(RSMSTheme.Radius.lg)
             } else {
+                let visibleStores = showAllStores ? assignedStores : Array(assignedStores.prefix(3))
                 VStack(spacing: 0) {
-                    ForEach(Array(assignedStores.enumerated()), id: \.element.id) { index, store in
-                        DashboardStoreRow(store: store, isLast: index == assignedStores.count - 1)
+                    ForEach(Array(visibleStores.enumerated()), id: \.element.id) { index, store in
+                        DashboardStoreRow(store: store, isLast: index == visibleStores.count - 1 && assignedStores.count <= 3)
+                    }
+                    if assignedStores.count > 3 {
+                        Button {
+                            withAnimation { showAllStores.toggle() }
+                        } label: {
+                            Text(showAllStores ? "Show Less" : "See More (\(assignedStores.count - 3))")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                        }
                     }
                 }
                 .background(RSMSTheme.Colors.backgroundDeep)
@@ -287,9 +290,12 @@ struct DashboardMetricCard: View {
             Text(value)
                 .font(.custom("Helvetica", size: 24).weight(.bold))
                 .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                .minimumScaleFactor(0.8)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .center)
-        .padding()
+        .padding(.vertical, RSMSTheme.Spacing.md)
+        .padding(.horizontal, RSMSTheme.Spacing.sm)
         .background(RSMSTheme.Colors.backgroundDeep)
         .cornerRadius(RSMSTheme.Radius.lg)
         .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
@@ -300,40 +306,32 @@ struct DashboardConfigCard: View {
     let icon: String
     let title: String
     let value: String
-    
+
     var body: some View {
-        VStack(alignment: .center, spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .foregroundStyle(RSMSTheme.Colors.accentGold)
-                    .font(.system(size: 16))
+        HStack(spacing: RSMSTheme.Spacing.sm) {
+            Image(systemName: icon)
+                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                .font(.system(size: 14))
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                    .tracking(0.5)
+                Text(value)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
             }
-            Text(value)
-                .font(.headline)
-                .fontWeight(.bold)
-                .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
-                .multilineTextAlignment(.center)
+            Spacer()
         }
-        .padding()
-        .frame(maxWidth: .infinity, minHeight: 110, alignment: .center)
-        .background(
-            LinearGradient(
-                colors: [RSMSTheme.Colors.backgroundDeep, RSMSTheme.Colors.backgroundDeep.opacity(0.5)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .cornerRadius(RSMSTheme.Radius.lg)
-        .overlay(
-            RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
-                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+        .padding(RSMSTheme.Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RSMSTheme.Colors.backgroundDeep)
+        .cornerRadius(RSMSTheme.Radius.md)
+        .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+            .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
     }
 }
 

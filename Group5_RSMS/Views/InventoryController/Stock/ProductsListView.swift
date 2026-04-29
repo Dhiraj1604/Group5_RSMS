@@ -74,37 +74,50 @@ struct ProductsListView: View {
     // MARK: - Product List
 
     private var productList: some View {
-        List {
-            ForEach(filteredProducts) { product in
-                productRow(product)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(
-                        top: RSMSTheme.Spacing.xs,
-                        leading: RSMSTheme.Spacing.lg,
-                        bottom: RSMSTheme.Spacing.xs,
-                        trailing: RSMSTheme.Spacing.lg
-                    ))
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button {
-                            if product.inRepair {
-                                productToResolve = product
-                                showingResolveAlert = true
-                            } else {
-                                productToRepair = product
-                            }
-                        } label: {
-                            Label(
-                                product.inRepair ? "Return" : "Repair",
-                                systemImage: product.inRepair ? "checkmark.circle.fill" : "wrench.fill"
-                            )
-                        }
-                        .tint(product.inRepair ? RSMSTheme.Colors.success : RSMSTheme.Colors.warning)
-                    }
+        VStack(spacing: 0) {
+            if !showOnlyInRepair {
+                HStack(spacing: 6) {
+                    Text("Swipe left on a product to send for repairment")
+                        .font(.footnote)
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    Spacer()
+                }
+                .padding(.horizontal, RSMSTheme.Spacing.lg)
+                .padding(.vertical, RSMSTheme.Spacing.sm)
             }
+
+            List {
+                ForEach(filteredProducts) { product in
+                    productRow(product)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(
+                            top: RSMSTheme.Spacing.xs,
+                            leading: RSMSTheme.Spacing.lg,
+                            bottom: RSMSTheme.Spacing.xs,
+                            trailing: RSMSTheme.Spacing.lg
+                        ))
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button {
+                                if product.inRepair {
+                                    productToResolve = product
+                                    showingResolveAlert = true
+                                } else {
+                                    productToRepair = product
+                                }
+                            } label: {
+                                Label(
+                                    product.inRepair ? "Return" : "Repair",
+                                    systemImage: product.inRepair ? "checkmark.circle.fill" : "wrench.fill"
+                                )
+                            }
+                            .tint(product.inRepair ? RSMSTheme.Colors.success : RSMSTheme.Colors.warning)
+                        }
+                }
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
     }
 
     private func productRow(_ product: Product) -> some View {

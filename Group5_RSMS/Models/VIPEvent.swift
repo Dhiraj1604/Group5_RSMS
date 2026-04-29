@@ -96,9 +96,9 @@ struct VIPGuest: Codable, Identifiable {
     var fullName: String
     var email: String?
     var phone: String?
-    var tier: String
     var addedBy: UUID?
     var preferences: String?
+    var lastVisit: Date?
     let createdBy: Date?
 
     enum CodingKeys: String, CodingKey {
@@ -107,9 +107,9 @@ struct VIPGuest: Codable, Identifiable {
         case fullName    = "full_name"
         case email
         case phone
-        case tier
         case addedBy     = "added_by"
         case preferences
+        case lastVisit   = "last_visit"
         case createdBy   = "created_by"
     }
 
@@ -120,31 +120,26 @@ struct VIPGuest: Codable, Identifiable {
         let full_name: String
         let email: String?
         let phone: String?
-        let tier: String
         let preferences: String?
+        let last_visit: String?
         let added_by: UUID?
     }
 
     var insertPayload: InsertPayload {
-        InsertPayload(
+        let iso = ISO8601DateFormatter()
+        return InsertPayload(
             id:          id,
             boutique_id: boutiqueId,
             full_name:   fullName,
             email:       email,
             phone:       phone,
-            tier:        tier,
             preferences: preferences,
+            last_visit:  lastVisit.map { iso.string(from: $0) },
             added_by:    addedBy
         )
     }
 
-    var tierIcon: String {
-        switch tier.lowercased() {
-        case "platinum": return "crown.fill"
-        case "gold":     return "star.fill"
-        default:         return "circle.fill"
-        }
-    }
+
 
     var initials: String {
         let parts = fullName.split(separator: " ")
@@ -211,5 +206,41 @@ struct VIPEventCollectionItem: Codable, Identifiable {
         let display_order: Int
         let special_price: Double?
         let is_reserved: Bool
+    }
+}
+
+// MARK: - VIP Appointment
+
+struct VIPAppointment: Codable, Identifiable {
+    let id: UUID
+    let guestId: UUID
+    let boutiqueId: UUID
+    var title: String?
+    var appointmentDate: Date
+    var type: String         // e.g., "In-Store Styling", "Virtual Consultation", "Repair/Service"
+    var status: String       // e.g., "scheduled", "completed", "cancelled"
+    var notes: String?
+    let createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case guestId         = "guest_id"
+        case boutiqueId      = "boutique_id"
+        case title
+        case appointmentDate = "appointment_date"
+        case type
+        case status
+        case notes
+        case createdAt       = "created_at"
+    }
+
+    struct InsertPayload: Encodable {
+        let guest_id: UUID
+        let boutique_id: UUID
+        let title: String?
+        let appointment_date: Date
+        let type: String
+        let status: String
+        let notes: String?
     }
 }

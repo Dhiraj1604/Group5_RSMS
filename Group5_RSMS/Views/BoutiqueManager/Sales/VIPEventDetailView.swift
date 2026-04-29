@@ -29,6 +29,12 @@ struct VIPEventDetailView: View {
                 eventSummaryCard
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
+                
+                if currentEvent.status == "completed" {
+                    attendanceSummaryCard
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                }
 
                 // Sub-tab picker
                 Picker("Detail", selection: $selectedSeg) {
@@ -52,12 +58,27 @@ struct VIPEventDetailView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    if selectedSeg == 0 { showInviteSheet = true }
-                    else { showAddProduct = true }
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+//                 Button {
+//                     if selectedSeg == 0 { showInviteSheet = true }
+//                     else { showAddProduct = true }
+//                 } label: {
+//                     Image(systemName: "plus.circle.fill")
+//                         .foregroundStyle(RSMSTheme.Colors.accentGold)
+                HStack(spacing: 16) {
+                    Button {
+                        showStatusPicker = true
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    }
+                    
+                    Button {
+                        if selectedSeg == 0 { showInviteSheet = true }
+                        else { showAddProduct = true }
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    }
                 }
             }
         }
@@ -116,6 +137,42 @@ struct VIPEventDetailView: View {
             }
         }
         .padding(14)
+        .background(RSMSTheme.Colors.backgroundElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
+    }
+
+    // MARK: - Attendance Summary Card
+    
+    @ViewBuilder
+    private var attendanceSummaryCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Attendance Report")
+                .font(.headline)
+                .foregroundStyle(RSMSTheme.Colors.textPrimary)
+            
+            HStack(spacing: 20) {
+                VStack(alignment: .leading) {
+                    Text("\(vm.selectedEventGuests.count)")
+                        .font(.title2).bold()
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    Text("Total Invited")
+                        .font(.caption)
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                }
+                
+                VStack(alignment: .leading) {
+                    Text("\(vm.selectedEventGuests.filter { $0.rsvpStatus == "attended" }.count)")
+                        .font(.title2).bold()
+                        .foregroundStyle(.green)
+                    Text("Attended")
+                        .font(.caption)
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(RSMSTheme.Colors.backgroundElevated)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
@@ -208,6 +265,8 @@ struct GuestInviteRow: View {
         switch invite.rsvpStatus {
         case "confirmed", "attended": return .green
         case "declined", "no_show":   return .red
+//         case "confirmed": return .green
+//         case "declined":   return .red
         default:                       return RSMSTheme.Colors.accentGold
         }
     }
@@ -232,10 +291,19 @@ struct GuestInviteRow: View {
                         .font(.caption)
                         .foregroundStyle(RSMSTheme.Colors.textTertiary)
                 }
+//             }
+//             Spacer()
+//             Menu {
+//                 ForEach(["invited","confirmed","declined"], id: \.self) { s in
+                if let phone = invite.guest?.phone {
+                    Text(phone)
+                        .font(.caption)
+                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                }
             }
             Spacer()
             Menu {
-                ForEach(["invited","confirmed","declined"], id: \.self) { s in
+                ForEach(["invited","confirmed","declined","attended","no_show"], id: \.self) { s in
                     Button(s.replacingOccurrences(of: "_", with: " ").capitalized) {
                         onStatusChange(s)
                     }

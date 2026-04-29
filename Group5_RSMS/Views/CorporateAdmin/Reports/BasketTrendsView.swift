@@ -12,32 +12,46 @@ import Charts
 struct BasketTrendsView: View {
     @Environment(AppState.self) private var appState
     @StateObject private var viewModel = BasketTrendsViewModel()
+    @State private var showAllBasketRows = false
 
     var body: some View {
         ZStack {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
             if viewModel.isLoading && viewModel.activeTrendData.isEmpty {
+                // First-load spinner — show before any data arrives
                 loadingView
-            } else if viewModel.activeTrendData.isEmpty {
-                emptyState
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: RSMSTheme.Spacing.lg) {
-                        summaryCards
-                        periodPicker
-                        chartSection
-                        filterSection
-                        trendTable
+                        if viewModel.activeTrendData.isEmpty {
+                            filtersSection
+                            inlineEmptyState
+                        } else {
+                            ViewThatFits {
+                                HStack(alignment: .top, spacing: RSMSTheme.Spacing.lg) {
+                                    filtersSection.frame(maxWidth: .infinity)
+                                    summaryCards.frame(maxWidth: .infinity)
+                                }
+                                VStack(spacing: RSMSTheme.Spacing.lg) {
+                                    filtersSection
+                                    summaryCards
+                                }
+                            }
+                            chartSection
+                            trendTable
+                        }
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                     .padding(.top, RSMSTheme.Spacing.md)
                     .padding(.bottom, 100)
+                    .frame(maxWidth: 1000)
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
         .navigationTitle("Basket Trends")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .task { await viewModel.fetchTrends() }
@@ -70,6 +84,29 @@ struct BasketTrendsView: View {
         .padding(.horizontal, RSMSTheme.Spacing.xxl)
     }
 
+    /// Inline placeholder shown below filters when selected store/category has no data.
+    private var inlineEmptyState: some View {
+        VStack(spacing: RSMSTheme.Spacing.md) {
+            Image(systemName: "basket")
+                .font(.system(size: 40))
+                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.25))
+            Text("No Basket Data")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(RSMSTheme.Colors.textPrimary)
+            Text("No transactions found for the selected store or category.\nTry switching the store or selecting a different category.")
+                .font(.system(size: 13))
+                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, RSMSTheme.Spacing.xxxl)
+        .padding(.horizontal, RSMSTheme.Spacing.xl)
+        .background(RSMSTheme.Colors.backgroundDeep)
+        .cornerRadius(RSMSTheme.Radius.lg)
+        .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+            .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
+    }
+
     // MARK: - Summary Cards
     private var summaryCards: some View {
         HStack(spacing: RSMSTheme.Spacing.sm) {
@@ -85,14 +122,14 @@ struct BasketTrendsView: View {
                 value: "₹\(String(format: "%.0f", viewModel.overallAvgValue))",
                 subtitle: "per txn",
                 icon: "indianrupeesign.circle.fill",
-                color: RSMSTheme.Colors.success
+                color: RSMSTheme.Colors.accentGold
             )
             metricCard(
                 title: "Total Txns",
                 value: "\(viewModel.totalTransactions)",
                 subtitle: "recorded",
                 icon: "receipt.fill",
-                color: .blue
+                color: RSMSTheme.Colors.accentGold
             )
         }
     }
@@ -121,45 +158,159 @@ struct BasketTrendsView: View {
         )
     }
 
-    // MARK: - Period Picker
-    private var periodPicker: some View {
-        HStack(spacing: RSMSTheme.Spacing.sm) {
-            ForEach(BasketTrendsViewModel.Period.allCases, id: \.self) { period in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        viewModel.selectedPeriod = period
+    // MARK: - Consolidated Filters
+
+    private var filtersSection: some View {
+        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
+            // Row 1: Store dropdown
+            storeDropdown
+
+            // Row 2: Category filter pills
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: RSMSTheme.Spacing.sm) {
+                    filterChip(label: "All Categories", isSelected: viewModel.selectedCategory == nil) {
+                        viewModel.selectedCategory = nil
+                        Task { await viewModel.fetchTrends() }
                     }
-                } label: {
-                    Text(period.rawValue)
-                        .font(.system(size: 13, weight: .semibold))
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 8)
-                        .foregroundStyle(viewModel.selectedPeriod == period ? .black : RSMSTheme.Colors.textSecondary)
-                        .background(viewModel.selectedPeriod == period
-                            ? RSMSTheme.Colors.accentGold
-                            : RSMSTheme.Colors.backgroundElevated)
-                        .cornerRadius(20)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(viewModel.selectedPeriod == period
-                                    ? Color.clear : RSMSTheme.Colors.borderLight, lineWidth: 1)
-                        )
+                    ForEach(viewModel.categories, id: \.self) { cat in
+                        filterChip(label: cat, isSelected: viewModel.selectedCategory == cat) {
+                            viewModel.selectedCategory = cat
+                            Task { await viewModel.fetchTrends() }
+                        }
+                    }
                 }
             }
-            Spacer()
+
+
+        }
+        .padding(RSMSTheme.Spacing.lg)
+        .background(RSMSTheme.Colors.backgroundDeep)
+        .cornerRadius(RSMSTheme.Radius.lg)
+        .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+            .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
+    }
+
+    // MARK: - Store Dropdown
+
+    private var storeDropdown: some View {
+        let isFiltered = viewModel.selectedStoreId != nil
+        let selectedName: String = {
+            guard let id = viewModel.selectedStoreId else { return "All Stores" }
+            return appState.stores.first(where: { $0.id == id })?.name ?? "All Stores"
+        }()
+
+        return Menu {
+            Button {
+                viewModel.selectedStoreId = nil
+                Task { await viewModel.fetchTrends() }
+            } label: {
+                HStack {
+                    Text("All Stores")
+                    if viewModel.selectedStoreId == nil { Image(systemName: "checkmark") }
+                }
+            }
+
+            if !appState.stores.isEmpty { Divider() }
+
+            ForEach(appState.stores) { store in
+                Button {
+                    viewModel.selectedStoreId = store.id
+                    Task { await viewModel.fetchTrends() }
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(store.name)
+                            Text(store.city).font(.caption)
+                        }
+                        if viewModel.selectedStoreId == store.id { Image(systemName: "checkmark") }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: RSMSTheme.Spacing.sm) {
+                Image(systemName: "storefront.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(isFiltered ? Color.black : RSMSTheme.Colors.accentGold)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("STORE")
+                        .font(.system(size: 9, weight: .semibold)).tracking(0.8)
+                        .foregroundStyle(isFiltered ? Color.black.opacity(0.6) : RSMSTheme.Colors.textTertiary)
+                    Text(selectedName)
+                        .font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                        .foregroundStyle(isFiltered ? Color.black : RSMSTheme.Colors.textPrimary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(isFiltered ? Color.black.opacity(0.6) : RSMSTheme.Colors.textSecondary)
+            }
+            .padding(.horizontal, RSMSTheme.Spacing.lg)
+            .padding(.vertical, RSMSTheme.Spacing.md)
+            .background(isFiltered ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.backgroundElevated)
+            .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
+            .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                .stroke(isFiltered ? Color.clear : RSMSTheme.Colors.borderLight, lineWidth: 1))
+        }
+    }
+
+    private func filterChip(label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 12, weight: .semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .foregroundStyle(isSelected ? .black : RSMSTheme.Colors.textSecondary)
+                .background(isSelected ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.backgroundElevated)
+                .cornerRadius(16)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(isSelected ? Color.clear : RSMSTheme.Colors.borderLight, lineWidth: 1)
+                )
         }
     }
 
     // MARK: - Chart
+
+    private var basketPeriodDropdown: some View {
+        Menu {
+            ForEach(BasketTrendsViewModel.Period.allCases, id: \.self) { period in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { viewModel.selectedPeriod = period }
+                } label: {
+                    HStack {
+                        Text(period.rawValue)
+                        if viewModel.selectedPeriod == period { Image(systemName: "checkmark") }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(viewModel.selectedPeriod.rawValue)
+                    .font(.system(size: 12, weight: .semibold))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .foregroundStyle(RSMSTheme.Colors.accentGold)
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(RSMSTheme.Colors.accentGold.opacity(0.12))
+            .cornerRadius(12)
+        }
+    }
     private var chartSection: some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-            Text("Avg Items per Transaction")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+            HStack {
+                Text("Avg Items per Transaction")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                Spacer()
+                basketPeriodDropdown
+            }
 
             Chart {
                 ForEach(viewModel.activeTrendData) { point in
-                    // Area fill
                     AreaMark(
                         x: .value("Period", point.label),
                         y: .value("Avg Basket", point.avgBasketSize)
@@ -171,18 +322,16 @@ struct BasketTrendsView: View {
                             endPoint: .bottom
                         )
                     )
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.monotone)
 
-                    // Line
                     LineMark(
                         x: .value("Period", point.label),
                         y: .value("Avg Basket", point.avgBasketSize)
                     )
                     .foregroundStyle(RSMSTheme.Colors.accentGold)
                     .lineStyle(StrokeStyle(lineWidth: 2.5))
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.monotone)
 
-                    // Data points
                     PointMark(
                         x: .value("Period", point.label),
                         y: .value("Avg Basket", point.avgBasketSize)
@@ -191,6 +340,7 @@ struct BasketTrendsView: View {
                     .symbolSize(40)
                 }
             }
+            .chartYScale(domain: .automatic(includesZero: true))
             .chartYAxisLabel("Items")
             .chartXAxis {
                 AxisMarks(values: .automatic) { _ in
@@ -219,67 +369,12 @@ struct BasketTrendsView: View {
         )
     }
 
-    // MARK: - Filters
-    private var filterSection: some View {
-        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
-            Text("FILTERS")
-                .font(.system(size: 11, weight: .semibold))
-                .tracking(1.5)
-                .foregroundStyle(RSMSTheme.Colors.accentGold)
-
-            // Store filter
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: RSMSTheme.Spacing.sm) {
-                    filterChip(label: "All Stores", isSelected: viewModel.selectedStoreId == nil) {
-                        viewModel.selectedStoreId = nil
-                        Task { await viewModel.fetchTrends() }
-                    }
-                    ForEach(appState.stores) { store in
-                        filterChip(label: store.name, isSelected: viewModel.selectedStoreId == store.id) {
-                            viewModel.selectedStoreId = store.id
-                            Task { await viewModel.fetchTrends() }
-                        }
-                    }
-                }
-            }
-
-            // Category filter
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: RSMSTheme.Spacing.sm) {
-                    filterChip(label: "All Categories", isSelected: viewModel.selectedCategory == nil) {
-                        viewModel.selectedCategory = nil
-                        Task { await viewModel.fetchTrends() }
-                    }
-                    ForEach(viewModel.categories, id: \.self) { cat in
-                        filterChip(label: cat, isSelected: viewModel.selectedCategory == cat) {
-                            viewModel.selectedCategory = cat
-                            Task { await viewModel.fetchTrends() }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func filterChip(label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 12, weight: .semibold))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .foregroundStyle(isSelected ? .black : RSMSTheme.Colors.textSecondary)
-                .background(isSelected ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.backgroundElevated)
-                .cornerRadius(16)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(isSelected ? Color.clear : RSMSTheme.Colors.borderLight, lineWidth: 1)
-                )
-        }
-    }
-
     // MARK: - Trend Table
     private var trendTable: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let data = viewModel.activeTrendData
+        let visibleData = showAllBasketRows ? data : Array(data.prefix(5))
+
+        return VStack(alignment: .leading, spacing: 0) {
             // Header
             HStack {
                 Text("Period")
@@ -291,14 +386,14 @@ struct BasketTrendsView: View {
                 Text("Txns")
                     .frame(width: 45, alignment: .trailing)
             }
-            .font(.system(size: 10, weight: .bold))
-            .foregroundStyle(RSMSTheme.Colors.textTertiary)
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(RSMSTheme.Colors.textSecondary)
             .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.vertical, 12)
             .background(RSMSTheme.Colors.backgroundElevated)
 
             // Rows
-            ForEach(Array(viewModel.activeTrendData.enumerated()), id: \.element.id) { index, point in
+            ForEach(Array(visibleData.enumerated()), id: \.element.id) { index, point in
                 VStack(spacing: 0) {
                     HStack {
                         HStack(spacing: 6) {
@@ -330,9 +425,31 @@ struct BasketTrendsView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
 
-                    if index < viewModel.activeTrendData.count - 1 {
+                    if index < visibleData.count - 1 {
                         Divider().background(Color.white.opacity(0.05)).padding(.leading, 14)
                     }
+                }
+            }
+
+            // See More / See Less
+            if data.count > 5 {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) { showAllBasketRows.toggle() }
+//                     withAnimation(.easeInOut(duration: 0.25)) {
+//                         showAllBasketRows.toggle()
+//                     }
+                } label: {
+                    HStack {
+                        Spacer()
+                        Text(showAllBasketRows ? "Show Less" : "See More (\(data.count - 5) more)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        Image(systemName: showAllBasketRows ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        Spacer()
+                    }
+                    .padding(.vertical, 12)
                 }
             }
         }

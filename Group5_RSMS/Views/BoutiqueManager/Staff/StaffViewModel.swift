@@ -66,12 +66,23 @@ final class StaffViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Add employee
     func addEmployee(_ employee: Employee, boutiqueId: UUID) async {
         isLoading = true
         errorMessage = nil
         do {
             try await sync.createEmployee(employee)
+            await fetchEmployees(boutiqueId: boutiqueId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    func updateEmployee(_ employee: Employee, boutiqueId: UUID) async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await sync.updateEmployee(employee)
             await fetchEmployees(boutiqueId: boutiqueId)
         } catch {
             errorMessage = error.localizedDescription
