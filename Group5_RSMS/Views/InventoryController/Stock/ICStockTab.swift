@@ -263,16 +263,23 @@ struct ICStockTab: View {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        // Past/today first (most urgent), then upcoming
+        // 1. Pending: Overdue and Today (most urgent, oldest first)
         let overdueAndToday = upcomingChecks
-            .filter { calendar.startOfDay(for: $0.date) <= today }
+            .filter { $0.auditStatus == .overdue || $0.auditStatus == .today }
             .sorted { $0.date < $1.date }
+            
+        // 2. Pending: Future (soonest first)
         let future = upcomingChecks
-            .filter { calendar.startOfDay(for: $0.date) > today }
+            .filter { $0.auditStatus == .upcoming }
             .sorted { $0.date < $1.date }
 
-        // Show at most 3 on the dashboard
-        return Array((overdueAndToday + future).prefix(3))
+        // 3. Completed: Most recent first
+        let completed = upcomingChecks
+            .filter { $0.auditStatus == .completed }
+            .sorted { $0.date > $1.date }
+
+        // Combine prioritizing urgent pending, then future, then recent completed
+        return Array((overdueAndToday + future + completed).prefix(3))
     }
 
     @ViewBuilder
@@ -291,7 +298,8 @@ struct ICStockTab: View {
                             checks: upcomingChecks,
                             categories: allCategories,
                             categorySchedules: categorySchedules,
-                            isShowingScheduleSheet: $isShowingScheduleSheet
+                            isShowingScheduleSheet: $isShowingScheduleSheet,
+                            selectedCheckForCompletion: $selectedCheckForCompletion
                         )) {
                             Text("See All")
                                 .font(.footnote)
@@ -338,7 +346,8 @@ struct ICStockTab: View {
                                 checks: upcomingChecks,
                                 categories: allCategories,
                                 categorySchedules: categorySchedules,
-                                isShowingScheduleSheet: $isShowingScheduleSheet
+                                isShowingScheduleSheet: $isShowingScheduleSheet,
+                                selectedCheckForCompletion: $selectedCheckForCompletion
                             )) {
                                 stockCheckRow(for: check)
                             }
@@ -716,6 +725,7 @@ struct AllStockChecksView: View {
     var categories: [Category]
     var categorySchedules: [StockCheckSchedule]
     @Binding var isShowingScheduleSheet: Bool
+    @Binding var selectedCheckForCompletion: StockCheck?
 
     @State private var searchText = ""
 
@@ -745,15 +755,22 @@ struct AllStockChecksView: View {
             } else {
                 List {
                     ForEach(filteredChecks) { check in
-                        auditRow(for: check)
+                        if check.auditStatus == .overdue || check.auditStatus == .today {
+                            Button {
+                                selectedCheckForCompletion = check
+                            } label: {
+                                auditRow(for: check)
+                            }
+                            .buttonStyle(.plain)
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
-                            .listRowInsets(EdgeInsets(
-                                top: RSMSTheme.Spacing.xs,
-                                leading: RSMSTheme.Spacing.lg,
-                                bottom: RSMSTheme.Spacing.xs,
-                                trailing: RSMSTheme.Spacing.lg
-                            ))
+                            .listRowInsets(EdgeInsets(top: RSMSTheme.Spacing.xs, leading: RSMSTheme.Spacing.lg, bottom: RSMSTheme.Spacing.xs, trailing: RSMSTheme.Spacing.lg))
+                        } else {
+                            auditRow(for: check)
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: RSMSTheme.Spacing.xs, leading: RSMSTheme.Spacing.lg, bottom: RSMSTheme.Spacing.xs, trailing: RSMSTheme.Spacing.lg))
+                        }
                     }
                 }
                 .listStyle(.plain)
@@ -860,23 +877,23 @@ struct ScheduleCheckSheet: View {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
                 
                 VStack(spacing: RSMSTheme.Spacing.xl) {
-                    VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
+                    HStack {
                         Text("Category")
                             .font(.subheadline)
                             .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                        
+                        Spacer()
                         Picker("Select Category", selection: $selectedCategoryId) {
-                            Text("Select a category").tag(Optional<UUID>.none)
+                            Text("Select").tag(Optional<UUID>.none)
                             ForEach(categories) { cat in
                                 Text(cat.name).tag(Optional(cat.id))
                             }
                         }
                         .pickerStyle(.menu)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(RSMSTheme.Colors.backgroundElevated)
-                        .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
+                        .tint(RSMSTheme.Colors.textPrimary)
                     }
+                    .padding()
+                    .background(RSMSTheme.Colors.backgroundElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
                     
                     VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
                         Text("Audit Date")
@@ -961,9 +978,7 @@ struct CompleteAuditSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button(step == 1 ? "Cancel" : "Skip") {
-                        if step == 2 { step = 1 } else { dismiss() }
-                    }
+                    Button("Cancel") { dismiss() }
                     .foregroundStyle(RSMSTheme.Colors.textSecondary)
                 }
             }
@@ -1005,19 +1020,11 @@ struct CompleteAuditSheet: View {
                 } label: {
                     HStack {
                         if isMarkingComplete { ProgressView().tint(.black) }
-                        Text(isMarkingComplete ? "Marking…" : "Mark as Completed")
+                        Text(isMarkingComplete ? "Marking…" : "Start")
                     }
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(GoldButtonStyle())
-                .disabled(isMarkingComplete)
-
-                // Secondary: just close after marking done (skip count)
-                Button("Mark as Completed & Close") {
-                    Task { await markComplete(thenGoToStep2: false) }
-                }
-                .font(.subheadline)
-                .foregroundStyle(RSMSTheme.Colors.textSecondary)
                 .disabled(isMarkingComplete)
             }
         }
@@ -1150,16 +1157,24 @@ struct CompleteAuditSheet: View {
                 )
             }
 
-            // Stepper to adjust count
-            Stepper(
-                "Adjust count",
-                value: Binding(
+            // Text field to adjust count
+            HStack {
+                Spacer()
+                TextField("Count", value: Binding(
                     get: { actualCounts[product.id] ?? systemQty },
                     set: { actualCounts[product.id] = $0 }
-                ),
-                in: 0...9999
-            )
-            .labelsHidden()
+                ), format: .number)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.center)
+                .font(.title3.bold())
+                .frame(width: 100, height: 44)
+                .background(RSMSTheme.Colors.backgroundPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm))
+                .overlay(
+                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.sm)
+                        .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+                )
+            }
         }
         .padding(.vertical, RSMSTheme.Spacing.xs)
     }
