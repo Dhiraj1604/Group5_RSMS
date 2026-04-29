@@ -128,7 +128,6 @@ struct AddGuestSheet: View {
     @State private var name         = ""
     @State private var email        = ""
     @State private var phone        = ""
-    @State private var tier         = "silver"
     @State private var preferences  = ""
     @State private var isSaving     = false
     private var isPhoneValid: Bool {
@@ -157,16 +156,7 @@ struct AddGuestSheet: View {
                         }
                         fieldRow("Style Preferences", text: $preferences, placeholder: "e.g. Prefers minimalist cuts")
 
-                        // Tier picker
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("VIP Tier").font(.caption).foregroundStyle(RSMSTheme.Colors.textSecondary)
-                            Picker("Tier", selection: $tier) {
-                                Text("🥈 Silver").tag("silver")
-                                Text("🥇 Gold").tag("gold")
-                                Text("💎 Platinum").tag("platinum")
-                            }
-                            .pickerStyle(.segmented)
-                        }
+
 
                         Button {
                             isSaving = true
@@ -176,7 +166,6 @@ struct AddGuestSheet: View {
                                     name:         name.trimmingCharacters(in: .whitespaces),
                                     email:        email.isEmpty ? nil : email,
                                     phone:        phone.isEmpty ? nil : phone,
-                                    tier:         tier,
                                     preferences:  preferences.isEmpty ? nil : preferences,
                                     addedBy:      appState.managerAuthId // Fix for added_by_fkey
                                 )
