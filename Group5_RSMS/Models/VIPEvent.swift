@@ -96,7 +96,6 @@ struct VIPGuest: Codable, Identifiable {
     var fullName: String
     var email: String?
     var phone: String?
-    var tier: String
     var addedBy: UUID?
     var preferences: String?
     let createdBy: Date?
@@ -107,7 +106,6 @@ struct VIPGuest: Codable, Identifiable {
         case fullName    = "full_name"
         case email
         case phone
-        case tier
         case addedBy     = "added_by"
         case preferences
         case createdBy   = "created_by"
@@ -120,7 +118,6 @@ struct VIPGuest: Codable, Identifiable {
         let full_name: String
         let email: String?
         let phone: String?
-        let tier: String
         let preferences: String?
         let added_by: UUID?
     }
@@ -132,19 +129,12 @@ struct VIPGuest: Codable, Identifiable {
             full_name:   fullName,
             email:       email,
             phone:       phone,
-            tier:        tier,
             preferences: preferences,
             added_by:    addedBy
         )
     }
 
-    var tierIcon: String {
-        switch tier.lowercased() {
-        case "platinum": return "crown.fill"
-        case "gold":     return "star.fill"
-        default:         return "circle.fill"
-        }
-    }
+
 
     var initials: String {
         let parts = fullName.split(separator: " ")
