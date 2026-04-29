@@ -45,7 +45,7 @@ struct AuditLogsView: View {
         .navigationTitle("Audit Logs")
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
         .task {
             await viewModel.loadLogs()
             withAnimation(.easeOut(duration: 0.5)) { animateIn = true }

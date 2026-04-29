@@ -33,7 +33,6 @@ struct BMSalesTab: View {
                     .pickerStyle(.segmented)
                     .padding(.horizontal)
                     .padding(.vertical, 8)
-                    .background(RSMSTheme.Colors.backgroundPrimary)
 
                     if selectedSeg == 0 {
                         VIPEventsListView(vm: vm, boutiqueId: boutiqueId)
@@ -47,7 +46,7 @@ struct BMSalesTab: View {
             .navigationTitle(selectedSeg == 0 ? "VIP Events" : (selectedSeg == 1 ? "Guest Directory" : "Appointments"))
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {

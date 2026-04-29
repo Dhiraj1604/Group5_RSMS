@@ -56,7 +56,7 @@ struct AuditLogDetailView: View {
         .navigationTitle("Log Details")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
     }
 
     // MARK: - Hero

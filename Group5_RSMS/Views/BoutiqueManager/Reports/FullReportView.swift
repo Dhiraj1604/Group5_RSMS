@@ -14,6 +14,7 @@ struct FullReportView: View {
     @ObservedObject var vm: BMReportsViewModel
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @State private var selectedPeriod: ConsolidatedPeriod = .threeMonth
     @State private var isExportingPDF = false
     @State private var pdfURL: URL?
@@ -207,7 +208,7 @@ struct FullReportView: View {
                                         Text("Export PDF Report")
                                     }
                                     .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.black)
+                                    .foregroundColor(colorScheme == .dark ? .black : .white)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
                                     .background(RSMSTheme.Colors.goldGradient)
@@ -233,7 +234,7 @@ struct FullReportView: View {
             .navigationTitle("Consolidated Report")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Close") { dismiss() }

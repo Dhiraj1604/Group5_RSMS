@@ -60,7 +60,7 @@ struct StockAnalysisView: View {
         .navigationTitle(store.name)
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(.automatic, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
         .searchable(text: $viewModel.searchText, prompt: "Search by product or SKU...")
         .refreshable { await viewModel.fetchInventory(forStore: store.id) }
         .task { await viewModel.fetchInventory(forStore: store.id) }

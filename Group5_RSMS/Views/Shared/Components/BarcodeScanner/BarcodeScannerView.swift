@@ -65,6 +65,9 @@ struct BarcodeScannerView: View {
             // Scan overlay frame
             scanOverlay
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Barcode scanner")
+        .accessibilityHint("Point the camera at a barcode, or use manual SKU entry from the Scan toolbar.")
     }
 
     // MARK: - Scan Overlay
@@ -101,6 +104,7 @@ struct BarcodeScannerView: View {
                             )
                     )
                     .padding(.bottom, 140) // Balanced position for one-handed operation
+                    .accessibilityLabel("Align barcode within the frame")
             }
         }
     }
@@ -190,6 +194,8 @@ struct BarcodeScannerView: View {
                             .fill(RSMSTheme.Colors.accentGold)
                     )
             }
+            .accessibilityLabel("Open Settings")
+            .accessibilityHint("Opens iOS Settings so you can enable camera access.")
         }
         .padding(40)
         .background(
@@ -213,6 +219,8 @@ struct BarcodeScannerView: View {
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundColor(RSMSTheme.Colors.accentGoldDark)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Preparing scanner")
     }
 }
 

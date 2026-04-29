@@ -63,6 +63,8 @@ struct StaffListView: View {
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
+                            .accessibilityLabel("Delete \(employee.name)")
+                            .accessibilityHint("Shows a confirmation before deleting this staff member.")
                         }
                     }
                 }
@@ -108,6 +110,8 @@ struct StaffListView: View {
                     .background(RSMSTheme.Colors.accentGold)
                     .cornerRadius(10)
             }
+            .accessibilityLabel("Add staff member")
+            .accessibilityHint("Opens the form to add a new staff member.")
             Spacer()
         }
     }
@@ -157,5 +161,13 @@ struct StaffDirectoryCard: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilitySummary)
+        .accessibilityHint("Double tap to view sales details.")
+    }
+
+    private var accessibilitySummary: String {
+        let status = (employee.isActive ?? true) ? "Active" : "Inactive"
+        return "Employee: \(employee.name). Role: \(employee.role). Status: \(status)."
     }
 }

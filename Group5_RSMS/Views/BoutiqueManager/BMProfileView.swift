@@ -2,7 +2,7 @@
 //  BMProfileView.swift
 //  Group5_RSMS
 //
-//  Boutique Manager — Profile modal. Uses shared RSMSTheme (dark/gold).
+//  Boutique Manager — Profile modal. Uses shared RSMSTheme.
 //
 
 import SwiftUI
@@ -10,6 +10,7 @@ import SwiftUI
 struct BMProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
+    @AppStorage("rsms.appearanceMode") private var appearanceModeRaw = RSMSAppearanceMode.dark.rawValue
 
     private var currentStore: Store? {
         guard let id = appState.currentStoreID else { return nil }
@@ -92,6 +93,52 @@ struct BMProfileView: View {
                             .overlay(RoundedRectangle(cornerRadius: 18).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
                         }
 
+                        // ── Appearance & Contrast ──────────────────────
+                        VStack(alignment: .leading, spacing: 0) {
+                            sectionLabel("ACCESSIBILITY & APPEARANCE")
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack(spacing: 14) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(RSMSTheme.Colors.accentGold.opacity(0.14))
+                                            .frame(width: 34, height: 34)
+                                        Image(systemName: "circle.lefthalf.filled")
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundColor(RSMSTheme.Colors.accentGold)
+                                    }
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Appearance")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                                        Text("Choose light, dark, or follow device settings.")
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundColor(RSMSTheme.Colors.textPrimary)
+                                    }
+                                    Spacer()
+                                }
+
+                                Picker("Appearance", selection: $appearanceModeRaw) {
+                                    ForEach(RSMSAppearanceMode.allCases) { mode in
+                                        Text(mode.title).tag(mode.rawValue)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                                .accessibilityLabel("Appearance")
+                                .accessibilityValue(selectedAppearanceTitle)
+                                .accessibilityHint("Choose whether the app uses system appearance, light mode, or dark mode.")
+
+                                Text("High contrast follows the iOS accessibility contrast setting.")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 14)
+                        }
+                        .background(RSMSTheme.Colors.backgroundElevated)
+                        .clipShape(RoundedRectangle(cornerRadius: 18))
+                        .overlay(RoundedRectangle(cornerRadius: 18).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
+
                         // ── Role ────────────────────────────────────────
                         VStack(alignment: .leading, spacing: 0) {
                             sectionLabel("ROLE & ACCESS")
@@ -125,6 +172,8 @@ struct BMProfileView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                         }
                         .padding(.top, 8)
+                        .accessibilityLabel("Sign out")
+                        .accessibilityHint("Signs you out of the current account.")
                     }
                     .padding(20)
                 }
@@ -132,15 +181,19 @@ struct BMProfileView: View {
             .navigationTitle("My Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                         .fontWeight(.semibold)
                         .foregroundColor(RSMSTheme.Colors.accentGold)
+                        .accessibilityLabel("Close profile")
                 }
             }
         }
+    }
+
+    private var selectedAppearanceTitle: String {
+        (RSMSAppearanceMode(rawValue: appearanceModeRaw) ?? .dark).title
     }
 
     private var rowDivider: some View {

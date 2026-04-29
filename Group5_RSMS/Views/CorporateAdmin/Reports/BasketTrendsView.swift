@@ -39,7 +39,7 @@ struct BasketTrendsView: View {
         .navigationTitle("Basket Trends")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
         .task { await viewModel.fetchTrends() }
     }
 

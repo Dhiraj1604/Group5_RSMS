@@ -339,7 +339,7 @@ struct CreateOfferView: View {
             .background(RSMSTheme.Colors.backgroundPrimary)
             .navigationTitle("Create Promotion")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") { dismiss() }

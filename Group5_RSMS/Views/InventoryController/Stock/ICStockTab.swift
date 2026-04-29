@@ -69,7 +69,7 @@ struct ICStockTab: View {
             .navigationTitle(appState.stores.first(where: { $0.id == appState.currentStoreID })?.name ?? "Stock")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -668,7 +668,7 @@ struct StockLevelsListView: View {
         .navigationTitle("Stock Levels")
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
         .searchable(text: $searchText, prompt: "Search by name or SKU")
     }
     
@@ -780,7 +780,7 @@ struct AllStockChecksView: View {
         .navigationTitle("All Scheduled Audits")
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { isShowingScheduleSheet = true }) {

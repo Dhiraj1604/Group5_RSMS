@@ -55,7 +55,7 @@ struct VarianceReportListView: View {
         .navigationTitle("Variance Report")
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
         .searchable(text: $searchText, prompt: "Search by product, store or status")
     }
     

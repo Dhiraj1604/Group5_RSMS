@@ -29,7 +29,7 @@ struct AllStaffPerformanceView: View {
         .navigationTitle("Staff Performance")
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
     }
 }
 
@@ -68,7 +68,7 @@ struct AllTasksView: View {
         .navigationTitle("Store Tasks")
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
     }
 }
 
@@ -109,7 +109,7 @@ struct BMDashboardTab: View {
             .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 14) {
@@ -118,11 +118,15 @@ struct BMDashboardTab: View {
                                 .font(.system(size: 22))
                                 .foregroundStyle(RSMSTheme.Colors.accentGold)
                         }
+                        .accessibilityLabel("Add task")
+                        .accessibilityHint("Opens the form to create a new store task.")
                         Button { showingProfile = true } label: {
                             Image(systemName: "person.crop.circle.fill")
                                 .font(.system(size: 22))
                                 .foregroundStyle(RSMSTheme.Colors.accentGold)
                         }
+                        .accessibilityLabel("My profile")
+                        .accessibilityHint("Opens profile, appearance, and account settings.")
                     }
                 }
             }
@@ -233,6 +237,9 @@ struct BMDashboardTab: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
         .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Daily sales pacing.")
+        .accessibilityValue("\(Int(dashboardVM.progress * 100)) percent of daily target achieved. Actual sales are \(dashboardVM.actualSales.formatted(.currency(code: "INR"))). The daily target is \(dashboardVM.dailyTarget.formatted(.currency(code: "INR"))).")
     }
 
     // MARK: - Team Metrics Row
@@ -377,6 +384,9 @@ struct DashMetricCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
         .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title).")
+        .accessibilityValue("\(value).")
     }
 }
 
@@ -451,6 +461,9 @@ struct StaffPerfRow: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
         .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Rank \(rank). \(entry.name).")
+        .accessibilityValue("Estimated commission is \(entry.potentialCommission.formatted(.currency(code: "INR"))). Commission rate is \(Int(entry.commissionRate)) percent.")
     }
 }
 

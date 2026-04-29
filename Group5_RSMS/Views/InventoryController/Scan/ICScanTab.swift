@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 @available(iOS 16.0, *)
 struct ICScanTab: View {
@@ -67,6 +68,9 @@ struct ICScanTab: View {
                         .stroke(RSMSTheme.Colors.accentGold.opacity(0.4), lineWidth: 1)
                 )
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Current stock in boutique")
+        .accessibilityValue("\(viewModel.currentStock ?? 0) units")
     }
 
     // MARK: - Body
@@ -132,7 +136,7 @@ struct ICScanTab: View {
             .navigationTitle("Scan")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: RSMSTheme.Spacing.md) {
@@ -159,6 +163,8 @@ struct ICScanTab: View {
                                     )
                             )
                         }
+                        .accessibilityLabel("Enter SKU manually")
+                        .accessibilityHint("Opens manual SKU entry if scanning is not possible.")
 
                         if viewModel.scanCount > 0 {
                             Button {
@@ -180,12 +186,23 @@ struct ICScanTab: View {
                                             )
                                     )
                             }
+                            .accessibilityLabel("Reset scan session")
+                            .accessibilityHint("Clears scanned items and starts a new scan session.")
                         }
                     }
                 }
             }
             .sheet(isPresented: $showManualEntry) {
                 manualEntrySheet
+            }
+            .onChange(of: viewModel.showSuccessHUD) { _, isShowing in
+                guard isShowing else { return }
+                let productName = viewModel.lastScannedName ?? "Product"
+                UIAccessibility.post(notification: .announcement, argument: "\(productName) scanned successfully. Stock updated.")
+            }
+            .onChange(of: viewModel.showErrorHUD) { _, isShowing in
+                guard isShowing else { return }
+                UIAccessibility.post(notification: .announcement, argument: viewModel.scanError ?? "Scanning error.")
             }
         }
     }
@@ -262,6 +279,8 @@ struct ICScanTab: View {
                         .clipShape(Capsule())
                         .shadow(color: RSMSTheme.Colors.accentGold.opacity(0.3), radius: 4)
                     }
+                    .accessibilityLabel("Save stock changes")
+                    .accessibilityHint("Commits pending stock adjustments for the scanned product.")
                 }
 
                 Divider()
@@ -283,21 +302,27 @@ struct ICScanTab: View {
                                 .font(.system(size: 15, weight: .medium, design: .rounded))
                                 .foregroundColor(RSMSTheme.Colors.textSecondary)
                             Spacer()
-                            Text(String(format: "$%.2f", breakdown.subtotal))
+                            Text(breakdown.subtotal.formatted(.currency(code: "INR")))
                                 .font(.system(size: 15, weight: .medium, design: .monospaced))
                                 .foregroundColor(RSMSTheme.Colors.textSecondary)
                         }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Base Price")
+                        .accessibilityValue(breakdown.subtotal.formatted(.currency(code: "INR")))
 
-                        if let breakdown = viewModel.currentBreakdown, breakdown.additionalTaxAmount > 0, let rule = viewModel.currentTaxRule {
+                        if breakdown.additionalTaxAmount > 0 {
                             HStack {
                                 Text("Admin Tax (\(rule.name))")
                                     .font(.system(size: 15, weight: .medium, design: .rounded))
                                     .foregroundColor(RSMSTheme.Colors.textSecondary)
                                 Spacer()
-                                Text(String(format: "$%.2f", breakdown.additionalTaxAmount))
+                                Text(breakdown.additionalTaxAmount.formatted(.currency(code: "INR")))
                                     .font(.system(size: 15, weight: .medium, design: .monospaced))
                                     .foregroundColor(RSMSTheme.Colors.textSecondary)
                             }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Admin Tax for \(rule.name)")
+                            .accessibilityValue(breakdown.additionalTaxAmount.formatted(.currency(code: "INR")))
                         }
 
                         Divider()
@@ -308,10 +333,13 @@ struct ICScanTab: View {
                                 .font(.system(size: 18, weight: .bold, design: .rounded))
                                 .foregroundColor(RSMSTheme.Colors.accentGold)
                             Spacer()
-                            Text(String(format: "$%.2f", breakdown.total))
+                            Text(breakdown.total.formatted(.currency(code: "INR")))
                                 .font(.system(size: 24, weight: .bold, design: .monospaced))
                                 .foregroundColor(RSMSTheme.Colors.accentGold)
                         }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Total Price")
+                        .accessibilityValue(breakdown.total.formatted(.currency(code: "INR")))
                     }
                     .padding(.bottom, RSMSTheme.Spacing.sm)
 
@@ -326,10 +354,16 @@ struct ICScanTab: View {
                             Button {
                                 viewModel.adjustStockLocal(actionType: "restock")
                             } label: { restockButtonLabel }
+                            .accessibilityLabel("Increase stock by one unit.")
+                            .accessibilityValue("Current stock is \(viewModel.currentStock ?? 0) units.")
+                            .accessibilityHint("Adds one unit to the scanned product stock.")
 
                             Button {
                                 viewModel.adjustStockLocal(actionType: "sale")
                             } label: { saleButtonLabel }
+                            .accessibilityLabel("Decrease stock by one unit.")
+                            .accessibilityValue("Current stock is \(viewModel.currentStock ?? 0) units.")
+                            .accessibilityHint("Removes one unit from the scanned product stock.")
                             Spacer()
                         }
                         .padding(.bottom, RSMSTheme.Spacing.md)
@@ -391,6 +425,8 @@ struct ICScanTab: View {
                                 )
                         )
                     }
+                    .accessibilityLabel("Scan again")
+                    .accessibilityHint("Clears the current result and returns to the scanner.")
                 }
             }
             .padding(.horizontal, RSMSTheme.Spacing.xl)
@@ -430,7 +466,7 @@ struct ICScanTab: View {
                             .autocorrectionDisabled()
                             .focused($isFieldFocused)
                             .font(.system(size: 18, weight: .medium, design: .monospaced))
-                            .foregroundColor(.white)
+                            .foregroundColor(RSMSTheme.Colors.textPrimary)
                             .padding(RSMSTheme.Spacing.lg)
                             .background(
                                 RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
@@ -440,6 +476,8 @@ struct ICScanTab: View {
                                             .stroke(RSMSTheme.Colors.accentGoldDark.opacity(0.3), lineWidth: 1)
                                     )
                             )
+                            .accessibilityLabel("Product SKU")
+                            .accessibilityHint("Enter the product SKU manually.")
                     }
                     .padding(.top, RSMSTheme.Spacing.xl)
                     
@@ -461,6 +499,8 @@ struct ICScanTab: View {
                     }
                     .disabled(manualSKU.trimmingCharacters(in: .whitespaces).isEmpty)
                     .opacity(manualSKU.trimmingCharacters(in: .whitespaces).isEmpty ? 0.5 : 1.0)
+                    .accessibilityLabel("Submit and update stock")
+                    .accessibilityHint("Looks up the entered SKU and opens stock update details.")
                     
                     Spacer()
                 }
@@ -475,6 +515,7 @@ struct ICScanTab: View {
                         manualSKU = ""
                     }
                     .foregroundColor(RSMSTheme.Colors.accentGold)
+                    .accessibilityLabel("Cancel manual SKU entry")
                 }
             }
         }
@@ -537,6 +578,9 @@ struct ICScanTab: View {
         )
         .padding(.top, 10)
         .padding(.horizontal, RSMSTheme.Spacing.md)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Stock updated")
+        .accessibilityValue(viewModel.lastScannedName ?? "Product verified")
     }
 
     private var errorHUD: some View {
@@ -556,6 +600,9 @@ struct ICScanTab: View {
         )
         .padding(.top, 10)
         .padding(.horizontal, RSMSTheme.Spacing.md)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Scanning error")
+        .accessibilityValue(viewModel.scanError ?? "Scanning Error")
     }
 }
 

@@ -55,7 +55,7 @@ struct VIPEventDetailView: View {
         .navigationTitle(currentEvent.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
 //                 Button {

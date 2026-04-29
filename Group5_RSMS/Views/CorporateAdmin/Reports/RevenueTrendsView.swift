@@ -46,7 +46,7 @@ struct RevenueTrendsView: View {
         .navigationTitle("Revenue Trends")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {

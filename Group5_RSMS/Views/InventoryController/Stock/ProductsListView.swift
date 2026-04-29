@@ -51,7 +51,7 @@ struct ProductsListView: View {
         .navigationTitle(showOnlyInRepair ? "In Repair" : "All Products")
         .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
         .searchable(text: $searchText, prompt: "Search by name or SKU")
         .task {
             await appState.fetchProducts()
@@ -365,7 +365,7 @@ struct RepairFormSheet: View {
             .navigationTitle("Log Repair")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

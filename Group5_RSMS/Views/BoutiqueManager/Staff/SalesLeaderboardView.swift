@@ -116,6 +116,7 @@ struct SalesLeaderboardView: View {
                         topPerformerBanner
                     }
                     .buttonStyle(.plain)
+                    .accessibilityHint("Opens sales details for the top performer.")
                     .padding(.horizontal, 16)
                     .transition(.opacity)  // ✅ fade instead of layout jump
                 }
@@ -136,6 +137,7 @@ struct SalesLeaderboardView: View {
                         )
                         }
                         .transition(.opacity)  // ✅ rows fade in, no jump
+                        .accessibilityHint("Opens employee sales details.")
                     }
                 }
                 .padding(.horizontal, 16)
@@ -204,6 +206,9 @@ struct SalesLeaderboardView: View {
         )
         .cornerRadius(16)
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(RSMSTheme.Colors.accentGold.opacity(0.25), lineWidth: 1))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Top performer, \(top.name)")
+        .accessibilityValue("\(top.role). ₹\(formatValue(value)) \(selectedRange == .thisMonth ? "estimated commission" : "in sales").")
     }
 
     private var rangePicker: some View {
@@ -335,5 +340,9 @@ struct LeaderboardRow: View {
         .padding(.horizontal, 14)
         .background(RSMSTheme.Colors.backgroundDeep)
         .cornerRadius(14)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Rank \(rank), \(employee.name)")
+        .accessibilityValue("\(employee.role). ₹\(formatValue(value)) \(isCommission ? "estimated commission" : "sales").\(isCommission && commissionRate > 0 ? " Commission rate \(Int(commissionRate)) percent." : "")")
+        .accessibilityHint("Double tap to view employee sales details.")
     }
 }

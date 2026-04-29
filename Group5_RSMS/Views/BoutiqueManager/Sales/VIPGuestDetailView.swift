@@ -49,8 +49,8 @@ struct VIPGuestDetailView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
+        
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
