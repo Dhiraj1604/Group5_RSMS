@@ -30,11 +30,6 @@ final class ShiftViewModel: ObservableObject {
     }
     
     func createShift(_ shift: Shift, boutiqueId: UUID) async -> Bool {
-        if hasConflict(for: shift.employeeId, start: shift.startTime, end: shift.endTime, excludingShiftId: shift.id) {
-            errorMessage = "Schedule conflict: This employee is already assigned to a shift during this time."
-            return false
-        }
-        
         isLoading = true
         errorMessage = nil
         do {
@@ -49,18 +44,15 @@ final class ShiftViewModel: ObservableObject {
     }
     
     func updateShift(_ shift: Shift, boutiqueId: UUID) async -> Bool {
-        if hasConflict(for: shift.employeeId, start: shift.startTime, end: shift.endTime, excludingShiftId: shift.id) {
-            errorMessage = "Schedule conflict: This employee is already assigned to a shift during this time."
-            return false
-        }
-        
         isLoading = true
         errorMessage = nil
         do {
             try await sync.updateShift(shift)
+            print("✅ Shift updated: \(shift.id) — \(shift.startTime) to \(shift.endTime)")
             await fetchShifts(boutiqueId: boutiqueId)
             return true
         } catch {
+            print("❌ updateShift failed: \(error)")
             errorMessage = "Failed to update shift: \(error.localizedDescription)"
             isLoading = false
             return false

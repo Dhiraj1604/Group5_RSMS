@@ -377,9 +377,21 @@ final class SupabaseSyncManager {
     }
     
     func updateShift(_ shift: Shift) async throws {
+        struct ShiftUpdatePayload: Encodable {
+            let employee_id: String
+            let start_time: String
+            let end_time: String
+        }
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let payload = ShiftUpdatePayload(
+            employee_id: shift.employeeId.uuidString,
+            start_time: isoFormatter.string(from: shift.startTime),
+            end_time:   isoFormatter.string(from: shift.endTime)
+        )
         try await client
             .from("shifts")
-            .update(shift)
+            .update(payload)
             .eq("id", value: shift.id.uuidString)
             .execute()
     }

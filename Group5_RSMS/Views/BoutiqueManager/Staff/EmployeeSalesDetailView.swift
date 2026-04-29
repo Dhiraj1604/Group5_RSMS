@@ -35,6 +35,34 @@ struct EmployeeSalesDetailView: View {
         optimisticIsActive ?? (currentEmployee.isActive ?? true)
     }
 
+    // Derives next upcoming shift from the shifts table
+    private var nextShiftDisplay: String {
+        let now = Date()
+        let upcoming = shiftVM.shifts
+            .filter { $0.employeeId == employee.id && $0.startTime >= now }
+            .sorted { $0.startTime < $1.startTime }
+        if let next = upcoming.first {
+            let f = DateFormatter()
+            f.dateFormat = "HH:mm"
+            return "\(f.string(from: next.startTime))–\(f.string(from: next.endTime))"
+        }
+        // Fall back to most recent past shift
+        let past = shiftVM.shifts
+            .filter { $0.employeeId == employee.id }
+            .sorted { $0.startTime > $1.startTime }
+        if let last = past.first {
+            let f = DateFormatter()
+            f.dateFormat = "HH:mm"
+            return "\(f.string(from: last.startTime))–\(f.string(from: last.endTime))"
+        }
+        return "Not Assigned"
+    }
+
+    // Derives weekly off from addEmpVM (set during editing) or falls back to employee field
+    private var weeklyOffDisplay: String {
+        currentEmployee.weeklyOff ?? addEmpVM.weeklyOff
+    }
+
     var body: some View {
         ZStack {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
@@ -136,13 +164,13 @@ struct EmployeeSalesDetailView: View {
                             HStack(spacing: 0) {
                                 EmployeeStatCell(
                                     title: "Shift",
-                                    value: currentEmployee.assignedShift ?? "N/A",
+                                    value: nextShiftDisplay,
                                     icon: "clock"
                                 )
                                 Divider().frame(height: 30).background(RSMSTheme.Colors.textSecondary.opacity(0.1))
                                 EmployeeStatCell(
                                     title: "Off Day",
-                                    value: currentEmployee.weeklyOff ?? "N/A",
+                                    value: weeklyOffDisplay,
                                     icon: "calendar.badge.clock"
                                 )
                             }
@@ -299,6 +327,20 @@ struct EmployeeSalesDetailView: View {
             await commissionVM.fetchPayouts(employeeId: employee.id)
             await staffVM.fetchEmployees(boutiqueId: boutiqueId)
             await shiftVM.fetchShifts(boutiqueId: boutiqueId)
+        }
+        .onAppear {
+            // Re-fetch shifts every time this screen is visible
+            // so edits made in the Schedule tab are reflected immediately
+            Task { await shiftVM.fetchShifts(boutiqueId: boutiqueId) }
+        }
+        .onChange(of: showEditEmployee) { _, isShowing in
+            if !isShowing {
+                // Reload everything after edit sheet closes
+                Task {
+                    await staffVM.fetchEmployees(boutiqueId: boutiqueId)
+                    await shiftVM.fetchShifts(boutiqueId: boutiqueId)
+                }
+            }
         }
         .sheet(isPresented: $showEditEmployee) {
             AddEmployeeView(boutiqueId: boutiqueId, staffVM: staffVM, vm: addEmpVM, employeeToEdit: currentEmployee)
