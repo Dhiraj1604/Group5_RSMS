@@ -14,6 +14,8 @@ struct StaffListView: View {
     @Binding var showAddEmployee: Bool
     
     @State private var searchText = ""
+    @State private var employeeToDelete: Employee?
+    @State private var showingDeleteAlert = false
 
     var filteredEmployees: [Employee] {
         if searchText.isEmpty {
@@ -35,31 +37,52 @@ struct StaffListView: View {
             } else if staffVM.employees.isEmpty {
                 emptyState
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 1) { // Divider-like spacing
-                        ForEach(filteredEmployees) { employee in
+                List {
+                    ForEach(filteredEmployees) { employee in
+                        ZStack {
                             NavigationLink(destination:
                                 EmployeeSalesDetailView(
                                     employee: employee,
                                     boutiqueId: boutiqueId
                                 )
                             ) {
-                                StaffDirectoryCard(employee: employee)
+                                EmptyView()
                             }
-                            .buttonStyle(.plain)
+                            .opacity(0)
                             
-                            if employee.id != filteredEmployees.last?.id {
-                                Divider()
-                                    .background(RSMSTheme.Colors.border.opacity(0.3))
-                                    .padding(.leading, 70) // Align with text
+                            StaffDirectoryCard(employee: employee)
+                        }
+                        .listRowBackground(RSMSTheme.Colors.backgroundDeep)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                        .listRowSeparator(.visible)
+                        .listRowSeparatorTint(RSMSTheme.Colors.border.opacity(0.3))
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                employeeToDelete = employee
+                                showingDeleteAlert = true
+                            } label: {
+                                Label("Delete", systemImage: "trash")
                             }
                         }
                     }
-                    .background(RSMSTheme.Colors.backgroundDeep)
-                    .cornerRadius(12)
-                    .padding()
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(RSMSTheme.Colors.backgroundDeep)
+                .cornerRadius(12)
+                .padding()
                 .searchable(text: $searchText, prompt: "Search staff members")
+                .alert("Delete Staff", isPresented: $showingDeleteAlert, presenting: employeeToDelete) { emp in
+                    Button("Cancel", role: .cancel) { }
+                    Button("Delete", role: .destructive) {
+                        Task {
+                            await staffVM.deleteEmployee(emp, boutiqueId: boutiqueId)
+                            await staffVM.fetchEmployees(boutiqueId: boutiqueId)
+                        }
+                    }
+                } message: { emp in
+                    Text("Are you sure you want to delete \(emp.name)? This action cannot be undone.")
+                }
             }
         }
     }
