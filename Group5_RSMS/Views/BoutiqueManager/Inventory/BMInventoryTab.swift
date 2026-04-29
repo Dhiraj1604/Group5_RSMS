@@ -453,7 +453,7 @@ struct BMInventoryTab: View {
                         navigationPath.append(RequestDestination.myRequests)
                     } label: {
                         transferCard(title: "My Requests", icon: "paperplane.fill",
-                                     hasNotification: viewModel.myRequests.contains { $0.status == .pending })
+                                     hasNotification: viewModel.myRequests.contains { $0.status != .pending })
                     }
                     .buttonStyle(.plain)
                 }
@@ -472,7 +472,7 @@ struct BMInventoryTab: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
 
-                if viewModel.isLoading {
+                if viewModel.isLoading && viewModel.alerts.isEmpty {
                     HStack {
                         Spacer()
                         ProgressView().tint(RSMSTheme.Colors.accentGold)
@@ -786,6 +786,7 @@ struct BMInventoryTab: View {
             }
             Spacer()
         }
+        .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, 28)
     }
 
