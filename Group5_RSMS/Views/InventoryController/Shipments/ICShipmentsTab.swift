@@ -601,17 +601,20 @@ struct OrderDetailsSheet: View {
                             .padding(.bottom, 4)
                     }
                     
-                    HStack(spacing: 8) {
-                        if let cat = product.category {
-                            detailPill(title: "Category", value: cat)
-                        }
-                        if let mat = product.material, !mat.isEmpty {
-                            detailPill(title: "Material", value: mat)
-                        }
-                        if let country = product.originCountry, !country.isEmpty {
-                            detailPill(title: "Origin", value: country)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            if let cat = product.category {
+                                detailPill(title: "Category", value: cat)
+                            }
+                            if let mat = product.material, !mat.isEmpty {
+                                detailPill(title: "Gender", value: mat)
+                            }
+                            if let country = product.originCountry, !country.isEmpty {
+                                detailPill(title: "Region", value: country)
+                            }
                         }
                     }
+                    .padding(.bottom, 4)
                     
                     if let notes = product.craftsmanshipNotes, !notes.isEmpty {
                         Text("Craftsmanship: \(notes)")
@@ -639,6 +642,8 @@ struct OrderDetailsSheet: View {
                 .foregroundColor(.white)
         }
         .font(.system(size: 11, weight: .medium))
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(RSMSTheme.Colors.border.opacity(0.3))
