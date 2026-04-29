@@ -181,16 +181,15 @@ struct AddGuestSheet: View {
                         fieldRow("Style Preferences", text: $preferences, placeholder: "e.g. Prefers minimalist cuts")
 
                         // Tier picker
-//                         VStack(alignment: .leading, spacing: 8) {
-//                             Text("VIP Tier").font(.caption).foregroundStyle(RSMSTheme.Colors.textSecondary)
-//                             Picker("Tier", selection: $tier) {
-//                                 Text("🥈 Silver").tag("silver")
-//                                 Text("🥇 Gold").tag("gold")
-//                                 Text("💎 Platinum").tag("platinum")
-//                             }
-//                             .pickerStyle(.segmented)
-//                         }
-
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("VIP Tier").font(.caption).foregroundStyle(RSMSTheme.Colors.textSecondary)
+                            Picker("Tier", selection: $tier) {
+                                Text("🥈 Silver").tag("silver")
+                                Text("🥇 Gold").tag("gold")
+                                Text("💎 Platinum").tag("platinum")
+                            }
+                            .pickerStyle(.segmented)
+                        }
 
                         Button {
                             isSaving = true

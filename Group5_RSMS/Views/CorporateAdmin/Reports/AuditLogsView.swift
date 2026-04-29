@@ -14,16 +14,22 @@ struct AuditLogsView: View {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Search Bar
-                searchBar
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 12)
-
-                // Dropdown Filter Row
-                dropdownFilterRow
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
+                // Search Bar and Dropdowns side by side on iPad
+                ViewThatFits {
+                    HStack(alignment: .top, spacing: 12) {
+                        searchBar.frame(maxWidth: .infinity)
+                        dropdownFilterRow.frame(maxWidth: .infinity)
+                    }
+                    VStack(spacing: 12) {
+                        searchBar
+                        dropdownFilterRow
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+                .frame(maxWidth: 1000)
+                .frame(maxWidth: .infinity)
 
                 Divider()
                     .background(Color.white.opacity(0.06))
@@ -208,6 +214,8 @@ struct AuditLogsView: View {
             .padding(.horizontal, 16)
             .padding(.top, 16)
             .padding(.bottom, 40)
+            .frame(maxWidth: 1000)
+            .frame(maxWidth: .infinity)
         }
         .refreshable {
             await viewModel.loadLogs()

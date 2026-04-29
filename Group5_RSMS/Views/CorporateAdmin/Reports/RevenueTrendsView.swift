@@ -26,31 +26,54 @@ struct RevenueTrendsView: View {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
             if viewModel.isLoading && viewModel.activeTrendData.isEmpty {
+                // First-load spinner — show before any data arrives
                 loadingView
-            } else if viewModel.activeTrendData.isEmpty {
-                emptyState
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: RSMSTheme.Spacing.lg) {
-                        filtersSection
-                        summaryCards
-                        chartSection
-                        revenueTable
+                        if viewModel.activeTrendData.isEmpty {
+                            filtersSection
+                            inlineEmptyState
+                        } else {
+                            ViewThatFits {
+                                HStack(alignment: .top, spacing: RSMSTheme.Spacing.lg) {
+                                    filtersSection.frame(maxWidth: .infinity)
+                                    summaryCards.frame(maxWidth: .infinity)
+                                }
+                                VStack(spacing: RSMSTheme.Spacing.lg) {
+                                    filtersSection
+                                    summaryCards
+                                }
+                            }
+                            chartSection
+                            revenueTable
+                        }
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                     .padding(.top, RSMSTheme.Spacing.md)
                     .padding(.bottom, 100)
+                    .frame(maxWidth: 1000)
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
         .navigationTitle("Revenue Trends")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
         
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showExportOptions = true
+                Menu {
+                    if let csvURL = viewModel.csvFileURL() {
+                        ShareLink(item: csvURL) {
+                            Label("Export as CSV", systemImage: "tablecells")
+                        }
+                    }
+                    if let xlsURL = viewModel.excelFileURL() {
+                        ShareLink(item: xlsURL) {
+                            Label("Export as Excel", systemImage: "doc.text")
+                        }
+                    }
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 15, weight: .semibold))
@@ -58,33 +81,7 @@ struct RevenueTrendsView: View {
                 }
             }
         }
-        .actionSheet(isPresented: $showExportOptions) {
-            ActionSheet(
-                title: Text("Export Revenue Data"),
-                buttons: [
-                    .default(Text("CSV")) {
-                        if let url = viewModel.csvFileURL() {
-                            exportURL = url
-                            showExportSheet = true
-                        }
-                    },
-                    .default(Text("Excel")) {
-                        if let url = viewModel.excelFileURL() {
-                            exportURL = url
-                            showExportSheet = true
-                        }
-                    },
-                    .cancel()
-                ]
-            )
-        }
         .task { await viewModel.fetchRevenue() }
-        .sheet(isPresented: $showExportSheet) {
-            if let url = exportURL {
-                ShareSheet(activityItems: [url])
-            }
-        }
-
     }
 
     // MARK: - Loading
@@ -112,6 +109,29 @@ struct RevenueTrendsView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, RSMSTheme.Spacing.xxl)
+    }
+
+    /// Inline placeholder shown below filters when selected store has no data.
+    private var inlineEmptyState: some View {
+        VStack(spacing: RSMSTheme.Spacing.md) {
+            Image(systemName: "chart.bar.xaxis.ascending")
+                .font(.system(size: 40))
+                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.25))
+            Text("No Revenue Data")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(RSMSTheme.Colors.textPrimary)
+            Text("No transactions found for the selected store and date range.\nTry selecting a different store or adjusting the date range.")
+                .font(.system(size: 13))
+                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, RSMSTheme.Spacing.xxxl)
+        .padding(.horizontal, RSMSTheme.Spacing.xl)
+        .background(RSMSTheme.Colors.backgroundDeep)
+        .cornerRadius(RSMSTheme.Radius.lg)
+        .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+            .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
     }
 
     // MARK: - Summary Cards
@@ -294,7 +314,7 @@ struct RevenueTrendsView: View {
 
     private var chartHeader: some View {
         VStack(spacing: RSMSTheme.Spacing.sm) {
-            HStack {
+            HStack(spacing: RSMSTheme.Spacing.sm) {
                 Text("Revenue Over Time")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(RSMSTheme.Colors.textSecondary)
@@ -590,6 +610,7 @@ struct RevenueTrendsView: View {
             // See More / See Less
             if data.count > 5 {
                 Button {
+//                     withAnimation(.easeInOut(duration: 0.25)) { showAllRevenueRows.toggle() }
                     withAnimation(.easeInOut(duration: 0.25)) {
                         showAllRevenueRows.toggle()
                     }
@@ -706,17 +727,6 @@ struct RevenueTrendsView: View {
     }
 }
 
-// MARK: - Share Sheet (UIKit bridge for CSV export)
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let activityItems: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
 
 // MARK: - Line Shape (for legend dashed line indicator)
 

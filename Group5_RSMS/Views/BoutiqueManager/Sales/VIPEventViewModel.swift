@@ -17,8 +17,6 @@ class VIPEventViewModel: ObservableObject {
     @Published var isLoadingEvents = false
     @Published var eventError: String?
 
-    // MARK: - Guest Directory
-//     @Published var allGuests: [VIPGuest] = []
     // MARK: - Guest Directory & Appointments
     @Published var allGuests: [VIPGuest] = []
     @Published var appointments: [VIPAppointment] = []
@@ -92,15 +90,9 @@ class VIPEventViewModel: ObservableObject {
 
     func deleteEvent(_ event: VIPEvent) async {
         do {
-//             try await service.deleteEvent(eventId: event.id)
-//             events.removeAll { $0.id == event.id }
-//         } catch {
-            print("[VIPEventVM] Deleting event: \(event.id)")
             try await service.deleteEvent(eventId: event.id)
             events.removeAll { $0.id == event.id }
-            print("[VIPEventVM] Event deleted successfully")
         } catch {
-            print("[VIPEventVM] Delete error: \(error)")
             eventError = error.localizedDescription
         }
     }
@@ -117,8 +109,6 @@ class VIPEventViewModel: ObservableObject {
         isLoadingGuests = false
     }
 
-//     func addGuest(boutiqueId: UUID, name: String, email: String?,
-//                   phone: String?, tier: String, preferences: String?,
     func loadAppointments(boutiqueId: UUID) async {
         do {
             appointments = try await service.fetchAppointments(boutiqueId: boutiqueId)

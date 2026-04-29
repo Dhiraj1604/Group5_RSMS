@@ -22,7 +22,7 @@ struct OffersView: View {
     @State private var sortOption: SortOption = .newest
     @State private var filterCategory: String = "All Categories"
     @State private var filterStoreId: UUID? = nil
-    @State private var showPausedOnly = false
+    @State private var showPausedOnly = false  // kept for data compat, pill removed
 
     enum OfferTab: String, CaseIterable, Identifiable {
         case active    = "Active"
@@ -231,21 +231,6 @@ struct OffersView: View {
     private var sortAndFilterRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: RSMSTheme.Spacing.md) {
-                if selectedTab == .active {
-                    Button(action: { showPausedOnly.toggle() }) {
-                        HStack {
-                            Image(systemName: showPausedOnly ? "checkmark.square.fill" : "square")
-                            Text("Paused")
-                        }
-                        .font(.caption.weight(.bold))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(showPausedOnly ? RSMSTheme.Colors.accentGold.opacity(0.15) : RSMSTheme.Colors.backgroundElevated)
-                        .foregroundStyle(showPausedOnly ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textPrimary)
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(showPausedOnly ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.borderLight, lineWidth: 1))
-                    }
-                }
                 
                 Menu {
                     Picker("Sort", selection: $sortOption) {

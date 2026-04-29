@@ -96,7 +96,7 @@ struct VIPGuest: Codable, Identifiable {
     var fullName: String
     var email: String?
     var phone: String?
-    var tier: String
+    var tier: String?
     var addedBy: UUID?
     var preferences: String?
     var lastVisit: Date?
@@ -122,7 +122,7 @@ struct VIPGuest: Codable, Identifiable {
         let full_name: String
         let email: String?
         let phone: String?
-        let tier: String
+        let tier: String?
         let preferences: String?
         let last_visit: String?
         let added_by: UUID?
@@ -153,7 +153,7 @@ struct VIPGuest: Codable, Identifiable {
     }
 
     var tierIcon: String {
-        switch tier.lowercased() {
+        switch (tier ?? "standard").lowercased() {
         case "gold": return "crown.fill"
         case "platinum": return "diamond.fill"
         default: return "medal.fill"
