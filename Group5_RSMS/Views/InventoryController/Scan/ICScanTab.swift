@@ -288,8 +288,7 @@ struct ICScanTab: View {
 
                 // MARK: Receipt Body (Tax Engine Breakdown)
                 if let product = viewModel.currentProduct,
-                   let breakdown = viewModel.currentBreakdown,
-                   let rule = viewModel.currentTaxRule {
+                   let breakdown = viewModel.currentBreakdown {
 
                     VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
                         Text(product.name)
@@ -310,7 +309,7 @@ struct ICScanTab: View {
                         .accessibilityLabel("Base Price")
                         .accessibilityValue(breakdown.subtotal.formatted(.currency(code: "INR")))
 
-                        if breakdown.additionalTaxAmount > 0 {
+                        if breakdown.additionalTaxAmount > 0, let rule = viewModel.currentTaxRule {
                             HStack {
                                 Text("Admin Tax (\(rule.name))")
                                     .font(.system(size: 15, weight: .medium, design: .rounded))
