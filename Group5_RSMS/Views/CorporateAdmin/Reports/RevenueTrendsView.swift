@@ -19,6 +19,7 @@ struct RevenueTrendsView: View {
     @State private var showExportSheet = false
     @State private var exportURL: URL?
     @State private var showExportOptions = false
+    @State private var showAllRevenueRows = false
 
     var body: some View {
         ZStack {
@@ -266,19 +267,6 @@ struct RevenueTrendsView: View {
                 inlineDatePickers
             }
 
-            // Row 3: Compare toggle
-            HStack {
-                Spacer()
-                HStack(spacing: 6) {
-                    Text("Compare")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                    Toggle("", isOn: $viewModel.showComparison)
-                        .tint(RSMSTheme.Colors.accentGold)
-                        .labelsHidden()
-                        .scaleEffect(0.8)
-                }
-            }
         }
         .padding(RSMSTheme.Spacing.lg)
         .background(RSMSTheme.Colors.backgroundDeep)
@@ -311,6 +299,18 @@ struct RevenueTrendsView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(RSMSTheme.Colors.textSecondary)
                 Spacer()
+
+                // Compare toggle
+                HStack(spacing: 6) {
+                    Text("Compare")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                    Toggle("", isOn: $viewModel.showComparison)
+                        .tint(RSMSTheme.Colors.accentGold)
+                        .labelsHidden()
+                        .scaleEffect(0.8)
+                }
+
                 periodDropdown
             }
             if viewModel.showComparison {
@@ -535,7 +535,10 @@ struct RevenueTrendsView: View {
     // MARK: - Revenue Table
 
     private var revenueTable: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let data = viewModel.activeTrendData
+        let visibleData = showAllRevenueRows ? data : Array(data.prefix(5))
+
+        return VStack(alignment: .leading, spacing: 0) {
             // Header
             HStack {
                 Text("Period").frame(maxWidth: .infinity, alignment: .leading)
@@ -543,13 +546,13 @@ struct RevenueTrendsView: View {
                 Text("Orders").frame(width: 55, alignment: .trailing)
                 Text("AOV").frame(width: 65, alignment: .trailing)
             }
-            .font(.system(size: 10, weight: .bold))
-            .foregroundStyle(RSMSTheme.Colors.textTertiary)
-            .padding(.horizontal, 14).padding(.vertical, 10)
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(RSMSTheme.Colors.textSecondary)
+            .padding(.horizontal, 14).padding(.vertical, 12)
             .background(RSMSTheme.Colors.backgroundElevated)
 
             // Rows
-            ForEach(Array(viewModel.activeTrendData.enumerated()), id: \.element.id) { index, point in
+            ForEach(Array(visibleData.enumerated()), id: \.element.id) { index, point in
                 VStack(spacing: 0) {
                     HStack {
                         HStack(spacing: 6) {
@@ -578,9 +581,30 @@ struct RevenueTrendsView: View {
                     }
                     .padding(.horizontal, 14).padding(.vertical, 10)
 
-                    if index < viewModel.activeTrendData.count - 1 {
+                    if index < visibleData.count - 1 {
                         Divider().background(Color.white.opacity(0.05)).padding(.leading, 14)
                     }
+                }
+            }
+
+            // See More / See Less
+            if data.count > 5 {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showAllRevenueRows.toggle()
+                    }
+                } label: {
+                    HStack {
+                        Spacer()
+                        Text(showAllRevenueRows ? "Show Less" : "See More (\(data.count - 5) more)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        Image(systemName: showAllRevenueRows ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        Spacer()
+                    }
+                    .padding(.vertical, 12)
                 }
             }
         }

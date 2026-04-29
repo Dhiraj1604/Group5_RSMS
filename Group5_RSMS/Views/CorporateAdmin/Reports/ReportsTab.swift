@@ -44,7 +44,6 @@ struct ReportsTab: View {
                                     icon: "chart.bar.xaxis.ascending",
                                     title: "Revenue Trends",
                                     subtitle: "Track daily, weekly & monthly revenue with period comparison and export.",
-                                    accentColor: RSMSTheme.Colors.accentGold,
                                     tag: "Financial"
                                 )
                             }
@@ -56,7 +55,6 @@ struct ReportsTab: View {
                                     icon: "basket.fill",
                                     title: "Basket Trends",
                                     subtitle: "Analyze average items per transaction across stores and categories.",
-                                    accentColor: Color(red: 0.55, green: 0.78, blue: 0.62),
                                     tag: "Transactions"
                                 )
                             }
@@ -68,7 +66,6 @@ struct ReportsTab: View {
                                     icon: "shield.lefthalf.filled",
                                     title: "Audit Logs",
                                     subtitle: "Complete trail of admin actions — products, tax, offers, stores & users.",
-                                    accentColor: Color(red: 0.65, green: 0.72, blue: 0.88),
                                     tag: "Compliance"
                                 )
                             }
@@ -181,10 +178,10 @@ struct ReportsTab: View {
         icon: String,
         title: String,
         subtitle: String,
-        accentColor: Color,
         tag: String
     ) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let accentColor = RSMSTheme.Colors.accentGold
+        return VStack(alignment: .leading, spacing: 0) {
 
             // Top accent bar
             Rectangle()
@@ -242,16 +239,12 @@ struct ReportsTab: View {
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
 
-                // Bottom arrow
+                // Chevron
                 HStack {
                     Spacer()
-                    HStack(spacing: 4) {
-                        Text("Open")
-                            .font(.system(size: 11, weight: .semibold))
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 10, weight: .bold))
-                    }
-                    .foregroundStyle(accentColor)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(accentColor.opacity(0.6))
                 }
             }
             .padding(RSMSTheme.Spacing.lg)
