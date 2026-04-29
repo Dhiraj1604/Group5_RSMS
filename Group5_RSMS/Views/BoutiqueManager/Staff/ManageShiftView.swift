@@ -5,6 +5,50 @@
 
 import SwiftUI
 
+// MARK: - Local UI Helpers
+struct ShiftFormSectionHeader: View {
+    let title: String
+    var body: some View {
+        Text(title)
+            .font(.caption2.weight(.bold))
+            .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
+            .padding(.leading, 8)
+    }
+}
+
+struct ShiftFormDividerRow: View {
+    var body: some View {
+        Divider()
+            .background(RSMSTheme.Colors.textSecondary.opacity(0.1))
+            .padding(.horizontal, 16)
+    }
+}
+
+struct ShiftFormPickerRow: View {
+    let label: String
+    let value: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Text(label)
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+                Spacer()
+                HStack(spacing: 4) {
+                    Text(value)
+                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    Image(systemName: "chevron.up.down")
+                        .font(.caption2)
+                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+        }
+    }
+}
+
 struct ManageShiftView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var shiftVM: ShiftViewModel
@@ -44,46 +88,63 @@ struct ManageShiftView: View {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 24) {
+                    VStack(spacing: 28) {
                         // Staff Member Section
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Staff Member")
-                                .font(.headline)
-                                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                        VStack(alignment: .leading, spacing: 10) {
+                            ShiftFormSectionHeader(title: "STAFF MEMBER")
                             
-                            DropdownRow(
-                                label: "Employee",
-                                value: selectedEmployeeName
-                            ) {
-                                if existingShift == nil {
-                                    showEmployeePicker = true
+                            VStack(spacing: 0) {
+                                ShiftFormPickerRow(
+                                    label: "Employee",
+                                    value: selectedEmployeeName
+                                ) {
+                                    if existingShift == nil {
+                                        showEmployeePicker = true
+                                    }
                                 }
                             }
+                            .background(RSMSTheme.Colors.backgroundDeep)
+                            .cornerRadius(14)
                         }
                         
                         // Shift Timing Section
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Shift Timing")
-                                .font(.headline)
-                                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                        VStack(alignment: .leading, spacing: 10) {
+                            ShiftFormSectionHeader(title: "SHIFT TIMING")
                             
-                            VStack(spacing: 12) {
-                                DatePicker("Start Time", selection: $startTime, displayedComponents: [.date, .hourAndMinute])
-                                    
+                            VStack(spacing: 0) {
+                                HStack {
+                                    Text("Start Time")
+                                        .foregroundColor(RSMSTheme.Colors.textPrimary)
+                                    Spacer()
+                                    DatePicker("", selection: $startTime, displayedComponents: [.date, .hourAndMinute])
+                                        .labelsHidden()
+                                        .accentColor(RSMSTheme.Colors.accentGold)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
                                 
-                                DatePicker("End Time", selection: $endTime, in: startTime..., displayedComponents: [.date, .hourAndMinute])
-                                    
+                                ShiftFormDividerRow()
+                                
+                                HStack {
+                                    Text("End Time")
+                                        .foregroundColor(RSMSTheme.Colors.textPrimary)
+                                    Spacer()
+                                    DatePicker("", selection: $endTime, in: startTime..., displayedComponents: [.date, .hourAndMinute])
+                                        .labelsHidden()
+                                        .accentColor(RSMSTheme.Colors.accentGold)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
                             }
-                            .padding()
                             .background(RSMSTheme.Colors.backgroundDeep)
-                            .cornerRadius(12)
+                            .cornerRadius(14)
                         }
                         
                         if let errorMessage = errorMessage {
                             Text(errorMessage)
                                 .foregroundColor(.red)
-                                .font(.footnote)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .font(.caption2)
+                                .padding(.horizontal, 8)
                         }
                         
                         if let existing = existingShift {
@@ -99,14 +160,15 @@ struct ManageShiftView: View {
                                     .frame(maxWidth: .infinity)
                                     .padding()
                                     .background(Color.red.opacity(0.8))
-                                    .cornerRadius(12)
+                                    .cornerRadius(14)
                             }
-                            .padding(.top, 16)
+                            .padding(.top, 8)
                         }
                         
                         Spacer()
                     }
-                    .padding()
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
                 }
             }
             .navigationTitle(existingShift == nil ? "Create Shift" : "Edit Shift")
@@ -115,12 +177,16 @@ struct ManageShiftView: View {
             
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .foregroundColor(RSMSTheme.Colors.accentGold)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button {
                         Task { await saveShift() }
+                    } label: {
+                        Image(systemName: "checkmark")
                     }
                     .foregroundColor(RSMSTheme.Colors.accentGold)
                     .disabled(selectedEmployeeId == nil || startTime >= endTime)
@@ -156,7 +222,9 @@ struct ManageShiftView: View {
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") { showEmployeePicker = false }
+                            Button { showEmployeePicker = false } label: {
+                                Image(systemName: "xmark")
+                            }
                         }
                     }
                 }
