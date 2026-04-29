@@ -5,6 +5,7 @@ import Supabase
 struct Group5_RSMSApp: App {
     @State private var appState = AppState()
     @AppStorage("rsms.appearanceMode") private var appearanceModeRaw = RSMSAppearanceMode.dark.rawValue
+    @AppStorage("rsms.language") private var appLanguage = "system"
 
     private var selectedAppearanceMode: RSMSAppearanceMode {
         RSMSAppearanceMode(rawValue: appearanceModeRaw) ?? .system
@@ -15,6 +16,7 @@ struct Group5_RSMSApp: App {
             ContentView()
                 .environment(appState)
                 .preferredColorScheme(selectedAppearanceMode.colorScheme)
+                .environment(\.locale, appLanguage == "system" ? Locale.current : .init(identifier: appLanguage))
                 .onOpenURL { url in
                     Task {
                         do {

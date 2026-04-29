@@ -131,7 +131,7 @@ struct BMDashboardTab: View {
                 }
             }
             .sheet(isPresented: $showingProfile) {
-                BMProfileView().presentationDetents([.large])
+                RSMSProfileView().presentationDetents([.large])
             }
             .sheet(isPresented: $showingAddTask) {
                 if let boutiqueId = appState.currentStoreID {

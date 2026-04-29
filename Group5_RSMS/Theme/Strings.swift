@@ -2,10 +2,6 @@
 //  Strings.swift
 //  Group5_RSMS
 //
-//  Centralized localization system.
-//  Provides strongly-typed LocalizedStringKeys for use throughout the app,
-//  matching the pattern established by Theme.swift.
-//
 
 import SwiftUI
 
