@@ -55,6 +55,32 @@ struct CreateEventSheet: View {
 
                         Spacer().frame(height: 8)
 
+//                         Button {
+//                             isSaving = true
+//                             Task {
+//                                 await vm.createEvent(
+//                                     boutiqueId:  boutiqueId,
+//                                     title:       title.trimmingCharacters(in: .whitespaces),
+//                                     description: description.isEmpty ? nil : description,
+//                                     eventDate:   eventDate,
+//                                     capacity:    Int(capacity),
+//                                     venue:       venue.isEmpty ? nil : venue,
+//                                     theme:       theme.isEmpty ? nil : theme,
+//                                     hostId:      nil // Reverting: must be nil unless we pick a real Employee ID
+//                                 )
+//                                 isSaving = false
+//                                 dismiss()
+//                             }
+//                         } label: {
+//                             HStack {
+//                                 if isSaving { ProgressView().tint(.black) }
+//                                 Text(isSaving ? "Creating…" : "Create Event")
+//                             }
+//                             .frame(maxWidth: .infinity)
+//                         }
+//                         .buttonStyle(GoldButtonStyle())
+//                         .disabled(!canSave || isSaving)
+//                         .opacity(!canSave ? 0.6 : 1)
                     }
                     .padding(20)
                 }
@@ -125,6 +151,7 @@ struct AddGuestSheet: View {
     @State private var name         = ""
     @State private var email        = ""
     @State private var phone        = ""
+    @State private var tier         = "silver"
     @State private var preferences  = ""
     @State private var isSaving     = false
     private var isPhoneValid: Bool {
@@ -153,7 +180,16 @@ struct AddGuestSheet: View {
                         }
                         fieldRow("Style Preferences", text: $preferences, placeholder: "e.g. Prefers minimalist cuts")
 
-
+                        // Tier picker
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("VIP Tier").font(.caption).foregroundStyle(RSMSTheme.Colors.textSecondary)
+                            Picker("Tier", selection: $tier) {
+                                Text("🥈 Silver").tag("silver")
+                                Text("🥇 Gold").tag("gold")
+                                Text("💎 Platinum").tag("platinum")
+                            }
+                            .pickerStyle(.segmented)
+                        }
 
                         Button {
                             isSaving = true
@@ -163,6 +199,7 @@ struct AddGuestSheet: View {
                                     name:         name.trimmingCharacters(in: .whitespaces),
                                     email:        email.isEmpty ? nil : email,
                                     phone:        phone.isEmpty ? nil : phone,
+                                    tier:         tier,
                                     preferences:  preferences.isEmpty ? nil : preferences,
                                     addedBy:      appState.managerAuthId // Fix for added_by_fkey
                                 )
@@ -217,6 +254,10 @@ struct InviteGuestSheet: View {
         Set(vm.selectedEventGuests.compactMap { $0.guestId })
     }
 
+//     private var availableGuests: [VIPGuest] {
+//         let eligible = vm.allGuests.filter { !alreadyInvitedIds.contains($0.id) }
+//         if searchText.isEmpty { return eligible }
+//         return eligible.filter {
     private var filteredGuests: [VIPGuest] {
         if searchText.isEmpty { return vm.allGuests }
         return vm.allGuests.filter {
@@ -229,6 +270,7 @@ struct InviteGuestSheet: View {
         NavigationStack {
             ZStack {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+//                 if availableGuests.isEmpty && searchText.isEmpty {
                 if vm.allGuests.isEmpty {
                     VStack(spacing: 12) {
                         Image(systemName: "person.slash")
@@ -240,6 +282,11 @@ struct InviteGuestSheet: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
+//                     List(availableGuests) { guest in
+//                         Button {
+//                             Task {
+//                                 await vm.inviteGuest(eventId: event.id, guestId: guest.id)
+//                                 dismiss()
                     List(filteredGuests) { guest in
                         let isInvited = alreadyInvitedIds.contains(guest.id)
                         
@@ -269,6 +316,8 @@ struct InviteGuestSheet: View {
                                     }
                                 }
                                 Spacer()
+//                                 Image(systemName: "plus.circle")
+//                                     .foregroundStyle(RSMSTheme.Colors.accentGold)
                                 Image(systemName: isInvited ? "checkmark.circle.fill" : "plus.circle")
                                     .foregroundStyle(isInvited ? .green : RSMSTheme.Colors.accentGold)
                             }
@@ -281,6 +330,11 @@ struct InviteGuestSheet: View {
                     .searchable(text: $searchText, prompt: "Search guests")
                 }
             }
+//             .navigationTitle("Invite Guest")
+//             .navigationBarTitleDisplayMode(.inline)
+//             .toolbar {
+//                 ToolbarItem(placement: .topBarLeading) {
+//                     Button("Cancel") { dismiss() }.foregroundStyle(RSMSTheme.Colors.textSecondary)
             .navigationTitle("Invite Guests")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -30,6 +30,8 @@ struct AddStoreView: View {
     @State private var selectedRegion = "West"
     @State private var selectedCurrency = "INR"          // ← NEW
     @State private var taxRate = "18.0"
+    @State private var monthlyRevenueTarget = "1500000"
+    @State private var imageUrl = ""
     @State private var showValidationErrors = false
     @State private var showSuccessAlert = false
     @State private var isRegistering = false
@@ -156,6 +158,8 @@ struct AddStoreView: View {
             formField(label: "Store Name", placeholder: "e.g. RSMS Flagship Mumbai", text: $storeName, icon: "building.2", required: true)
             formField(label: "Store Code", placeholder: "e.g. BTQ-MUM-001", text: $storeCode, icon: "qrcode", required: true)
                 .textInputAutocapitalization(.characters)
+            formField(label: "Monthly Revenue Target", placeholder: "e.g. 1500000", text: $monthlyRevenueTarget, icon: "target", required: true)
+                .keyboardType(.numberPad)
         }
     }
 
@@ -260,6 +264,7 @@ struct AddStoreView: View {
 
             formField(label: "Tax Rate (%)", placeholder: "18.0", text: $taxRate, icon: "percent", required: true, isValid: isTaxRateValid, errorMessage: "Invalid Rate")
                 .keyboardType(.decimalPad)
+            formField(label: "Image URL / Asset", placeholder: "e.g. boutique_exterior", text: $imageUrl, icon: "photo", required: false)
         }
     }
 
@@ -379,7 +384,9 @@ struct AddStoreView: View {
             region: selectedRegion,
             taxRate: Double(taxRate) ?? 18.0,
             isActive: true,
-            currencyCode: selectedCurrency
+            currencyCode: selectedCurrency,
+            monthlyRevenueTarget: Double(monthlyRevenueTarget) ?? 1500000.0,
+            imageUrl: imageUrl.trimmingCharacters(in: .whitespaces).isEmpty ? nil : imageUrl.trimmingCharacters(in: .whitespaces)
         )
         self.isRegistering = true
         

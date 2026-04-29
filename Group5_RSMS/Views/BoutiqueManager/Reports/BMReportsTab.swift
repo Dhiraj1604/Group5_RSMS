@@ -12,7 +12,7 @@ struct BMReportsTab: View {
     @Environment(AppState.self) private var appState
     @StateObject private var vm = BMReportsViewModel()
 
-    @State private var chartRange: ChartRange = .yearly
+    @State private var chartRange: ChartRange = .oneWeek
     @State private var showFullReport = false
 
     private var storeName: String {
@@ -30,6 +30,13 @@ struct BMReportsTab: View {
 
                         // MARK: - Weekly Performance Header
                         HStack {
+//                             VStack(alignment: .leading, spacing: 4) {
+//                                 Text("Weekly Performance")
+//                                     .font(RSMSTheme.Typography.heading3)
+//                                     .foregroundColor(RSMSTheme.Colors.textPrimary)
+//                                 Text("This month's overview")
+//                                     .font(RSMSTheme.Typography.caption)
+//                                     .foregroundColor(RSMSTheme.Colors.textSecondary)
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Weekly Performance")
                                     .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -127,31 +134,21 @@ struct BMReportsTab: View {
 
                         // MARK: - Weekly Sales Chart
                         VStack(alignment: .leading, spacing: 14) {
-                            let data = vm.chartData(for: chartRange)
-                            let periodTotal = data.reduce(0) { $0 + $1.amount }
-
-                            // Chart Summary Header
-                            VStack(alignment: .leading, spacing: 6) {
+                            HStack {
                                 Text("Sales Trend")
                                     .font(RSMSTheme.Typography.heading4)
                                     .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                
-                                Text("Visualizing your boutique's monthly revenue flow for the current year.")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                
-                                HStack(spacing: 4) {
-                                    Text("Yearly Total:")
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                                    Text("₹\(formatNumber(periodTotal))")
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                                Spacer()
+                                Picker("Range", selection: $chartRange) {
+                                    ForEach(ChartRange.allCases, id: \.self) { range in
+                                        Text(range.rawValue).tag(range)
+                                    }
                                 }
-                                .padding(.top, 2)
+                                .pickerStyle(.segmented)
+                                .frame(width: 100)
                             }
 
+                            let data = vm.chartData(for: chartRange)
 
                             if data.isEmpty || data.allSatisfy({ $0.amount == 0 }) {
                                 VStack(spacing: 10) {
@@ -167,25 +164,23 @@ struct BMReportsTab: View {
                             } else {
                                 Chart(data) { point in
                                     BarMark(
-                                        x: .value("Month", point.date, unit: .month),
+                                        x: .value("Day", point.date, unit: .day),
                                         y: .value("Sales", point.amount)
                                     )
-
                                     .foregroundStyle(RSMSTheme.Colors.accentGold.gradient)
                                     .cornerRadius(4)
                                 }
                                 .chartXAxis {
-                                    AxisMarks(values: .stride(by: .month)) { _ in
+                                    AxisMarks(values: .stride(by: .day, count: chartRange == .twoWeeks ? 3 : 1)) { value in
                                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3))
                                             .foregroundStyle(RSMSTheme.Colors.border)
-                                        AxisValueLabel(format: .dateTime.month(.abbreviated))
+                                        AxisValueLabel(format: .dateTime.day().month(.abbreviated))
                                             .foregroundStyle(RSMSTheme.Colors.textSecondary)
                                             .offset(x: 0, y: 4)
                                     }
                                 }
-
                                 .chartYAxis {
-                                    AxisMarks(position: .leading) { _ in
+                                    AxisMarks { _ in
                                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.3))
                                             .foregroundStyle(RSMSTheme.Colors.border)
                                         AxisValueLabel()
@@ -193,10 +188,8 @@ struct BMReportsTab: View {
                                     }
                                 }
                                 .frame(height: 200)
-                                .padding(.top, 10)
                                 .animation(.easeInOut, value: chartRange)
                             }
-
                         }
                         .padding()
                         .background(RSMSTheme.Colors.backgroundElevated)

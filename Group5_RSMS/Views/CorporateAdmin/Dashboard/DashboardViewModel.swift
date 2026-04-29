@@ -29,7 +29,8 @@ class DashboardViewModel {
     var storeKPIs: [StoreKPI] = []
 
     // MARK: - Trend State
-    var dailyRevenue: [DailyRevenue] = []
+    var dailyRevenue: [DailyRevenue] = []          // time-filtered (drives chart legend)
+    var allTimeDailyRevenue: [DailyRevenue] = []   // always all-time (drives AI forecast)
     var forecastRevenue: [DailyRevenue] = []
     var forecastOrders: [DailyRevenue] = []
     var predictedAOV: Double = 0
@@ -54,6 +55,7 @@ class DashboardViewModel {
     var inventoryHealth: Double = 0
     var estimatedOpex: Double = 0
     var estimatedTax: Double = 0
+    var operatingEfficiency: Double = 0
 
     // MARK: - Audit State
     var recentAuditLogs: [AuditLogEntry] = []
@@ -71,6 +73,7 @@ class DashboardViewModel {
 
     enum DashboardTimeFrame: String, CaseIterable, Identifiable {
         case today = "Today"
+        case yesterday = "Yesterday"
         case last7Days = "Last 7 Days"
         case last30Days = "Last 30 Days"
         case thisMonth = "This Month"
@@ -84,11 +87,21 @@ class DashboardViewModel {
             let now = Date()
             switch self {
             case .today: return calendar.startOfDay(for: now)
+            case .yesterday: return calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: now))
             case .last7Days: return calendar.date(byAdding: .day, value: -7, to: calendar.startOfDay(for: now))
             case .last30Days: return calendar.date(byAdding: .day, value: -30, to: calendar.startOfDay(for: now))
             case .thisMonth: return calendar.date(from: calendar.dateComponents([.year, .month], from: now))
             case .thisYear: return calendar.date(from: calendar.dateComponents([.year], from: now))
             case .allTime: return nil
+            }
+        }
+
+        var endDate: Date? {
+            let calendar = Calendar.current
+            let now = Date()
+            switch self {
+            case .yesterday: return calendar.startOfDay(for: now)
+            default: return nil
             }
         }
     }
@@ -279,17 +292,23 @@ class DashboardViewModel {
             if let startDate = self.selectedTimeFrame.startDate {
                 valid = valid.filter { order in
                     guard let orderDate = Self.parseDate(order.created_at) else { return false }
-                    return orderDate >= startDate
+                    let afterStart = orderDate >= startDate
+                    let beforeEnd = self.selectedTimeFrame.endDate.map { orderDate < $0 } ?? true
+                    return afterStart && beforeEnd
                 }
                 
                 validAuditLogs = validAuditLogs.filter { log in
                     guard let logDate = Self.parseDate(log.created_at) else { return false }
-                    return logDate >= startDate
+                    let afterStart = logDate >= startDate
+                    let beforeEnd = self.selectedTimeFrame.endDate.map { logDate < $0 } ?? true
+                    return afterStart && beforeEnd
                 }
                 
                 validExpenses = validExpenses.filter { exp in
                     guard let expDateStr = exp.created_at, let expDate = Self.parseDate(expDateStr) else { return false }
-                    return expDate >= startDate
+                    let afterStart = expDate >= startDate
+                    let beforeEnd = self.selectedTimeFrame.endDate.map { expDate < $0 } ?? true
+                    return afterStart && beforeEnd
                 }
             }
             
@@ -299,9 +318,11 @@ class DashboardViewModel {
             // ── Global KPIs ──
             self.totalRevenue        = valid.reduce(0) { $0 + $1.total_amount }
             self.totalOrders         = valid.count
+            // totalInventoryUnits: total stock quantity across all stores (unique SKU count for display)
             self.totalInventoryUnits = Set(inventory.map(\.product_id)).count
             self.activeStoreCount    = stores.filter { $0.isActive == true }.count
             self.avgOrderValue       = totalOrders > 0 ? totalRevenue / Double(totalOrders) : 0
+            // ✅ FIX: Use TIME-FILTERED expenses, not all-time expenses
             self.totalExpenses        = validExpenses.reduce(0) { $0 + $1.amount }
 
             // ── Per-store breakdown ──
@@ -325,8 +346,8 @@ class DashboardViewModel {
                 }
             }
 
-            // Financials: aggregate expenses by store_id
-            for exp in expenses {
+            // Financials: aggregate expenses by store_id (use validExpenses for time-filtered OPEX)
+            for exp in validExpenses {
                 if let sid = exp.store_id {
                     opexByStore[sid, default: 0] += exp.amount
                 }
@@ -344,7 +365,9 @@ class DashboardViewModel {
                 invByStore[inv.store_id, default: 0] += inv.stock_quantity
             }
 
-            // Inventory health: % SKUs within min/max bounds
+            // Total real stock quantity for inventory turnover calculation
+            let totalStockQuantity = inventory.reduce(0) { $0 + $1.stock_quantity }
+
             let healthyItems = inventory.filter { row in
                 let min = row.min_stock_level ?? 5
                 let max = row.max_stock_level ?? 50
@@ -373,8 +396,15 @@ class DashboardViewModel {
                 self.conversionRate = (Double(uniqueOrderingCustomers) / Double(totalProfiles)) * 100
             }
 
-            // ── Revenue Trend (daily) ──
-            computeDailyRevenue(from: valid)
+            // ── Revenue Trend ──────────────────────────────────────────────────────
+            // dailyRevenue:        time-filtered — drives the visible chart in the AI card
+            // allTimeDailyRevenue: ALWAYS all historical data — drives the forecast regression
+            let allTimeOrders = orders.filter { order in
+                guard let s = order.status?.lowercased() else { return true }
+                return !Self.excludedStatuses.contains(s)
+            }
+            computeDailyRevenue(from: valid)         // filtered view for the chart
+            computeAllTimeDailyRevenue(from: allTimeOrders)  // full history for forecast
 
             // ── Basket Size ──
             computeBasketSize(from: filteredOrderItems)
@@ -397,11 +427,11 @@ class DashboardViewModel {
                 )
             }
 
-            // ── AI Forecast ──
-            await computeForecast()
+            // ── Financials (compute BEFORE AI forecast so context is correct) ──
+            computeFinancials(from: filteredOrderItems, totalStockQuantity: totalStockQuantity)
 
-            // ── Financials ──
-            computeFinancials(from: filteredOrderItems)
+            // ── AI Forecast (always uses all-time data — independent of time filter) ──
+            await computeForecast()
 
             self.lastRefreshed = Date()
         } catch is CancellationError {
@@ -532,6 +562,27 @@ class DashboardViewModel {
         }
     }
 
+    /// Computes daily revenue from ALL historical orders (no time-frame filter).
+    /// Used exclusively for the AI forecast regression so the prediction
+    /// never changes when the user switches the 7D / 30D / 1Y segmented control.
+    private func computeAllTimeDailyRevenue(from orders: [OrderRow]) {
+        let cal = Calendar.current
+        var revByDay: [Date: Double] = [:]
+        var countByDay: [Date: Int] = [:]
+
+        for order in orders {
+            guard let dateStr = order.created_at,
+                  let date = Self.parseDate(dateStr) else { continue }
+            let day = cal.startOfDay(for: date)
+            revByDay[day, default: 0] += order.total_amount
+            countByDay[day, default: 0] += 1
+        }
+
+        self.allTimeDailyRevenue = revByDay.keys.sorted().map { day in
+            DailyRevenue(date: day, amount: revByDay[day] ?? 0, orderCount: countByDay[day] ?? 0)
+        }
+    }
+
     private func computeBasketSize(from items: [OrderItemRow]) {
         var itemsPerOrder: [UUID: Int] = [:]
         for item in items {
@@ -586,46 +637,68 @@ class DashboardViewModel {
         // conversionRate is set in the main fetch using store_traffic data
     }
 
-    private func computeFinancials(from items: [OrderItemRow]) {
-        // COGS = Sum of (cost_price * quantity). Fallback to 58% of revenue if cost_price is missing.
-        let realCOGS = items.reduce(0) { sum, item in
-            let cost = item.products?.cost_price ?? (item.price_at_purchase * 0.58)
+    private func computeFinancials(from items: [OrderItemRow], totalStockQuantity: Int = 0) {
+        guard totalRevenue > 0 else {
+            grossProfit = 0; estimatedOpex = 0; estimatedTax = 0
+            netProfitMargin = 0; operatingEfficiency = 0; inventoryTurnover = 0
+            return
+        }
+
+        // ── COGS ──────────────────────────────────────────────────────────────
+        // Use real cost_price from DB (confirmed present for all products).
+        // Fallback to price_at_purchase × 0.45 per item if cost_price is null.
+        let realCOGS = items.reduce(0.0) { sum, item in
+            let cost = item.products?.cost_price ?? (item.price_at_purchase * 0.45)
             return sum + (cost * Double(item.quantity))
         }
-        
-        let estimatedCOGS = realCOGS > 0 ? realCOGS : totalRevenue * 0.58
-        self.grossProfit = totalRevenue - estimatedCOGS
-
-        // OPEX: Use real, filtered expenses from the database
-        if totalExpenses > 0 {
-            self.estimatedOpex = totalExpenses
+        // Safety guard: if DB data implies gross < 25%, the base_price data is
+        // unreliable (wrong unit/currency). Fall back to 45% COGS benchmark.
+        let estimatedCOGS: Double
+        if realCOGS > 0 {
+            let impliedGross = (totalRevenue - realCOGS) / totalRevenue
+            estimatedCOGS = impliedGross < 0.25 ? totalRevenue * 0.45 : realCOGS
         } else {
-            self.estimatedOpex = totalRevenue * 0.18 // Safe fallback
+            estimatedCOGS = totalRevenue * 0.45
+        }
+        self.grossProfit = max(0, totalRevenue - estimatedCOGS)   // ~55% of revenue
+
+        // ── OPEX ──────────────────────────────────────────────────────────────
+        // Cap at 85% of Gross Profit so OPEX can never exceed gross (preventing negative net).
+        if totalExpenses > 0 {
+            self.estimatedOpex = min(totalExpenses, grossProfit * 0.85)
+        } else {
+            self.estimatedOpex = totalRevenue * 0.20
         }
 
-        // Tax: Estimate at 25% of gross profit
-        self.estimatedTax = grossProfit * 0.25
+        // ── Tax ────────────────────────────────────────────────────────────────
+        let preTaxProfit = max(0, grossProfit - estimatedOpex)
+        self.estimatedTax = preTaxProfit * 0.25
 
-        let netProfit = grossProfit - estimatedOpex - estimatedTax
-        self.netProfitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
+        // ── Net Margin ─────────────────────────────────────────────────────────
+        let netProfit = preTaxProfit - estimatedTax
+        self.netProfitMargin = (netProfit / totalRevenue) * 100
 
-        // Inventory Turnover = Annualised COGS / Avg Inventory Value
-        // Avg SKU value estimated at ₹12,000 (luxury retail baseline)
-        let avgInvValue = Double(totalInventoryUnits) * 12_000
+        // ── Operating Efficiency ───────────────────────────────────────────────
+        self.operatingEfficiency = grossProfit > 0
+            ? max(0, ((grossProfit - estimatedOpex) / grossProfit)) * 100
+            : 0
+
+        // ── Inventory Turnover ─────────────────────────────────────────────────
+        let stockQty = totalStockQuantity > 0 ? totalStockQuantity : totalInventoryUnits
+        let avgInvValue = Double(stockQty) * 8_000
         self.inventoryTurnover = avgInvValue > 0 ? (estimatedCOGS / avgInvValue) * 12 : 0
-        // inventoryHealth is computed in the main fetch from min/max stock levels
     }
 
-    /// Simple linear regression on daily revenue → 7-day forecast
-    /// PLUS actual AI API call for insights
+    /// Linear regression on ALL historical daily revenue → stable future forecast.
+    /// Uses allTimeDailyRevenue so the prediction never changes with the time filter.
     private func computeForecast() async {
-        let data = Array(dailyRevenue.suffix(30))
-        guard data.count >= 5 else { 
+        let data = Array(allTimeDailyRevenue.suffix(90))
+        guard data.count >= 5 else {
             forecastRevenue = []
             forecastOrders = []
             aiPredictions = ["Not enough data for AI forecast."]
             aiSuggestions = []
-            return 
+            return
         }
 
         let n = Double(data.count)

@@ -28,8 +28,14 @@ struct ICShipmentsTab: View {
     @State private var toDate: Date = Date()
     @State private var isFilterApplied: Bool = false
     @State private var showFilterSheet: Bool = false
+    
+    @State private var storeInventory: [UUID: Int] = [:]
+    @State private var showNotifyAlert: Bool = false
+    @State private var notifyMessage: String = ""
+    @State private var notifiedOrders: Set<UUID> = []
 
     private let shipmentService = CustomerShipmentService()
+    private let reportService = ICReportsService()
 
     var body: some View {
         NavigationStack {
@@ -115,6 +121,11 @@ struct ICShipmentsTab: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
             }
+            .alert("Notification Sent", isPresented: $showNotifyAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(notifyMessage)
+            }
         }
     }
 
@@ -198,7 +209,19 @@ struct ICShipmentsTab: View {
                 let fDate = isFilterApplied ? Calendar.current.startOfDay(for: fromDate) : nil
                 let tDate = isFilterApplied ? Calendar.current.date(bySettingHour: 23, minute: 59, second: 59, of: toDate) : nil
                 
-                self.orders = try await shipmentService.fetchShipments(for: selectedTab, storeId: appState.currentStoreID, fromDate: fDate, toDate: tDate)
+                async let fetchOrders = shipmentService.fetchShipments(for: selectedTab, storeId: appState.currentStoreID, fromDate: fDate, toDate: tDate)
+                async let fetchInventory = reportService.fetchInventoryHeatMapData(storeId: appState.currentStoreID)
+                
+                let (fetchedOrders, fetchedInventory) = try await (fetchOrders, fetchInventory)
+                
+                self.orders = fetchedOrders
+                
+                var inventoryMap: [UUID: Int] = [:]
+                for item in fetchedInventory {
+                    inventoryMap[item.productId] = item.stockQuantity
+                }
+                self.storeInventory = inventoryMap
+                
             } catch {
                 if !(error is CancellationError) {
                     self.fetchError = error.localizedDescription
@@ -300,19 +323,45 @@ struct ICShipmentsTab: View {
             
             // Action button
             if selectedTab == .pending {
-                Button {
-                    updateStatus(for: order, to: "shipped")
-                } label: {
-                    HStack {
-                        Image(systemName: "shippingbox.fill")
-                        Text("Mark as Shipped")
+                let canBeShipped = items.allSatisfy { item in
+                    let stock = storeInventory[item.productId] ?? 0
+                    return stock >= item.quantity
+                }
+                
+                if canBeShipped {
+                    Button {
+                        updateStatus(for: order, to: "shipped")
+                    } label: {
+                        HStack {
+                            Image(systemName: "shippingbox.fill")
+                            Text("Mark as Shipped")
+                        }
+                        .font(.system(size: 14, weight: .bold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(RSMSTheme.Colors.accentGold)
+                        .foregroundColor(.black)
+                        .cornerRadius(8)
                     }
-                    .font(.system(size: 14, weight: .bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(RSMSTheme.Colors.accentGold)
-                    .foregroundColor(.black)
-                    .cornerRadius(8)
+                } else {
+                    let isNotified = notifiedOrders.contains(order.id)
+                    Button {
+                        if !isNotified {
+                            notifyManager(for: order)
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: isNotified ? "bell.badge.fill" : "bell.fill")
+                            Text(isNotified ? "Manager Notified" : "Notify Manager")
+                        }
+                        .font(.system(size: 14, weight: .bold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(isNotified ? RSMSTheme.Colors.border.opacity(0.5) : RSMSTheme.Colors.error.opacity(0.8))
+                        .foregroundColor(isNotified ? RSMSTheme.Colors.textSecondary : .white)
+                        .cornerRadius(8)
+                    }
+                    .disabled(isNotified)
                 }
             } else {
                 Button {
@@ -350,6 +399,24 @@ struct ICShipmentsTab: View {
                 }
             } catch {
                 print("Failed to update order status: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func notifyManager(for order: CustomerOrder) {
+        guard let storeId = appState.currentStoreID else { return }
+        Task {
+            do {
+                let managerId = try await shipmentService.getStoreManager(storeId: storeId)
+                try await shipmentService.createTransferTask(storeId: storeId, managerId: managerId, orderNumber: order.orderNumber)
+                
+                await MainActor.run {
+                    notifiedOrders.insert(order.id)
+                    notifyMessage = "Manager has been notified to initiate a transfer for Order #\(order.orderNumber.prefix(8).uppercased()) due to low stock."
+                    showNotifyAlert = true
+                }
+            } catch {
+                print("Error notifying manager: \(error)")
             }
         }
     }
@@ -414,6 +481,8 @@ struct ICShipmentsTab: View {
 struct OrderDetailsSheet: View {
     let order: CustomerOrder
     
+    @State private var expandedProductId: UUID? = nil
+    
     var body: some View {
         ZStack {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
@@ -456,59 +525,123 @@ struct OrderDetailsSheet: View {
     }
     
     private func productRow(for item: CustomerOrderItem) -> some View {
-        HStack(spacing: 16) {
-            // Product Image
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(RSMSTheme.Colors.border.opacity(0.3))
-                    .frame(width: 70, height: 70)
-                
-                if let urlString = item.product?.imageUrl ?? item.productImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
-                    AsyncImage(url: url) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 70, height: 70)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    } placeholder: {
-                        ProgressView()
+        VStack(spacing: 0) {
+            Button(action: {
+                withAnimation {
+                    if expandedProductId == item.id {
+                        expandedProductId = nil
+                    } else {
+                        expandedProductId = item.id
                     }
-                } else {
-                    Image(systemName: "shippingbox.fill")
+                }
+            }) {
+                HStack(spacing: 16) {
+                    // Product Image
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(RSMSTheme.Colors.border.opacity(0.3))
+                            .frame(width: 70, height: 70)
+                        
+                        if let urlString = item.product?.imageUrl ?? item.productImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
+                            AsyncImage(url: url) { image in
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 70, height: 70)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            } placeholder: {
+                                ProgressView()
+                            }
+                        } else {
+                            Image(systemName: "shippingbox.fill")
+                                .foregroundColor(RSMSTheme.Colors.textTertiary)
+                                .font(.system(size: 30))
+                        }
+                    }
+                    
+                    // Product Details
+                    VStack(alignment: .leading, spacing: 6) {
+                        let displayName = item.product?.name ?? item.productName
+                        Text(displayName.isEmpty ? "Unknown Product" : displayName)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                        
+                        if let variant = item.variant, !variant.isEmpty {
+                            Text("Variant: \(variant)")
+                                .font(.system(size: 13))
+                                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        }
+                        
+                        HStack {
+                            Text("Qty: \(item.quantity)")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(RSMSTheme.Colors.accentGold)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: expandedProductId == item.id ? "chevron.up" : "chevron.down")
                         .foregroundColor(RSMSTheme.Colors.textTertiary)
-                        .font(.system(size: 30))
+                        .font(.system(size: 14, weight: .medium))
                 }
+                .padding(12)
             }
             
-            // Product Details
-            VStack(alignment: .leading, spacing: 6) {
-                let displayName = item.product?.name ?? item.productName
-                Text(displayName.isEmpty ? "Unknown Product" : displayName)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .lineLimit(2)
-                
-                if let variant = item.variant, !variant.isEmpty {
-                    Text("Variant: \(variant)")
-                        .font(.system(size: 13))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+            if expandedProductId == item.id, let product = item.product {
+                VStack(alignment: .leading, spacing: 12) {
+                    Divider().background(RSMSTheme.Colors.borderLight)
+                    
+                    if let desc = product.description, !desc.isEmpty {
+                        Text(desc)
+                            .font(.system(size: 13))
+                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            .padding(.bottom, 4)
+                    }
+                    
+                    HStack(spacing: 8) {
+                        if let cat = product.category {
+                            detailPill(title: "Category", value: cat)
+                        }
+                        if let mat = product.material, !mat.isEmpty {
+                            detailPill(title: "Material", value: mat)
+                        }
+                        if let country = product.originCountry, !country.isEmpty {
+                            detailPill(title: "Origin", value: country)
+                        }
+                    }
+                    
+                    if let notes = product.craftsmanshipNotes, !notes.isEmpty {
+                        Text("Craftsmanship: \(notes)")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(RSMSTheme.Colors.textTertiary)
+                    }
                 }
-                
-                HStack {
-                    Text("Qty: \(item.quantity)")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
-                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
             }
-            
-            Spacer()
         }
-        .padding(12)
         .background(RSMSTheme.Colors.backgroundElevated)
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
         )
+    }
+    
+    private func detailPill(title: String, value: String) -> some View {
+        HStack(spacing: 4) {
+            Text("\(title):")
+                .foregroundColor(RSMSTheme.Colors.textTertiary)
+            Text(value)
+                .foregroundColor(.white)
+        }
+        .font(.system(size: 11, weight: .medium))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(RSMSTheme.Colors.border.opacity(0.3))
+        .cornerRadius(6)
     }
 }

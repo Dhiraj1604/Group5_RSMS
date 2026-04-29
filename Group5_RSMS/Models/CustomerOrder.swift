@@ -72,10 +72,22 @@ struct CustomerOrder: Codable, Identifiable {
 struct SimpleProduct: Codable {
     let name: String?
     let imageUrl: String?
+    let description: String?
+    let category: String?
+    let basePrice: Double?
+    let material: String?
+    let originCountry: String?
+    let craftsmanshipNotes: String?
     
     enum CodingKeys: String, CodingKey {
         case name
         case imageUrl = "image_url"
+        case description
+        case category
+        case basePrice = "base_price"
+        case material
+        case originCountry = "origin_country"
+        case craftsmanshipNotes = "craftsmanship_notes"
     }
 }
 

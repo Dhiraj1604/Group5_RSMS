@@ -84,7 +84,6 @@ struct VIPGuestDetailView: View {
                     .font(.title2).fontWeight(.bold)
                     .foregroundStyle(RSMSTheme.Colors.textPrimary)
                 
-
                 
                 if let email = guest.email {
                     Text(email)

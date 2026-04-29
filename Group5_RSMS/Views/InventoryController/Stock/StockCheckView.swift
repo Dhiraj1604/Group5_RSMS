@@ -211,6 +211,9 @@ struct StockCheckView: View {
             .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
             .padding(.top, RSMSTheme.Spacing.md)
         }
+        .refreshable {
+            await vm.load(storeId: effectiveStoreId, userId: appState.managerAuthId)
+        }
     }
 
     // MARK: - Summary Header
@@ -449,13 +452,6 @@ struct StockCheckView: View {
             if vm.isLoading {
                 ProgressView()
                     .tint(RSMSTheme.Colors.accentGold)
-            } else {
-                Button {
-                    Task { await vm.load(storeId: effectiveStoreId) }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
-                }
             }
         }
     }
