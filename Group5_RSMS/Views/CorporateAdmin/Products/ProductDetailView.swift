@@ -107,12 +107,17 @@ struct ProductDetailView: View {
             // Product Image
             productImage
 
-            // Product Name
-            Text(currentProduct.name)
-                .font(.title2).fontWeight(.bold)
-                .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+            // Product Name + Active dot
+            HStack(spacing: RSMSTheme.Spacing.sm) {
+                Text(currentProduct.name)
+                    .font(.title2).fontWeight(.bold)
+                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Circle()
+                    .fill(currentProduct.isActive ? RSMSTheme.Colors.success : Color.gray)
+                    .frame(width: 10, height: 10)
+            }
 
             // SKU + Category
             HStack(spacing: RSMSTheme.Spacing.sm) {
@@ -248,18 +253,6 @@ struct ProductDetailView: View {
     // MARK: - Status Card
     private var statusCard: some View {
         detailSection(title: "Visibility & Status") {
-            HStack(spacing: RSMSTheme.Spacing.md) {
-                Image(systemName: "checkmark.circle.fill").font(.caption)
-                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
-                Text("Active Status").font(.subheadline).foregroundStyle(RSMSTheme.Colors.textSecondary)
-                Spacer()
-                Circle()
-                    .fill(currentProduct.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.error)
-                    .frame(width: 10, height: 10)
-            }
-            .padding(.vertical, RSMSTheme.Spacing.md)
-            Divider().background(RSMSTheme.Colors.borderLight)
-
             HStack(spacing: RSMSTheme.Spacing.md) {
                 Image(systemName: "globe").font(.caption)
                     .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
