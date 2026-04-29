@@ -1,6 +1,4 @@
 //
-import SwiftUI
-import Charts
 //  RevenueTrendsView.swift
 //  Group5_RSMS
 //
@@ -21,6 +19,7 @@ struct RevenueTrendsView: View {
     @State private var showExportSheet = false
     @State private var exportURL: URL?
     @State private var showExportOptions = false
+    @State private var showAllRevenueRows = false
 
     var body: some View {
         ZStack {
@@ -33,12 +32,9 @@ struct RevenueTrendsView: View {
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: RSMSTheme.Spacing.lg) {
+                        filtersSection
                         summaryCards
-                        dateRangeBar
-                        periodPicker
                         chartSection
-                        storeDropdown
-                        comparisonToggle
                         revenueTable
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
@@ -88,9 +84,7 @@ struct RevenueTrendsView: View {
                 ShareSheet(activityItems: [url])
             }
         }
-        .sheet(isPresented: $showDatePicker) {
-            datePickerSheet
-        }
+
     }
 
     // MARK: - Loading
@@ -148,7 +142,7 @@ struct RevenueTrendsView: View {
                         value: "—",
                         subtitle: "no prior data",
                         icon: "arrow.left.arrow.right",
-                        color: RSMSTheme.Colors.textTertiary
+                        color: RSMSTheme.Colors.accentGold
                     )
                 }
             }
@@ -160,14 +154,14 @@ struct RevenueTrendsView: View {
                     value: "\(viewModel.totalTransactions)",
                     subtitle: "total orders",
                     icon: "receipt.fill",
-                    color: .blue
+                    color: RSMSTheme.Colors.accentGold
                 )
                 metricCard(
                     title: "Avg Order",
                     value: formatCurrency(viewModel.avgOrderValue),
                     subtitle: "per transaction",
                     icon: "basket.fill",
-                    color: RSMSTheme.Colors.success
+                    color: RSMSTheme.Colors.accentGold
                 )
             }
         }
@@ -221,13 +215,19 @@ struct RevenueTrendsView: View {
 
                 Spacer()
 
-                // Custom date range button
-                Button { showDatePicker = true } label: {
+                // Custom date range toggle
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showDatePicker.toggle()
+                    }
+                } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "calendar")
                             .font(.system(size: 12))
                         Text(dateRangeLabel)
                             .font(.system(size: 11, weight: .medium))
+                        Image(systemName: showDatePicker ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 8, weight: .bold))
                     }
                     .foregroundStyle(RSMSTheme.Colors.accentGold)
                     .padding(.horizontal, 10).padding(.vertical, 7)
@@ -252,99 +252,21 @@ struct RevenueTrendsView: View {
         return diff < 86400 // within 1 day tolerance
     }
 
-    // MARK: - Period Picker
+    // MARK: - Consolidated Filters
 
-    private var periodPicker: some View {
-        HStack(spacing: RSMSTheme.Spacing.sm) {
-            ForEach(RevenueTrendsViewModel.Period.allCases, id: \.self) { period in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { viewModel.selectedPeriod = period }
-                } label: {
-                    Text(period.rawValue)
-                        .font(.system(size: 13, weight: .semibold))
-                        .padding(.horizontal, 18).padding(.vertical, 8)
-                        .foregroundStyle(viewModel.selectedPeriod == period
-                                         ? .black : RSMSTheme.Colors.textSecondary)
-                        .background(viewModel.selectedPeriod == period
-                                    ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.backgroundElevated)
-                        .cornerRadius(20)
-                        .overlay(RoundedRectangle(cornerRadius: 20)
-                            .stroke(viewModel.selectedPeriod == period
-                                    ? Color.clear : RSMSTheme.Colors.borderLight, lineWidth: 1))
-                }
-            }
-            Spacer()
-        }
-    }
-
-    // MARK: - Chart
-
-    private var chartSection: some View {
+    private var filtersSection: some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-            HStack {
-                Text("Revenue Over Time")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                Spacer()
-                if viewModel.showComparison {
-                    HStack(spacing: RSMSTheme.Spacing.md) {
-                        legendDot(color: RSMSTheme.Colors.accentGold, label: "Current")
-                        legendDot(color: RSMSTheme.Colors.textTertiary, label: "Previous")
-                    }
-                }
+            // Row 1: Store dropdown
+            storeDropdown
+
+            // Row 2: Date range quick buttons + custom date
+            dateRangeBar
+
+            // Inline date pickers (expandable)
+            if showDatePicker {
+                inlineDatePickers
             }
 
-            Chart {
-                // Current period
-                ForEach(viewModel.activeTrendData) { point in
-                    AreaMark(x: .value("Period", point.label),
-                             y: .value("Revenue", point.revenue))
-                    .foregroundStyle(LinearGradient(
-                        colors: [RSMSTheme.Colors.accentGold.opacity(0.3),
-                                 RSMSTheme.Colors.accentGold.opacity(0.02)],
-                        startPoint: .top, endPoint: .bottom))
-                    .interpolationMethod(.catmullRom)
-
-                    LineMark(x: .value("Period", point.label),
-                             y: .value("Revenue", point.revenue))
-                    .foregroundStyle(RSMSTheme.Colors.accentGold)
-                    .lineStyle(StrokeStyle(lineWidth: 2.5))
-                    .interpolationMethod(.catmullRom)
-
-                    PointMark(x: .value("Period", point.label),
-                              y: .value("Revenue", point.revenue))
-                    .foregroundStyle(trendColor(point.trend))
-                    .symbolSize(40)
-                }
-
-                // Previous period (comparison overlay)
-                if viewModel.showComparison {
-                    ForEach(Array(viewModel.prevTrendData.prefix(viewModel.activeTrendData.count).enumerated()),
-                            id: \.offset) { index, point in
-                        if index < viewModel.activeTrendData.count {
-                            let matchLabel = viewModel.activeTrendData[index].label
-                            LineMark(x: .value("Period", matchLabel),
-                                     y: .value("Prev Revenue", point.revenue))
-                            .foregroundStyle(RSMSTheme.Colors.textTertiary.opacity(0.6))
-                            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 3]))
-                            .interpolationMethod(.catmullRom)
-                        }
-                    }
-                }
-            }
-            .chartYAxisLabel("₹")
-            .chartXAxis {
-                AxisMarks(values: .automatic) { _ in
-                    AxisValueLabel().font(.system(size: 9)).foregroundStyle(RSMSTheme.Colors.textTertiary)
-                }
-            }
-            .chartYAxis {
-                AxisMarks { _ in
-                    AxisGridLine().foregroundStyle(RSMSTheme.Colors.borderLight)
-                    AxisValueLabel().font(.system(size: 10)).foregroundStyle(RSMSTheme.Colors.textTertiary)
-                }
-            }
-            .frame(height: 240)
         }
         .padding(RSMSTheme.Spacing.lg)
         .background(RSMSTheme.Colors.backgroundDeep)
@@ -353,10 +275,192 @@ struct RevenueTrendsView: View {
             .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
     }
 
-    private func legendDot(color: Color, label: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 6, height: 6)
-            Text(label).font(.system(size: 9)).foregroundStyle(RSMSTheme.Colors.textTertiary)
+    // MARK: - Chart
+
+    /// Warm copper/rose color for previous-period — matches the dark/gold theme
+    private let previousPeriodColor = Color(red: 0.76, green: 0.48, blue: 0.36)
+
+    private var chartSection: some View {
+        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
+            chartHeader
+            revenueChart
+        }
+        .padding(RSMSTheme.Spacing.lg)
+        .background(RSMSTheme.Colors.backgroundDeep)
+        .cornerRadius(RSMSTheme.Radius.lg)
+        .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+            .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
+    }
+
+    private var chartHeader: some View {
+        VStack(spacing: RSMSTheme.Spacing.sm) {
+            HStack {
+                Text("Revenue Over Time")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                Spacer()
+
+                // Compare toggle
+                HStack(spacing: 6) {
+                    Text("Compare")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                    Toggle("", isOn: $viewModel.showComparison)
+                        .tint(RSMSTheme.Colors.accentGold)
+                        .labelsHidden()
+                        .scaleEffect(0.8)
+                }
+
+                periodDropdown
+            }
+            if viewModel.showComparison {
+                HStack {
+                    Spacer()
+                    HStack(spacing: RSMSTheme.Spacing.lg) {
+                        legendItem(color: RSMSTheme.Colors.accentGold, label: "Current Period", dashed: false)
+                        legendItem(color: previousPeriodColor, label: "Previous Period", dashed: true)
+                    }
+                }
+            }
+        }
+    }
+
+    private var periodDropdown: some View {
+        Menu {
+            ForEach(RevenueTrendsViewModel.Period.allCases, id: \.self) { period in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { viewModel.selectedPeriod = period }
+                } label: {
+                    HStack {
+                        Text(period.rawValue)
+                        if viewModel.selectedPeriod == period { Image(systemName: "checkmark") }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(viewModel.selectedPeriod.rawValue)
+                    .font(.system(size: 12, weight: .semibold))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .foregroundStyle(RSMSTheme.Colors.accentGold)
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(RSMSTheme.Colors.accentGold.opacity(0.12))
+            .cornerRadius(12)
+        }
+    }
+
+    private var revenueChart: some View {
+        Chart {
+            // Current period
+            ForEach(viewModel.activeTrendData) { point in
+                AreaMark(
+                    x: .value("Period", point.label),
+                    y: .value("Revenue", point.revenue)
+                )
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [
+                            RSMSTheme.Colors.accentGold.opacity(0.3),
+                            RSMSTheme.Colors.accentGold.opacity(0.02)
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .interpolationMethod(.monotone)
+
+                LineMark(
+                    x: .value("Period", point.label),
+                    y: .value("Revenue", point.revenue)
+                )
+                .foregroundStyle(by: .value("Type", "Current Period"))
+                .lineStyle(StrokeStyle(lineWidth: 2.5))
+                .interpolationMethod(.monotone)
+
+                PointMark(
+                    x: .value("Period", point.label),
+                    y: .value("Revenue", point.revenue)
+                )
+                .foregroundStyle(trendColor(point.trend))
+                .symbolSize(40)
+            }
+
+            // Previous period overlay
+            if viewModel.showComparison {
+                ForEach(
+                    Array(
+                        viewModel.prevTrendData
+                            .prefix(viewModel.activeTrendData.count)
+                            .enumerated()
+                    ),
+                    id: \.offset
+                ) { index, point in
+                    if index < viewModel.activeTrendData.count {
+                        LineMark(
+                            x: .value("Period", viewModel.activeTrendData[index].label),
+                            y: .value("Revenue", point.revenue)
+                        )
+                        .foregroundStyle(by: .value("Type", "Previous Period"))
+                        .lineStyle(StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                        .interpolationMethod(.monotone)
+
+                        PointMark(
+                            x: .value("Period", viewModel.activeTrendData[index].label),
+                            y: .value("Revenue", point.revenue)
+                        )
+                        .foregroundStyle(previousPeriodColor.opacity(0.8))
+                        .symbolSize(24)
+                    }
+                }
+            }
+        }
+        .chartForegroundStyleScale([
+            "Current Period": RSMSTheme.Colors.accentGold,
+            "Previous Period": previousPeriodColor
+        ])
+        .chartLegend(.hidden)
+        .chartYScale(domain: .automatic(includesZero: true))
+        .chartYAxisLabel("₹")
+        .chartXAxis {
+            AxisMarks(values: .automatic) { _ in
+                AxisValueLabel()
+                    .font(.system(size: 9))
+                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
+            }
+        }
+        .chartYAxis {
+            AxisMarks { _ in
+                AxisGridLine()
+                    .foregroundStyle(RSMSTheme.Colors.borderLight)
+                AxisValueLabel()
+                    .font(.system(size: 10))
+                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
+            }
+        }
+        .frame(height: 240)
+    }
+
+    /// Legend item showing a line sample + label
+    private func legendItem(color: Color, label: String, dashed: Bool) -> some View {
+        HStack(spacing: 5) {
+            // Line sample
+            ZStack {
+                if dashed {
+                    Line()
+                        .stroke(style: StrokeStyle(lineWidth: 2, dash: [4, 3]))
+                        .foregroundStyle(color)
+                        .frame(width: 16, height: 2)
+                } else {
+                    Rectangle()
+                        .fill(color)
+                        .frame(width: 16, height: 2)
+                        .cornerRadius(1)
+                }
+            }
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(RSMSTheme.Colors.textTertiary)
         }
     }
 
@@ -426,37 +530,15 @@ struct RevenueTrendsView: View {
         }
     }
 
-    // MARK: - Comparison Toggle
-
-    private var comparisonToggle: some View {
-        HStack {
-            Image(systemName: "arrow.left.arrow.right")
-                .font(.system(size: 13))
-                .foregroundStyle(RSMSTheme.Colors.accentGold)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Compare with Previous Period")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                Text("Overlay the previous \(viewModel.rangeDays)-day period on the chart")
-                    .font(.system(size: 10))
-                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
-            }
-            Spacer()
-            Toggle("", isOn: $viewModel.showComparison)
-                .tint(RSMSTheme.Colors.accentGold)
-                .labelsHidden()
-        }
-        .padding(RSMSTheme.Spacing.lg)
-        .background(RSMSTheme.Colors.backgroundDeep)
-        .cornerRadius(RSMSTheme.Radius.md)
-        .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-            .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
-    }
+    // (comparisonToggle moved inline into filtersSection)
 
     // MARK: - Revenue Table
 
     private var revenueTable: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let data = viewModel.activeTrendData
+        let visibleData = showAllRevenueRows ? data : Array(data.prefix(5))
+
+        return VStack(alignment: .leading, spacing: 0) {
             // Header
             HStack {
                 Text("Period").frame(maxWidth: .infinity, alignment: .leading)
@@ -464,13 +546,13 @@ struct RevenueTrendsView: View {
                 Text("Orders").frame(width: 55, alignment: .trailing)
                 Text("AOV").frame(width: 65, alignment: .trailing)
             }
-            .font(.system(size: 10, weight: .bold))
-            .foregroundStyle(RSMSTheme.Colors.textTertiary)
-            .padding(.horizontal, 14).padding(.vertical, 10)
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(RSMSTheme.Colors.textSecondary)
+            .padding(.horizontal, 14).padding(.vertical, 12)
             .background(RSMSTheme.Colors.backgroundElevated)
 
             // Rows
-            ForEach(Array(viewModel.activeTrendData.enumerated()), id: \.element.id) { index, point in
+            ForEach(Array(visibleData.enumerated()), id: \.element.id) { index, point in
                 VStack(spacing: 0) {
                     HStack {
                         HStack(spacing: 6) {
@@ -499,9 +581,30 @@ struct RevenueTrendsView: View {
                     }
                     .padding(.horizontal, 14).padding(.vertical, 10)
 
-                    if index < viewModel.activeTrendData.count - 1 {
+                    if index < visibleData.count - 1 {
                         Divider().background(Color.white.opacity(0.05)).padding(.leading, 14)
                     }
+                }
+            }
+
+            // See More / See Less
+            if data.count > 5 {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showAllRevenueRows.toggle()
+                    }
+                } label: {
+                    HStack {
+                        Spacer()
+                        Text(showAllRevenueRows ? "Show Less" : "See More (\(data.count - 5) more)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        Image(systemName: showAllRevenueRows ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        Spacer()
+                    }
+                    .padding(.vertical, 12)
                 }
             }
         }
@@ -511,59 +614,59 @@ struct RevenueTrendsView: View {
             .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
     }
 
-    // MARK: - Date Picker Sheet
+    // MARK: - Inline Date Pickers
 
-    private var datePickerSheet: some View {
-        NavigationStack {
-            ZStack {
-                RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-
-                VStack(spacing: RSMSTheme.Spacing.xl) {
-                    VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-                        Text("START DATE")
-                            .font(.system(size: 11, weight: .semibold)).tracking(1)
-                            .foregroundStyle(RSMSTheme.Colors.accentGold)
-                        DatePicker("", selection: $viewModel.startDate, displayedComponents: .date)
-                            .datePickerStyle(.compact)
-                            .tint(RSMSTheme.Colors.accentGold)
-                            .colorScheme(.dark)
-                    }
-
-                    VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-                        Text("END DATE")
-                            .font(.system(size: 11, weight: .semibold)).tracking(1)
-                            .foregroundStyle(RSMSTheme.Colors.accentGold)
-                        DatePicker("", selection: $viewModel.endDate,
-                                   in: viewModel.startDate..., displayedComponents: .date)
-                            .datePickerStyle(.compact)
-                            .tint(RSMSTheme.Colors.accentGold)
-                            .colorScheme(.dark)
-                    }
-
-                    Spacer()
-
-                    Button {
-                        showDatePicker = false
-                        Task { await viewModel.fetchRevenue() }
-                    } label: {
-                        Text("Apply Date Range")
-                    }
-                    .buttonStyle(GoldButtonStyle())
-                }
-                .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-                .padding(.top, RSMSTheme.Spacing.xl)
-            }
-            .navigationTitle("Select Date Range")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { showDatePicker = false }
+    private var inlineDatePickers: some View {
+        VStack(spacing: RSMSTheme.Spacing.md) {
+            HStack(spacing: RSMSTheme.Spacing.md) {
+                // Start date
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("FROM")
+                        .font(.system(size: 9, weight: .bold)).tracking(1)
                         .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    DatePicker("", selection: $viewModel.startDate, displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                        .tint(RSMSTheme.Colors.accentGold)
+                        .colorScheme(.dark)
+                        .labelsHidden()
+                }
+
+                // End date (max 30 days from start)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("TO (max 30 days)")
+                        .font(.system(size: 9, weight: .bold)).tracking(1)
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    let maxEnd = Calendar.current.date(byAdding: .day, value: 30, to: viewModel.startDate) ?? viewModel.startDate
+                    DatePicker("", selection: $viewModel.endDate,
+                               in: viewModel.startDate...maxEnd, displayedComponents: .date)
+                        .datePickerStyle(.compact)
+                        .tint(RSMSTheme.Colors.accentGold)
+                        .colorScheme(.dark)
+                        .labelsHidden()
+                }
+
+                Spacer()
+
+                // Apply button
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showDatePicker = false
+                    }
+                    Task { await viewModel.fetchRevenue() }
+                } label: {
+                    Text("Apply")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 16).padding(.vertical, 8)
+                        .background(RSMSTheme.Colors.accentGold)
+                        .cornerRadius(16)
                 }
             }
         }
+        .padding(RSMSTheme.Spacing.md)
+        .background(RSMSTheme.Colors.backgroundElevated)
+        .cornerRadius(RSMSTheme.Radius.md)
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     // MARK: - Helpers
@@ -613,6 +716,17 @@ struct ShareSheet: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+// MARK: - Line Shape (for legend dashed line indicator)
+
+private struct Line: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        return path
+    }
 }
 
 // MARK: - Preview

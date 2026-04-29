@@ -209,10 +209,36 @@ final class BMInventoryViewModel: ObservableObject {
             DispatchQueue.main.async {
                 self.incomingRequests.removeAll { $0.id == request.id }
             }
+            
+            // Refresh stock alerts to reflect the change
+            await loadAlerts(forStore: request.fulfillingStoreId)
         } catch {
             if error is CancellationError { return }
             self.transferError = error.localizedDescription
             print("❌ [BMInventoryVM] Fulfillment failed: \(error)")
+        }
+        isTransferring = false
+    }
+
+    // MARK: - Reject Transfer Request
+
+    func rejectRequest(
+        _ request: TransferRequest,
+        currentStoreName: String
+    ) async {
+        isTransferring = true
+        transferError = nil
+        do {
+            try await LowStockService.shared.rejectTransferRequest(
+                request,
+                rejectingStoreName: currentStoreName
+            )
+            // Instantly remove from incoming list so it disappears from this manager's view
+            self.incomingRequests.removeAll { $0.id == request.id }
+        } catch {
+            if error is CancellationError { return }
+            self.transferError = "Failed to reject request: \(error.localizedDescription)"
+            print("❌ [BMInventoryVM] Reject failed: \(error)")
         }
         isTransferring = false
     }

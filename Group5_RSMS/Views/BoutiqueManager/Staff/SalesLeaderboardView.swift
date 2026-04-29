@@ -35,14 +35,15 @@ struct SalesLeaderboardView: View {
 
     // ✅ Removed dummySales entirely
 
-    /// Returns real sales from dashVM (Supabase) if available, else falls back to StaffViewModel live sales
-    private func displaySales(for employee: Employee) -> Double {
+    /// Returns real commission from dashVM if range is This Month, else returns sales.
+    private func displayValue(for employee: Employee) -> Double {
         // Try real Supabase data from BMDashboardViewModel first
         if let entry = dashVM.staffPerformance.first(where: { $0.id == employee.id }) {
             // Use range-appropriate value
             switch selectedRange {
             case .thisMonth:
-                return entry.thisMonthSales > 0 ? entry.thisMonthSales : entry.totalSales
+                // Show Potential Commission for the simulation
+                return entry.potentialCommission
             case .thisWeek, .last3, .allTime:
                 return entry.totalSales
             }
@@ -52,11 +53,11 @@ struct SalesLeaderboardView: View {
     }
 
     private var sortedEmployees: [Employee] {
-        staffVM.employees.sorted { displaySales(for: $0) > displaySales(for: $1) }
+        staffVM.employees.sorted { displayValue(for: $0) > displayValue(for: $1) }
     }
 
-    private var maxDisplaySales: Double {
-        sortedEmployees.map { displaySales(for: $0) }.max() ?? 1
+    private var maxDisplayValue: Double {
+        sortedEmployees.map { displayValue(for: $0) }.max() ?? 1
     }
 
     var body: some View {
@@ -77,10 +78,12 @@ struct SalesLeaderboardView: View {
             }
         }
         .sheet(isPresented: $showRangePicker) { rangePicker }
-        .task {
-            async let empFetch: () = staffVM.fetchEmployees(boutiqueId: boutiqueId)
-            async let salesFetch: () = dashVM.loadStaffPerformance(boutiqueId: boutiqueId)
-            _ = await (empFetch, salesFetch)
+        .onAppear {
+            Task {
+                async let empFetch: () = staffVM.fetchEmployees(boutiqueId: boutiqueId)
+                async let salesFetch: () = dashVM.loadStaffPerformance(boutiqueId: boutiqueId)
+                _ = await (empFetch, salesFetch)
+            }
         }
         .onChange(of: selectedRange) { _, _ in
             Task {
@@ -96,16 +99,10 @@ struct SalesLeaderboardView: View {
         ScrollView {
             VStack(spacing: 16) {
                 HStack {
-                    Text(selectedRange.rawValue)
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(RSMSTheme.Colors.accentGold.opacity(0.12))
-                        .cornerRadius(8)
-                    Text("· \(staffVM.employees.count) staff members")
+                    Text("\(staffVM.employees.count) staff members tracked")
                         .font(.caption)
                         .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        .padding(.leading, 2)
                     Spacer()
                 }
                 .padding(.horizontal, 16)
@@ -113,22 +110,30 @@ struct SalesLeaderboardView: View {
 
                 // ✅ Always reserve space for banner, fade it in
                 if sortedEmployees.count >= 1 {
-                    topPerformerBanner
-                        .padding(.horizontal, 16)
-                        .transition(.opacity)  // ✅ fade instead of layout jump
+                    NavigationLink(destination:
+                        EmployeeSalesDetailView(employee: sortedEmployees[0], boutiqueId: boutiqueId)
+                    ) {
+                        topPerformerBanner
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .transition(.opacity)  // ✅ fade instead of layout jump
                 }
 
                 LazyVStack(spacing: 10) {
-                    ForEach(Array(sortedEmployees.enumerated()), id: \.element.id) { index, emp in
+                    ForEach(Array(sortedEmployees.dropFirst().enumerated()), id: \.element.id) { index, emp in
                         NavigationLink(destination:
                             EmployeeSalesDetailView(employee: emp, boutiqueId: boutiqueId)
                         ) {
-                            LeaderboardRow(
-                                rank: index + 1,
-                                employee: emp,
-                                sales: displaySales(for: emp),
-                                maxSales: maxDisplaySales
-                            )
+                        let entry = dashVM.staffPerformance.first(where: { $0.id == emp.id })
+                        LeaderboardRow(
+                            rank: index + 2,
+                            employee: emp,
+                            value: displayValue(for: emp),
+                            maxValue: maxDisplayValue,
+                            isCommission: selectedRange == .thisMonth,
+                            commissionRate: entry?.commissionRate ?? 0
+                        )
                         }
                         .transition(.opacity)  // ✅ rows fade in, no jump
                     }
@@ -142,7 +147,7 @@ struct SalesLeaderboardView: View {
 
     private var topPerformerBanner: some View {
         let top = sortedEmployees[0]
-        let sales = displaySales(for: top)
+        let value = displayValue(for: top)
         return HStack(spacing: 14) {
             ZStack(alignment: .topTrailing) {
                 Circle()
@@ -166,18 +171,26 @@ struct SalesLeaderboardView: View {
                 Text(top.name)
                     .font(.headline)
                     .foregroundColor(RSMSTheme.Colors.textPrimary)
-                Text(top.role)
-                    .font(.caption)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                
+                let entry = dashVM.staffPerformance.first(where: { $0.id == top.id })
+                if selectedRange == .thisMonth, let rate = entry?.commissionRate {
+                    Text("\(top.role) · \(Int(rate))% rate")
+                        .font(.caption)
+                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                } else {
+                    Text(top.role)
+                        .font(.caption)
+                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                }
             }
 
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text("₹\(Int(sales).formatted())")
+                Text("₹\(formatValue(value))")
                     .font(.title3.weight(.bold))
                     .foregroundColor(RSMSTheme.Colors.accentGold)
-                Text("in sales")
+                Text(selectedRange == .thisMonth ? "est. commission" : "in sales")
                     .font(.caption2)
                     .foregroundColor(RSMSTheme.Colors.textSecondary)
             }
@@ -228,13 +241,29 @@ struct SalesLeaderboardView: View {
             await staffVM.fetchSalesPerEmployee(boutiqueId: boutiqueId)
         }
     }
+
+    private func formatValue(_ v: Double) -> String {
+        if v >= 10_000_000 { return String(format: "%.2fCr", v / 10_000_000) }
+        if v >= 100_000    { return String(format: "%.2fL", v / 100_000) }
+        if v >= 1_000      { return String(format: "%.1fK", v / 1_000) }
+        return String(format: "%.0f", v)
+    }
 }
 
 struct LeaderboardRow: View {
     let rank: Int
     let employee: Employee
-    let sales: Double
-    let maxSales: Double
+    let value: Double
+    let maxValue: Double
+    let isCommission: Bool
+    let commissionRate: Double
+
+    private func formatValue(_ v: Double) -> String {
+        if v >= 10_000_000 { return String(format: "%.2fCr", v / 10_000_000) }
+        if v >= 100_000    { return String(format: "%.2fL", v / 100_000) }
+        if v >= 1_000      { return String(format: "%.1fK", v / 1_000) }
+        return String(format: "%.0f", v)
+    }
 
     private var rankColor: Color {
         switch rank {
@@ -266,18 +295,34 @@ struct LeaderboardRow: View {
                 Text(employee.name)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(RSMSTheme.Colors.textPrimary)
-                Text(employee.role)
-                    .font(.caption)
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                
+                HStack(spacing: 4) {
+                    Text(employee.role)
+                        .font(.caption)
+                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                    
+                    if isCommission && commissionRate > 0 {
+                        Text("·")
+                            .font(.caption)
+                            .foregroundColor(RSMSTheme.Colors.textTertiary)
+                        Text("\(Int(commissionRate))% rate")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(RSMSTheme.Colors.accentGold)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(RSMSTheme.Colors.accentGold.opacity(0.1))
+                            .cornerRadius(4)
+                    }
+                }
             }
 
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text("₹\(Int(sales).formatted())")
+                Text("₹\(formatValue(value))")
                     .font(.subheadline.weight(.bold))
                     .foregroundColor(rank == 1 ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.textPrimary)
-                Text("sales")
+                Text(isCommission ? "est. commission" : "sales")
                     .font(.caption2)
                     .foregroundColor(RSMSTheme.Colors.textSecondary)
             }

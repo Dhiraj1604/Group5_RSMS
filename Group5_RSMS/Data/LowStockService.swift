@@ -126,6 +126,7 @@ final class LowStockService {
     }
     
     /// Fetches all requests initiated by the currentStore (Outbound/My Requests).
+    /// Includes all statuses (pending, fulfilled, rejected) so the manager can see the outcome.
     func fetchMyRequests(forStore storeId: UUID) async throws -> [TransferRequest] {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -143,6 +144,7 @@ final class LowStockService {
             .from("transfer_requests")
             .select("*, products(*), requesting_store:requesting_store_id(*), fulfilling_store:fulfilling_store_id(*)")
             .eq("requesting_store_id", value: storeId)
+            // .neq("status", value: "rejected") // Remove this to allow manager to see rejected status
             .order("created_at", ascending: false)
             .execute()
             .value
@@ -163,6 +165,58 @@ final class LowStockService {
             .value
             
         return record.first?.stock_quantity ?? 0
+    }
+
+    // MARK: - Reject Transfer Request
+
+    /// Marks the request as 'rejected' in the DB without touching inventory.
+    /// Writes an audit log so the requesting manager is notified via the audit trail.
+    func rejectTransferRequest(
+        _ request: TransferRequest,
+        rejectingStoreName: String
+    ) async throws {
+        // 1. Update status
+        try await client
+            .from("transfer_requests")
+            .update(["status": "rejected"])
+            .eq("id", value: request.id)
+            .execute()
+
+        // 2. Audit log — the requesting store's manager can see this
+        struct AuditPayload: Encodable {
+            let action: String
+            let event_type: String
+            let user_name: String
+            let entity: String
+            let before_data: [String: String]?
+            let after_data: [String: String]?
+        }
+
+        let audit = AuditPayload(
+            action: "TRANSFER_REQUEST_REJECTED",
+            event_type: "inventory_transfer",
+            user_name: rejectingStoreName,
+            entity: "TransferRequest",
+            before_data: [
+                "request_id": request.id.uuidString,
+                "product": request.productName,
+                "requesting_store": request.requestingStoreName,
+                "status": "pending"
+            ],
+            after_data: [
+                "status": "rejected",
+                "rejected_by": rejectingStoreName,
+                "product": request.productName,
+                "quantity_requested": "\(request.quantity)"
+            ]
+        )
+
+        try await client
+            .from("audit_logs")
+            .insert(audit)
+            .execute()
+
+        print("❌ [LowStockService] Request rejected: \(request.productName) — rejected by \(rejectingStoreName)")
     }
 
     // MARK: - Execute Inter-Store Transfer

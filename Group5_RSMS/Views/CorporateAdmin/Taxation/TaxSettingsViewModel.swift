@@ -22,15 +22,25 @@ final class TaxSettingsViewModel: ObservableObject {
     // MARK: - Published
     @Published var taxRules: [TaxRule] = []
     @Published var activeRuleId: UUID?
-    @Published var availableStores: [Store] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
     @Published var selectedFilter: TaxFilter = .all
 
-    enum TaxFilter: String, CaseIterable {
-        case all = "All"
-        case inclusive = "Inclusive"
-        case exclusive = "Exclusive"
+//     enum TaxFilter: String, CaseIterable {
+//         case all = "All"
+//         case inclusive = "Inclusive"
+//         case exclusive = "Exclusive"
+    
+    enum TaxFilter: Equatable, Hashable {
+        case all
+        case category(ProductCategory)
+        
+        var displayName: String {
+            switch self {
+            case .all: return "All"
+            case .category(let cat): return cat.rawValue
+            }
+        }
     }
 
     var activeRule: TaxRule? {
@@ -40,19 +50,26 @@ final class TaxSettingsViewModel: ObservableObject {
 
     var filteredRules: [TaxRule] {
         switch selectedFilter {
-        case .all: return taxRules
-        case .inclusive: return taxRules.filter { $0.isInclusive }
-        case .exclusive: return taxRules.filter { !$0.isInclusive }
+//         case .all: return taxRules
+//         case .inclusive: return taxRules.filter { $0.isInclusive }
+//         case .exclusive: return taxRules.filter { !$0.isInclusive }
+//         }
+//     }
+
+//     init() {}
+
+//     // MARK: - AppState integration
+
+//     func fetchAvailableStores(from appState: AppState) {
+//         availableStores = appState.stores
+        case .all:
+            return taxRules
+        case .category(let category):
+            return taxRules.filter { $0.category == category }
         }
     }
 
     init() {}
-
-    // MARK: - AppState integration
-
-    func fetchAvailableStores(from appState: AppState) {
-        availableStores = appState.stores
-    }
 
     // MARK: - Fetch
 
@@ -67,7 +84,7 @@ final class TaxSettingsViewModel: ObservableObject {
             notifyScannerOfChange()
         } catch {
             print("❌ fetchTaxRules: \(error)")
-            self.errorMessage = "Failed to load tax rules: \(error.localizedDescription)"
+            self.errorMessage = "Failed to load additional tax rules: \(error.localizedDescription)"
         }
         isLoading = false
     }
@@ -92,15 +109,14 @@ final class TaxSettingsViewModel: ObservableObject {
 
             await fetchTaxRules()
 
-            // ── Task #8 — Audit log ─────────────────────────────────
             ActivityLogService.shared.log(
                 action: isNew ? .created : .updated,
                 entity: .tax,
                 entityName: saved.name,
                 entityId: saved.id.uuidString,
                 details: isNew
-                    ? "Tax rule '\(saved.name)' created at \(String(format: "%.1f", saved.rate * 100))%."
-                    : "Tax rule '\(saved.name)' updated.",
+                    ? "Additional tax rule '\(saved.name)' for \(saved.category.rawValue) created at \(String(format: "%.1f", saved.rate * 100))%."
+                    : "Additional tax rule '\(saved.name)' updated.",
                 before: previousRule,
                 after: saved
             )
@@ -109,10 +125,7 @@ final class TaxSettingsViewModel: ObservableObject {
             return true
         } catch {
             print("❌ saveRule: \(error)")
-            let msg = error.localizedDescription
-            self.errorMessage = msg.contains("duplicate key") || msg.contains("tax_rules_store_id_name_key")
-                ? "A rule with this name already exists for this location."
-                : "Failed to save tax rule: \(msg)"
+            self.errorMessage = "Failed to save additional tax rule: \(error.localizedDescription)"
             isLoading = false
             return false
         }
@@ -129,13 +142,12 @@ final class TaxSettingsViewModel: ObservableObject {
 
             await fetchTaxRules()
 
-            // ── Task #8 — Audit log ─────────────────────────────────
             ActivityLogService.shared.log(
                 action: .deleted,
                 entity: .tax,
                 entityName: rule.name,
                 entityId: rule.id.uuidString,
-                details: "Tax rule '\(rule.name)' deleted.",
+                details: "Additional tax rule '\(rule.name)' deleted.",
                 before: rule,
                 after: nil as String?
             )
@@ -160,14 +172,6 @@ final class TaxSettingsViewModel: ObservableObject {
             object: nil,
             userInfo: ["rule": activeRule as Any]
         )
-    }
-
-    func store(for storeId: UUID) -> Store? {
-        availableStores.first(where: { $0.id == storeId })
-    }
-
-    func storeName(for storeId: UUID) -> String {
-        store(for: storeId)?.name ?? "Unknown Boutique"
     }
 }
 
