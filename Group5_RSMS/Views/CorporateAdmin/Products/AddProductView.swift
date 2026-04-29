@@ -71,12 +71,8 @@ struct AddProductView: View {
                         imageUploaderHeader
                         
                         coreInfoSection
-                        pricingSection
-                        statusSection
                         craftsmanshipSection
                         heritageSection
-                        
-//                        saveButton
                         
                         Spacer().frame(height: RSMSTheme.Spacing.xxl)
                     }
@@ -207,10 +203,16 @@ struct AddProductView: View {
 
     private var coreInfoSection: some View {
         formSection(title: "Product Information") {
-            formField(label: "SKU", placeholder: "e.g. JWL-RNG-001", text: $sku, icon: "barcode", required: true)
-                .textInputAutocapitalization(.characters)
+            HStack(spacing: RSMSTheme.Spacing.md) {
+                formField(label: "SKU", placeholder: "e.g. JWL-001", text: $sku, icon: "barcode", required: true)
+                    .textInputAutocapitalization(.characters)
+                formField(label: "Price (₹)", placeholder: "485000", text: $basePriceInput, icon: "indianrupeesign.circle", required: true)
+                    .keyboardType(.decimalPad)
+            }
             formField(label: "Product Name", placeholder: "e.g. Maharaja Diamond Ring", text: $name, icon: "tag", required: true)
             categoryPicker
+            Divider().background(RSMSTheme.Colors.borderLight).padding(.vertical, 4)
+            toggleRow(icon: "globe", label: "Globally Listed", sublabel: "Visible across all boutiques", isOn: $isGloballyListed, color: RSMSTheme.Colors.accentGold)
         }
     }
 
@@ -240,23 +242,12 @@ struct AddProductView: View {
         }
     }
 
-    private var pricingSection: some View {
-        formSection(title: "Pricing") {
-            formField(label: "Retail Price (₹ INR)", placeholder: "e.g. 485000", text: $basePriceInput, icon: "indianrupeesign.circle", required: true)
-                .keyboardType(.decimalPad)
-        }
-    }
-
-    private var statusSection: some View {
-        formSection(title: "Visibility & Status") {
-            toggleRow(icon: "globe", label: "Globally Listed", sublabel: "Visible across all boutiques", isOn: $isGloballyListed, color: RSMSTheme.Colors.accentGold)
-        }
-    }
-
     private var craftsmanshipSection: some View {
         formSection(title: "Materials & Craftsmanship") {
-            formField(label: "Materials", placeholder: "e.g. 18K Yellow Gold", text: $material, icon: "atom", required: true)
-            formField(label: "Country of Origin", placeholder: "e.g. India", text: $originCountry, icon: "globe.europe.africa", required: true)
+            HStack(spacing: RSMSTheme.Spacing.md) {
+                formField(label: "Materials", placeholder: "18K Gold", text: $material, icon: "atom", required: true)
+                formField(label: "Origin", placeholder: "India", text: $originCountry, icon: "globe.europe.africa", required: true)
+            }
             craftsmanshipPicker
             notesField(label: "Craftsmanship Notes", placeholder: "Artisan techniques...", text: $craftsmanshipNotes)
         }
@@ -285,8 +276,10 @@ struct AddProductView: View {
 
     private var heritageSection: some View {
         formSection(title: "Heritage & Provenance") {
-            formField(label: "Collection Name", placeholder: "Collection Name", text: $collectionName, icon: "crown.fill", required: true)
-            formField(label: "Artisan Studio", placeholder: "Atelier location", text: $artisanStudio, icon: "paintpalette.fill", required: true)
+            HStack(spacing: RSMSTheme.Spacing.md) {
+                formField(label: "Collection", placeholder: "Collection Name", text: $collectionName, icon: "crown.fill", required: true)
+                formField(label: "Studio", placeholder: "Atelier", text: $artisanStudio, icon: "paintpalette.fill", required: true)
+            }
         }
     }
 
