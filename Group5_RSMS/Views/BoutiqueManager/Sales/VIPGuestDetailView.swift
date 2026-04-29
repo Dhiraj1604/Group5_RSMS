@@ -84,14 +84,14 @@ struct VIPGuestDetailView: View {
                     .font(.title2).fontWeight(.bold)
                     .foregroundStyle(RSMSTheme.Colors.textPrimary)
                 
-                HStack {
-                    Image(systemName: guest.tierIcon)
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
-                        .font(.caption)
-                    Text("\(guest.tier.capitalized) VIP")
-                        .font(.subheadline).fontWeight(.semibold)
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
-                }
+//                HStack {
+//                    Image(systemName: guest.tierIcon)
+//                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+//                        .font(.caption)
+//                    Text("\(guest.tier.capitalized) VIP")
+//                        .font(.subheadline).fontWeight(.semibold)
+//                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+//                }
                 
                 if let email = guest.email {
                     Text(email)
