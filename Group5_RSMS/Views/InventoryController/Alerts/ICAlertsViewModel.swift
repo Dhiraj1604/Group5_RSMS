@@ -50,8 +50,10 @@ final class ICAlertsViewModel: ObservableObject {
                 self.alerts = try await LowStockService.shared.fetchAllLowStockAlerts()
             }
         } catch {
-            self.errorMessage = "Failed to load alerts: \(error.localizedDescription)"
-            print("❌ [ICAlertsVM] \(error)")
+            if !(error is CancellationError) {
+                self.errorMessage = "Failed to load alerts: \(error.localizedDescription)"
+                print("❌ [ICAlertsVM] \(error)")
+            }
         }
         isLoading = false
     }

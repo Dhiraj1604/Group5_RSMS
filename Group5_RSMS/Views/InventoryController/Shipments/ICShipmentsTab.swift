@@ -200,7 +200,9 @@ struct ICShipmentsTab: View {
                 
                 self.orders = try await shipmentService.fetchShipments(for: selectedTab, storeId: appState.currentStoreID, fromDate: fDate, toDate: tDate)
             } catch {
-                self.fetchError = error.localizedDescription
+                if !(error is CancellationError) {
+                    self.fetchError = error.localizedDescription
+                }
             }
             isLoading = false
         }

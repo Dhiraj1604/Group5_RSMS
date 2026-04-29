@@ -82,7 +82,9 @@ struct ICReportsTab: View {
             self.varianceData = variance
             self.heatmapData = heatmap
         } catch {
-            self.fetchError = error.localizedDescription
+            if !(error is CancellationError) {
+                self.fetchError = error.localizedDescription
+            }
         }
         isLoading = false
     }
@@ -166,11 +168,16 @@ struct ICReportsTab: View {
                         )
                     }
                     if varianceData.count > 5 {
-                        Text("Showing 5 of \(varianceData.count) records")
-                            .font(.system(size: 12))
-                            .foregroundColor(RSMSTheme.Colors.textTertiary)
+                        NavigationLink(destination: VarianceReportListView(varianceData: varianceData)) {
+                            HStack(spacing: 4) {
+                                Text("See All \(varianceData.count) Records")
+                                Image(systemName: "chevron.right")
+                            }
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(RSMSTheme.Colors.accentGold)
                             .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, 8)
+                            .padding(.top, 12)
+                        }
                     }
                 }
             }
