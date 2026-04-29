@@ -257,8 +257,8 @@ struct GuestInviteRow: View {
 
     private var rsvpColor: Color {
         switch invite.rsvpStatus {
-        case "confirmed", "attended": return .green
-        case "declined", "no_show":   return .red
+        case "confirmed": return .green
+        case "declined":   return .red
         default:                       return RSMSTheme.Colors.accentGold
         }
     }
