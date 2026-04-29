@@ -5,7 +5,7 @@ import PostgREST
 struct ProductsTab: View {
     @Environment(AppState.self) private var appState
     @State private var searchText = ""
-    @State private var selectedCategory: ProductCategory? = nil
+    @State private var selectedCategories: Set<ProductCategory> = []   // empty = All
     @State private var filterActive: Bool? = nil
     @State private var showAddProduct = false
     
@@ -21,7 +21,7 @@ struct ProductsTab: View {
     
     private var filteredProducts: [Product] {
         var list = appState.products
-        if let cat = selectedCategory { list = list.filter { $0.category == cat } }
+        if !selectedCategories.isEmpty { list = list.filter { selectedCategories.contains($0.category) } }
         if let active = filterActive { list = list.filter { $0.isActive == active } }
         if !searchText.isEmpty {
             list = list.filter {
@@ -66,18 +66,10 @@ struct ProductsTab: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 20) {
-                        Button { Task { await appState.fetchProducts() } } label: {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.headline)
-                                .foregroundStyle(RSMSTheme.Colors.accentGold)
-                        }
-                        
-                        Button { showAddProduct = true } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title3)
-                                .foregroundStyle(RSMSTheme.Colors.accentGold)
-                        }
+                    Button { showAddProduct = true } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
                     }
                 }
             }
@@ -101,14 +93,21 @@ struct ProductsTab: View {
         }
     }
     
-    // MARK: - Category Filter Row
+    // MARK: - Category Filter Row (multi-select)
     private var categoryFilterRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                filterChip(label: "All", isSelected: selectedCategory == nil) { selectedCategory = nil }
+                // "All" pill — clears selection
+                filterChip(label: "All", isSelected: selectedCategories.isEmpty) {
+                    selectedCategories.removeAll()
+                }
                 ForEach(ProductCategory.allCases) { cat in
-                    filterChip(label: cat.rawValue, isSelected: selectedCategory == cat) {
-                        selectedCategory = (selectedCategory == cat) ? nil : cat
+                    filterChip(label: cat.rawValue, isSelected: selectedCategories.contains(cat)) {
+                        if selectedCategories.contains(cat) {
+                            selectedCategories.remove(cat)
+                        } else {
+                            selectedCategories.insert(cat)
+                        }
                     }
                 }
             }

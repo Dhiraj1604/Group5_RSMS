@@ -19,25 +19,39 @@ struct BasketTrendsView: View {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
             if viewModel.isLoading && viewModel.activeTrendData.isEmpty {
+                // First-load spinner — show before any data arrives
                 loadingView
-            } else if viewModel.activeTrendData.isEmpty {
-                emptyState
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: RSMSTheme.Spacing.lg) {
-                        filtersSection
-                        summaryCards
-                        chartSection
-                        trendTable
+                        if viewModel.activeTrendData.isEmpty {
+                            filtersSection
+                            inlineEmptyState
+                        } else {
+                            ViewThatFits {
+                                HStack(alignment: .top, spacing: RSMSTheme.Spacing.lg) {
+                                    filtersSection.frame(maxWidth: .infinity)
+                                    summaryCards.frame(maxWidth: .infinity)
+                                }
+                                VStack(spacing: RSMSTheme.Spacing.lg) {
+                                    filtersSection
+                                    summaryCards
+                                }
+                            }
+                            chartSection
+                            trendTable
+                        }
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                     .padding(.top, RSMSTheme.Spacing.md)
                     .padding(.bottom, 100)
+                    .frame(maxWidth: 1000)
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
         .navigationTitle("Basket Trends")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .task { await viewModel.fetchTrends() }
@@ -68,6 +82,29 @@ struct BasketTrendsView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, RSMSTheme.Spacing.xxl)
+    }
+
+    /// Inline placeholder shown below filters when selected store/category has no data.
+    private var inlineEmptyState: some View {
+        VStack(spacing: RSMSTheme.Spacing.md) {
+            Image(systemName: "basket")
+                .font(.system(size: 40))
+                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.25))
+            Text("No Basket Data")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(RSMSTheme.Colors.textPrimary)
+            Text("No transactions found for the selected store or category.\nTry switching the store or selecting a different category.")
+                .font(.system(size: 13))
+                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, RSMSTheme.Spacing.xxxl)
+        .padding(.horizontal, RSMSTheme.Spacing.xl)
+        .background(RSMSTheme.Colors.backgroundDeep)
+        .cornerRadius(RSMSTheme.Radius.lg)
+        .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+            .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
     }
 
     // MARK: - Summary Cards
@@ -397,9 +434,10 @@ struct BasketTrendsView: View {
             // See More / See Less
             if data.count > 5 {
                 Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        showAllBasketRows.toggle()
-                    }
+                    withAnimation(.easeInOut(duration: 0.25)) { showAllBasketRows.toggle() }
+//                     withAnimation(.easeInOut(duration: 0.25)) {
+//                         showAllBasketRows.toggle()
+//                     }
                 } label: {
                     HStack {
                         Spacer()
