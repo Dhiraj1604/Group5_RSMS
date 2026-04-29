@@ -12,31 +12,46 @@ import Charts
 struct BasketTrendsView: View {
     @Environment(AppState.self) private var appState
     @StateObject private var viewModel = BasketTrendsViewModel()
+    @State private var showAllBasketRows = false
 
     var body: some View {
         ZStack {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
             if viewModel.isLoading && viewModel.activeTrendData.isEmpty {
+                // First-load spinner — show before any data arrives
                 loadingView
-            } else if viewModel.activeTrendData.isEmpty {
-                emptyState
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: RSMSTheme.Spacing.lg) {
-                        filtersSection
-                        summaryCards
-                        chartSection
-                        trendTable
+                        if viewModel.activeTrendData.isEmpty {
+                            filtersSection
+                            inlineEmptyState
+                        } else {
+                            ViewThatFits {
+                                HStack(alignment: .top, spacing: RSMSTheme.Spacing.lg) {
+                                    filtersSection.frame(maxWidth: .infinity)
+                                    summaryCards.frame(maxWidth: .infinity)
+                                }
+                                VStack(spacing: RSMSTheme.Spacing.lg) {
+                                    filtersSection
+                                    summaryCards
+                                }
+                            }
+                            chartSection
+                            trendTable
+                        }
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                     .padding(.top, RSMSTheme.Spacing.md)
                     .padding(.bottom, 100)
+                    .frame(maxWidth: 1000)
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
         .navigationTitle("Basket Trends")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .task { await viewModel.fetchTrends() }
@@ -67,6 +82,29 @@ struct BasketTrendsView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, RSMSTheme.Spacing.xxl)
+    }
+
+    /// Inline placeholder shown below filters when selected store/category has no data.
+    private var inlineEmptyState: some View {
+        VStack(spacing: RSMSTheme.Spacing.md) {
+            Image(systemName: "basket")
+                .font(.system(size: 40))
+                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.25))
+            Text("No Basket Data")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(RSMSTheme.Colors.textPrimary)
+            Text("No transactions found for the selected store or category.\nTry switching the store or selecting a different category.")
+                .font(.system(size: 13))
+                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, RSMSTheme.Spacing.xxxl)
+        .padding(.horizontal, RSMSTheme.Spacing.xl)
+        .background(RSMSTheme.Colors.backgroundDeep)
+        .cornerRadius(RSMSTheme.Radius.lg)
+        .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+            .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
     }
 
     // MARK: - Summary Cards
@@ -333,7 +371,10 @@ struct BasketTrendsView: View {
 
     // MARK: - Trend Table
     private var trendTable: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let data = viewModel.activeTrendData
+        let visibleData = showAllBasketRows ? data : Array(data.prefix(5))
+
+        return VStack(alignment: .leading, spacing: 0) {
             // Header
             HStack {
                 Text("Period")
@@ -345,14 +386,14 @@ struct BasketTrendsView: View {
                 Text("Txns")
                     .frame(width: 45, alignment: .trailing)
             }
-            .font(.system(size: 10, weight: .bold))
-            .foregroundStyle(RSMSTheme.Colors.textTertiary)
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(RSMSTheme.Colors.textSecondary)
             .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.vertical, 12)
             .background(RSMSTheme.Colors.backgroundElevated)
 
             // Rows
-            ForEach(Array(viewModel.activeTrendData.enumerated()), id: \.element.id) { index, point in
+            ForEach(Array(visibleData.enumerated()), id: \.element.id) { index, point in
                 VStack(spacing: 0) {
                     HStack {
                         HStack(spacing: 6) {
@@ -384,9 +425,28 @@ struct BasketTrendsView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
 
-                    if index < viewModel.activeTrendData.count - 1 {
+                    if index < visibleData.count - 1 {
                         Divider().background(Color.white.opacity(0.05)).padding(.leading, 14)
                     }
+                }
+            }
+
+            // See More / See Less
+            if data.count > 5 {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) { showAllBasketRows.toggle() }
+                } label: {
+                    HStack {
+                        Spacer()
+                        Text(showAllBasketRows ? "Show Less" : "See More (\(data.count - 5) more)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        Image(systemName: showAllBasketRows ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        Spacer()
+                    }
+                    .padding(.vertical, 12)
                 }
             }
         }

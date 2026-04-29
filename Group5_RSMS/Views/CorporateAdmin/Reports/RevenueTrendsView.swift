@@ -16,40 +16,61 @@ struct RevenueTrendsView: View {
     @StateObject private var viewModel = RevenueTrendsViewModel()
 
     @State private var showDatePicker = false
-    @State private var showExportSheet = false
-    @State private var exportURL: URL?
-    @State private var showExportOptions = false
+    @State private var showAllRevenueRows = false
 
     var body: some View {
         ZStack {
             RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
             if viewModel.isLoading && viewModel.activeTrendData.isEmpty {
+                // First-load spinner — show before any data arrives
                 loadingView
-            } else if viewModel.activeTrendData.isEmpty {
-                emptyState
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: RSMSTheme.Spacing.lg) {
-                        filtersSection
-                        summaryCards
-                        chartSection
-                        revenueTable
+                        if viewModel.activeTrendData.isEmpty {
+                            filtersSection
+                            inlineEmptyState
+                        } else {
+                            ViewThatFits {
+                                HStack(alignment: .top, spacing: RSMSTheme.Spacing.lg) {
+                                    filtersSection.frame(maxWidth: .infinity)
+                                    summaryCards.frame(maxWidth: .infinity)
+                                }
+                                VStack(spacing: RSMSTheme.Spacing.lg) {
+                                    filtersSection
+                                    summaryCards
+                                }
+                            }
+                            chartSection
+                            revenueTable
+                        }
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
                     .padding(.top, RSMSTheme.Spacing.md)
                     .padding(.bottom, 100)
+                    .frame(maxWidth: 1000)
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
         .navigationTitle("Revenue Trends")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showExportOptions = true
+                Menu {
+                    if let csvURL = viewModel.csvFileURL() {
+                        ShareLink(item: csvURL) {
+                            Label("Export as CSV", systemImage: "tablecells")
+                        }
+                    }
+                    if let xlsURL = viewModel.excelFileURL() {
+                        ShareLink(item: xlsURL) {
+                            Label("Export as Excel", systemImage: "doc.text")
+                        }
+                    }
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 15, weight: .semibold))
@@ -57,33 +78,7 @@ struct RevenueTrendsView: View {
                 }
             }
         }
-        .actionSheet(isPresented: $showExportOptions) {
-            ActionSheet(
-                title: Text("Export Revenue Data"),
-                buttons: [
-                    .default(Text("CSV")) {
-                        if let url = viewModel.csvFileURL() {
-                            exportURL = url
-                            showExportSheet = true
-                        }
-                    },
-                    .default(Text("Excel")) {
-                        if let url = viewModel.excelFileURL() {
-                            exportURL = url
-                            showExportSheet = true
-                        }
-                    },
-                    .cancel()
-                ]
-            )
-        }
         .task { await viewModel.fetchRevenue() }
-        .sheet(isPresented: $showExportSheet) {
-            if let url = exportURL {
-                ShareSheet(activityItems: [url])
-            }
-        }
-
     }
 
     // MARK: - Loading
@@ -111,6 +106,29 @@ struct RevenueTrendsView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, RSMSTheme.Spacing.xxl)
+    }
+
+    /// Inline placeholder shown below filters when selected store has no data.
+    private var inlineEmptyState: some View {
+        VStack(spacing: RSMSTheme.Spacing.md) {
+            Image(systemName: "chart.bar.xaxis.ascending")
+                .font(.system(size: 40))
+                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.25))
+            Text("No Revenue Data")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(RSMSTheme.Colors.textPrimary)
+            Text("No transactions found for the selected store and date range.\nTry selecting a different store or adjusting the date range.")
+                .font(.system(size: 13))
+                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, RSMSTheme.Spacing.xxxl)
+        .padding(.horizontal, RSMSTheme.Spacing.xl)
+        .background(RSMSTheme.Colors.backgroundDeep)
+        .cornerRadius(RSMSTheme.Radius.lg)
+        .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+            .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5))
     }
 
     // MARK: - Summary Cards
@@ -266,19 +284,6 @@ struct RevenueTrendsView: View {
                 inlineDatePickers
             }
 
-            // Row 3: Compare toggle
-            HStack {
-                Spacer()
-                HStack(spacing: 6) {
-                    Text("Compare")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                    Toggle("", isOn: $viewModel.showComparison)
-                        .tint(RSMSTheme.Colors.accentGold)
-                        .labelsHidden()
-                        .scaleEffect(0.8)
-                }
-            }
         }
         .padding(RSMSTheme.Spacing.lg)
         .background(RSMSTheme.Colors.backgroundDeep)
@@ -306,11 +311,21 @@ struct RevenueTrendsView: View {
 
     private var chartHeader: some View {
         VStack(spacing: RSMSTheme.Spacing.sm) {
-            HStack {
+            HStack(spacing: RSMSTheme.Spacing.sm) {
                 Text("Revenue Over Time")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(RSMSTheme.Colors.textSecondary)
                 Spacer()
+                // Compare toggle
+                HStack(spacing: 6) {
+                    Text("Compare")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                    Toggle("", isOn: $viewModel.showComparison)
+                        .tint(RSMSTheme.Colors.accentGold)
+                        .labelsHidden()
+                        .scaleEffect(0.8)
+                }
                 periodDropdown
             }
             if viewModel.showComparison {
@@ -535,7 +550,10 @@ struct RevenueTrendsView: View {
     // MARK: - Revenue Table
 
     private var revenueTable: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let data = viewModel.activeTrendData
+        let visibleData = showAllRevenueRows ? data : Array(data.prefix(5))
+
+        return VStack(alignment: .leading, spacing: 0) {
             // Header
             HStack {
                 Text("Period").frame(maxWidth: .infinity, alignment: .leading)
@@ -543,13 +561,13 @@ struct RevenueTrendsView: View {
                 Text("Orders").frame(width: 55, alignment: .trailing)
                 Text("AOV").frame(width: 65, alignment: .trailing)
             }
-            .font(.system(size: 10, weight: .bold))
-            .foregroundStyle(RSMSTheme.Colors.textTertiary)
-            .padding(.horizontal, 14).padding(.vertical, 10)
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(RSMSTheme.Colors.textSecondary)
+            .padding(.horizontal, 14).padding(.vertical, 12)
             .background(RSMSTheme.Colors.backgroundElevated)
 
             // Rows
-            ForEach(Array(viewModel.activeTrendData.enumerated()), id: \.element.id) { index, point in
+            ForEach(Array(visibleData.enumerated()), id: \.element.id) { index, point in
                 VStack(spacing: 0) {
                     HStack {
                         HStack(spacing: 6) {
@@ -578,9 +596,28 @@ struct RevenueTrendsView: View {
                     }
                     .padding(.horizontal, 14).padding(.vertical, 10)
 
-                    if index < viewModel.activeTrendData.count - 1 {
+                    if index < visibleData.count - 1 {
                         Divider().background(Color.white.opacity(0.05)).padding(.leading, 14)
                     }
+                }
+            }
+
+            // See More / See Less
+            if data.count > 5 {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) { showAllRevenueRows.toggle() }
+                } label: {
+                    HStack {
+                        Spacer()
+                        Text(showAllRevenueRows ? "Show Less" : "See More (\(data.count - 5) more)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        Image(systemName: showAllRevenueRows ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        Spacer()
+                    }
+                    .padding(.vertical, 12)
                 }
             }
         }
@@ -682,17 +719,6 @@ struct RevenueTrendsView: View {
     }
 }
 
-// MARK: - Share Sheet (UIKit bridge for CSV export)
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let activityItems: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
 
 // MARK: - Line Shape (for legend dashed line indicator)
 

@@ -244,9 +244,16 @@ struct ProductDetailView: View {
     // MARK: - Status Card
     private var statusCard: some View {
         detailSection(title: "Visibility & Status") {
-            staticRow(icon: "checkmark.circle.fill", label: "Active Status",
-                      value: currentProduct.isActive ? "Active" : "Inactive",
-                      valueColor: currentProduct.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.error)
+            HStack(spacing: RSMSTheme.Spacing.md) {
+                Image(systemName: "checkmark.circle.fill").font(.caption)
+                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
+                Text("Active Status").font(.subheadline).foregroundStyle(RSMSTheme.Colors.textSecondary)
+                Spacer()
+                Circle()
+                    .fill(currentProduct.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.error)
+                    .frame(width: 10, height: 10)
+            }
+            .padding(.vertical, RSMSTheme.Spacing.md)
             Divider().background(RSMSTheme.Colors.borderLight)
 
             HStack(spacing: RSMSTheme.Spacing.md) {
