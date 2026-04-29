@@ -254,7 +254,7 @@ struct BMInventoryTab: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 14) {
                 // Product image
-                AsyncImage(url: URL(string: product.imageUrl ?? "")) { phase in
+                AsyncImage(url: resolvePublicImageUrl(for: product.imageUrl)) { phase in
                     if let image = phase.image {
                         image
                             .resizable()
@@ -625,8 +625,7 @@ struct BMInventoryTab: View {
         return HStack(alignment: .top, spacing: 14) {
             // Product image / fallback
             Group {
-                if let urlString = alert.productImageUrl,
-                   let url = URL(string: urlString) {
+                if let url = resolvePublicImageUrl(for: alert.productImageUrl) {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let image):
@@ -814,4 +813,13 @@ struct BMInventoryTab: View {
 #Preview {
     BMInventoryTab()
         .environment(AppState())
+}
+
+// MARK: - Image Helper
+fileprivate func resolvePublicImageUrl(for path: String?) -> URL? {
+    guard let path = path, !path.isEmpty else { return nil }
+    if path.hasPrefix("http") { return URL(string: path) }
+    let supabaseProjectID = "https://bdgwzkpteyxhlgprlmye.supabase.co"
+    let bucketName = "product-images"
+    return URL(string: "\(supabaseProjectID)/storage/v1/object/public/\(bucketName)/\(path)")
 }
