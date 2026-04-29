@@ -11,7 +11,6 @@ import SwiftUI
 // MARK: - See All Staff Performance
 struct AllStaffPerformanceView: View {
     let entries: [StaffPerformanceEntry]
-    let teamTotal: Double
 
     var body: some View {
         ZStack {
@@ -19,7 +18,8 @@ struct AllStaffPerformanceView: View {
             ScrollView {
                 LazyVStack(spacing: 12) {
                     ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                        StaffPerfRow(entry: entry, rank: index + 1, teamTotal: teamTotal)
+                        let maxComm = entries.map { $0.potentialCommission }.max() ?? 1
+                        StaffPerfRow(entry: entry, rank: index + 1, maxValue: maxComm)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -252,19 +252,6 @@ struct BMDashboardTab: View {
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(RSMSTheme.Colors.textPrimary)
                 Spacer()
-                if dashboardVM.staffPerformance.count > 3 {
-                    NavigationLink(destination: AllStaffPerformanceView(
-                        entries: dashboardVM.staffPerformance,
-                        teamTotal: dashboardVM.teamTotalSales)) {
-                        HStack(spacing: 3) {
-                            Text("See All")
-                                .font(.system(size: 14, weight: .medium))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .bold))
-                        }
-                        .foregroundColor(RSMSTheme.Colors.accentGold)
-                    }
-                }
             }
             .padding(.horizontal, 20)
 
@@ -289,10 +276,11 @@ struct BMDashboardTab: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
             } else {
-                // ✅ Only top 3 on dashboard
+                // ✅ Show top 3 based on potential commission
+                let maxComm = dashboardVM.staffPerformance.map { $0.potentialCommission }.max() ?? 1
                 VStack(spacing: 10) {
                     ForEach(Array(dashboardVM.staffPerformance.prefix(3).enumerated()), id: \.element.id) { idx, entry in
-                        StaffPerfRow(entry: entry, rank: idx + 1, teamTotal: dashboardVM.teamTotalSales)
+                        StaffPerfRow(entry: entry, rank: idx + 1, maxValue: maxComm)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -356,8 +344,9 @@ struct BMDashboardTab: View {
     }
 
     private func fmt(_ v: Double) -> String {
-        if v >= 100_000 { return String(format: "%.1fL", v / 100_000) }
-        if v >= 1_000   { return String(format: "%.1fK", v / 1_000) }
+        if v >= 10_000_000 { return String(format: "%.2fCr", v / 10_000_000) }
+        if v >= 100_000    { return String(format: "%.2fL", v / 100_000) }
+        if v >= 1_000      { return String(format: "%.1fK", v / 1_000) }
         return String(format: "%.0f", v)
     }
 }
@@ -395,9 +384,9 @@ struct DashMetricCard: View {
 struct StaffPerfRow: View {
     let entry: StaffPerformanceEntry
     let rank: Int
-    let teamTotal: Double
+    let maxValue: Double
 
-    private var pct: Double { teamTotal > 0 ? entry.totalSales / teamTotal : 0 }
+    private var pct: Double { maxValue > 0 ? entry.potentialCommission / maxValue : 0 }
 
     private var rankColor: Color {
         switch rank {
@@ -406,6 +395,13 @@ struct StaffPerfRow: View {
         case 3: return Color(red: 0.8, green: 0.5, blue: 0.2)
         default: return RSMSTheme.Colors.textSecondary
         }
+    }
+
+    private func formatValue(_ v: Double) -> String {
+        if v >= 10_000_000 { return String(format: "%.2fCr", v / 10_000_000) }
+        if v >= 100_000    { return String(format: "%.2fL", v / 100_000) }
+        if v >= 1_000      { return String(format: "%.1fK", v / 1_000) }
+        return String(format: "%.0f", v)
     }
 
     var body: some View {
@@ -426,36 +422,30 @@ struct StaffPerfRow: View {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(entry.name)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(RSMSTheme.Colors.textPrimary).lineLimit(1)
-                    Text("\(entry.totalOrders) orders · Avg ₹\(String(format: "%.0f", entry.avgOrderValue))")
-                        .font(.system(size: 12))
-                        .foregroundColor(RSMSTheme.Colors.textSecondary).lineLimit(1)
+                    
+                    Text("\(Int(entry.commissionRate))% rate")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(RSMSTheme.Colors.accentGold.opacity(0.1))
+                        .cornerRadius(4)
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("₹\(String(format: "%.0f", entry.totalSales))")
+                VStack(alignment: .trailing, spacing: 6) {
+                    Text("₹\(formatValue(entry.potentialCommission))")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundColor(rank <= 3 ? rankColor : RSMSTheme.Colors.textPrimary)
-                    Text("\(Int(pct * 100))% of team")
+                    Text("est. commission")
                         .font(.system(size: 11))
                         .foregroundColor(RSMSTheme.Colors.textSecondary)
                 }
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
-
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2).fill(RSMSTheme.Colors.surfacePrimary).frame(height: 3)
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(rank <= 3 ? rankColor : RSMSTheme.Colors.accentGold)
-                        .frame(width: geo.size.width * pct, height: 3)
-                        .animation(.easeOut(duration: 0.6), value: pct)
-                }
-            }
-            .frame(height: 3).padding(.horizontal, 14).padding(.bottom, 12)
         }
         .background(RSMSTheme.Colors.backgroundElevated)
         .clipShape(RoundedRectangle(cornerRadius: 14))

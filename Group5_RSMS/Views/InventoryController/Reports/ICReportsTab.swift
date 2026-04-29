@@ -10,7 +10,6 @@ import UniformTypeIdentifiers
 import CoreTransferable
 
 // No longer using CSVDocument here, moved to ICReportPDFGenerator.swift
-
 struct ICReportsTab: View {
     @Environment(AppState.self) private var appState
     @State private var varianceData: [VarianceReportItem] = []

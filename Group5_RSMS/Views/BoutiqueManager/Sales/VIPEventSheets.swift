@@ -55,32 +55,6 @@ struct CreateEventSheet: View {
 
                         Spacer().frame(height: 8)
 
-                        Button {
-                            isSaving = true
-                            Task {
-                                await vm.createEvent(
-                                    boutiqueId:  boutiqueId,
-                                    title:       title.trimmingCharacters(in: .whitespaces),
-                                    description: description.isEmpty ? nil : description,
-                                    eventDate:   eventDate,
-                                    capacity:    Int(capacity),
-                                    venue:       venue.isEmpty ? nil : venue,
-                                    theme:       theme.isEmpty ? nil : theme,
-                                    hostId:      nil // Reverting: must be nil unless we pick a real Employee ID
-                                )
-                                isSaving = false
-                                dismiss()
-                            }
-                        } label: {
-                            HStack {
-                                if isSaving { ProgressView().tint(.black) }
-                                Text(isSaving ? "Creating…" : "Create Event")
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(GoldButtonStyle())
-                        .disabled(!canSave || isSaving)
-                        .opacity(!canSave ? 0.6 : 1)
                     }
                     .padding(20)
                 }
@@ -90,6 +64,29 @@ struct CreateEventSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }.foregroundStyle(RSMSTheme.Colors.textSecondary)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Add") {
+                        isSaving = true
+                        Task {
+                            await vm.createEvent(
+                                boutiqueId:  boutiqueId,
+                                title:       title.trimmingCharacters(in: .whitespaces),
+                                description: description.isEmpty ? nil : description,
+                                eventDate:   eventDate,
+                                capacity:    Int(capacity),
+                                venue:       venue.isEmpty ? nil : venue,
+                                theme:       theme.isEmpty ? nil : theme,
+                                hostId:      nil // Reverting: must be nil unless we pick a real Employee ID
+                            )
+                            isSaving = false
+                            dismiss()
+                        }
+                    }
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    .disabled(!canSave || isSaving)
+                    .opacity(!canSave ? 0.6 : 1)
                 }
             }
         }

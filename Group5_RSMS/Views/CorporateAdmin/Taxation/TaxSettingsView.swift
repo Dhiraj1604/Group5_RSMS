@@ -25,7 +25,7 @@ struct TaxSettingsView: View {
             VStack(spacing: 20) {
                 // Custom Large Title
                 HStack {
-                    Text("Tax Settings")
+                    Text("Additional Taxes")
                         .font(.custom("Helvetica-Bold", size: 34))
                         .foregroundStyle(.white)
                     Spacer()
@@ -40,15 +40,11 @@ struct TaxSettingsView: View {
                     emptyState
                         .padding(.top, 100)
                 } else {
-                    // Summary Header
-                    summaryHeader
+                    // Category Filter Bar
+                    filterBar
                     
                     // Rules List
-                    let columns = horizontalSizeClass == .regular
-                        ? [GridItem(.adaptive(minimum: 220), spacing: RSMSTheme.Spacing.lg)]
-                        : [GridItem(.flexible())]
-                    
-                    LazyVGrid(columns: columns, spacing: RSMSTheme.Spacing.lg) {
+                    LazyVGrid(columns: gridColumns, spacing: RSMSTheme.Spacing.lg) {
                         ForEach(viewModel.filteredRules) { rule in
                             taxRuleCard(for: rule)
                         }
@@ -87,96 +83,79 @@ struct TaxSettingsView: View {
         }
         .sheet(isPresented: $showAddSheet) {
             AddEditTaxView(viewModel: viewModel)
+                .presentationDetents([.height(480)])
+                .presentationDragIndicator(.visible)
         }
         .sheet(item: $editingRule) { rule in
             AddEditTaxView(viewModel: viewModel, existingRule: rule)
+                .presentationDetents([.height(480)])
+                .presentationDragIndicator(.visible)
         }
         .task {
-            viewModel.fetchAvailableStores(from: appState)
             if viewModel.taxRules.isEmpty {
                 await viewModel.fetchTaxRules()
             }
         }
     }
 
-    // MARK: - Summary Header
+    // MARK: - Computed Properties
     
-    private var summaryHeader: some View {
-        HStack(spacing: 12) {
-            // Total Rules
-            summaryCard(
-                value: "\(viewModel.taxRules.count)",
-                label: "RULES",
-                icon: "doc.text.fill",
-                color: .white,
-                filter: .all
-            )
-            
-            // Inclusive Count
-            summaryCard(
-                value: "\(viewModel.taxRules.filter { $0.isInclusive }.count)",
-                label: "INCLUSIVE",
-                icon: "checkmark.circle.fill",
-                color: Color(red: 0.2, green: 0.8, blue: 0.3),
-                filter: .inclusive
-            )
-            
-            // Exclusive Count
-            summaryCard(
-                value: "\(viewModel.taxRules.filter { !$0.isInclusive }.count)",
-                label: "EXCLUSIVE",
-                icon: "plus.circle.fill",
-                color: Color.orange,
-                filter: .exclusive
-            )
+    private var gridColumns: [GridItem] {
+        horizontalSizeClass == .regular
+            ? [GridItem(.adaptive(minimum: 220), spacing: RSMSTheme.Spacing.lg)]
+            : [GridItem(.flexible())]
+    }
+
+    // MARK: - Filter Bar
+    
+    private var filterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                // "All" Filter
+                filterCapsule(label: "All", filter: .all)
+                
+                // Category Filters
+                ForEach(ProductCategory.allCases) { category in
+                    filterCapsule(
+                        label: category.rawValue,
+                        icon: category.icon,
+                        filter: .category(category)
+                    )
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 8)
         }
     }
 
-    private func summaryCard(value: String, label: String, icon: String, color: Color, filter: TaxSettingsViewModel.TaxFilter) -> some View {
+    private func filterCapsule(label: String, icon: String? = nil, filter: TaxSettingsViewModel.TaxFilter) -> some View {
         let isSelected = viewModel.selectedFilter == filter
         
         return Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 viewModel.selectedFilter = filter
             }
         } label: {
-            VStack(spacing: RSMSTheme.Spacing.xs) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(isSelected ? color : color.opacity(0.6))
-                    .padding(.bottom, 2)
+            HStack(spacing: 8) {
+                if let icon = icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .bold))
+                }
                 
-                Text(value)
-                    .font(.custom("HelveticaNeue-Bold", size: 32))
-                    .foregroundStyle(isSelected ? color : color.opacity(0.8))
-                    .shadow(color: isSelected ? color.opacity(0.4) : .clear, radius: 4, x: 0, y: 2)
-                
-                Text(label.uppercased())
-                    .font(.custom("HelveticaNeue-Bold", size: 9))
-                    .tracking(1.2)
-                    .foregroundStyle(isSelected ? color : color.opacity(0.6))
+                Text(label)
+                    .font(.custom("HelveticaNeue-Bold", size: 13))
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 24)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
             .background(
-                LinearGradient(
-                    colors: isSelected 
-                        ? [RSMSTheme.Colors.backgroundElevated, RSMSTheme.Colors.backgroundElevated.opacity(0.8)]
-                        : [RSMSTheme.Colors.backgroundDeep, RSMSTheme.Colors.backgroundDeep.opacity(0.5)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+                Capsule()
+                    .fill(isSelected ? RSMSTheme.Colors.accentGold : Color.white.opacity(0.05))
             )
-            .cornerRadius(16)
+            .foregroundStyle(isSelected ? .black : RSMSTheme.Colors.textSecondary)
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(
-                        isSelected ? color.opacity(0.5) : RSMSTheme.Colors.borderLight,
-                        lineWidth: isSelected ? 1.5 : 1
-                    )
+                Capsule()
+                    .stroke(isSelected ? .clear : Color.white.opacity(0.1), lineWidth: 1)
             )
-            .shadow(color: isSelected ? color.opacity(0.15) : Color.black.opacity(0.2), radius: 6, x: 0, y: 4)
-            .scaleEffect(isSelected ? 1.02 : 1.0)
         }
         .buttonStyle(.plain)
     }
@@ -185,10 +164,9 @@ struct TaxSettingsView: View {
     
     private func taxRuleCard(for rule: TaxRule) -> some View {
         let isActive = viewModel.activeRuleId == rule.id
-        let store = viewModel.store(for: rule.storeId)
-        let locationName = store.map { "\($0.city), \($0.country)" } ?? "Global"
+        let categoryName = rule.category.rawValue
         let ratePercent = String(format: "%.1f", rule.rate * 100)
-        let accentColor = rule.isInclusive ? Color(red: 0.2, green: 0.8, blue: 0.3) : Color.orange
+        let accentColor = RSMSTheme.Colors.accentGold
 
         return Button {
             editingRule = rule
@@ -226,34 +204,27 @@ struct TaxSettingsView: View {
                         
                         Spacer()
                         
-                        // Type Badge
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(accentColor)
-                                .frame(width: 6, height: 6)
-                            Text(rule.isInclusive ? "INCLUSIVE" : "EXCLUSIVE")
-                                .font(.custom("HelveticaNeue-Bold", size: 10))
-                                .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.black.opacity(0.4))
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                        // Category Icon
+                        Image(systemName: rule.category.icon)
+                            .font(.system(size: 14))
+                            .foregroundColor(accentColor)
+                            .padding(8)
+                            .background(Color.black.opacity(0.4))
+                            .clipShape(Circle())
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
                     
                     Spacer()
                     
-                    // Rule Name & Location
+                    // Rule Name & Category
                     VStack(alignment: .leading, spacing: 4) {
                         Text(rule.name)
                             .font(.custom("HelveticaNeue-Bold", size: 26))
                             .foregroundStyle(RSMSTheme.Colors.textPrimary)
                             .lineLimit(2)
                             .minimumScaleFactor(0.8)
-                        Text(locationName.uppercased())
+                        Text(categoryName.uppercased())
                             .font(.custom("HelveticaNeue-Medium", size: 12))
                             .foregroundStyle(RSMSTheme.Colors.textTertiary)
                             .tracking(1.5)
@@ -264,7 +235,7 @@ struct TaxSettingsView: View {
                     
                     // Middle: Tax Rate
                     VStack(alignment: .leading, spacing: -2) {
-                        Text("TAX RATE")
+                        Text("ADDITIONAL RATE")
                             .font(.custom("HelveticaNeue-Bold", size: 11))
                             .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.8))
                             .tracking(2)
@@ -315,11 +286,11 @@ struct TaxSettingsView: View {
             }
             
             VStack(spacing: 12) {
-                Text("No Tax Rules Defined")
+                Text("No Additional Taxes")
                     .font(.custom("HelveticaNeue-Bold", size: 18))
                     .foregroundStyle(.white)
                 
-                Text("Add your first tax rule to begin managing regional tax compliance.")
+                Text("Create category-specific tax rules that will be applied on top of regional taxes.")
                     .font(.custom("HelveticaNeue", size: 14))
                     .foregroundStyle(RSMSTheme.Colors.textSecondary)
                     .multilineTextAlignment(.center)
@@ -332,7 +303,7 @@ struct TaxSettingsView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "plus")
                         .font(.system(size: 14, weight: .semibold))
-                    Text("Add Tax Rule")
+                    Text("Add Additional Tax")
                         .font(.custom("HelveticaNeue-Bold", size: 15))
                 }
                 .padding(.horizontal, 32)

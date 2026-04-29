@@ -109,14 +109,12 @@ class RevenueTrendsViewModel: ObservableObject {
         case last7   = "7D"
         case last14  = "14D"
         case last30  = "30D"
-        case last90  = "90D"
 
         var days: Int {
             switch self {
             case .last7:  return 7
             case .last14: return 14
             case .last30: return 30
-            case .last90: return 90
             }
         }
     }
