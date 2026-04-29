@@ -129,6 +129,24 @@ final class BMReportsViewModel: ObservableObject {
         
         print("Reports → payouts: \(payouts.count), employees: \(employees.count), sold: \(soldItems.count), slow: \(slowItems.count)")
         
+        // --- Total Sales (Sold in last 30 days) ---
+        // Payouts might be monthly, but let's filter by date for the 30-day window
+//         let recentPayouts = payouts.filter { $0.periodEnd >= thirtyDaysAgo }
+//         self.totalSales = recentPayouts.reduce(0.0) { $0 + $1.totalSalesAmount }
+//         self.totalRevenue = self.totalSales * 0.72
+//         self.totalOrders = recentPayouts.count
+        
+//         self.soldProducts = soldItems
+        
+//         // --- Footfall (Items in stock > 30 days) ---
+//         self.footfall = slowItems.count
+//         self.unsoldProducts = slowItems
+        
+//         // --- Dormant employees (active but no payout in last 30 days) ---
+//         let recentEmployeeIds = Set(recentPayouts.map { $0.employeeId })
+//         let activeEmployees = employees.filter { $0.isActive ?? true }
+//         self.dormantStaffDetails = activeEmployees.filter {
+//             !recentEmployeeIds.contains($0.id)
         // ── Compute everything locally first ───────────────────────────────────
         let recentPayouts   = payouts.filter { $0.periodEnd >= thirtyDaysAgo }
         let newTotalSales   = recentPayouts.reduce(0.0) { $0 + $1.totalSalesAmount }
@@ -154,6 +172,30 @@ final class BMReportsViewModel: ObservableObject {
             dailyData.append(DailySalesPoint(date: startOfDay, amount: dayPayouts.reduce(0.0) { $0 + $1.totalSalesAmount }))
         }
         
+        // --- Targets vs Actual ---
+//         self.targetMetrics = [
+//             TargetMetric(label: "Sales",    target: 500000, actual: self.totalSales),
+//             TargetMetric(label: "Slow Items", target: 50,    actual: Double(self.footfall)), // "Footfall" in UI
+//             TargetMetric(label: "Revenue",  target: 350000, actual: self.totalRevenue)
+//         ]
+        
+//         // --- Daily Sales (last 14 days) ---
+//         var dailyData: [DailySalesPoint] = []
+//         for dayOffset in (0..<14).reversed() {
+//             guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: today) else { continue }
+//             let startOfDay = calendar.startOfDay(for: date)
+//             guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else { continue }
+            
+//             let dayPayouts = payouts.filter { payout in
+//                 payout.periodEnd >= startOfDay && payout.periodEnd < endOfDay
+//             }
+//             let daySales: Double = dayPayouts.reduce(0.0) { result, payout in
+//                 result + payout.totalSalesAmount
+//             }
+            
+//             dailyData.append(DailySalesPoint(date: startOfDay, amount: daySales))
+//         }
+//         self.dailySalesData = dailyData
         var flags: [String: Bool] = [:]
         if newTotalSales == 0      { flags["Sales"] = true }
         if slowItems.isEmpty       { flags["Slow Items"] = true }
@@ -259,16 +301,17 @@ final class BMReportsViewModel: ObservableObject {
     
     // MARK: - Filtered chart data
     func chartData(for range: ChartRange) -> [DailySalesPoint] {
-        return dailySalesData
+        switch range {
+        case .oneWeek:  return Array(dailySalesData.suffix(7))
+        case .twoWeeks: return dailySalesData
+        }
     }
-
     
     var targetsMet: Int   { targetMetrics.filter { $0.isMet }.count }
     var targetsMissed: Int { targetMetrics.filter { !$0.isMet }.count }
 }
 
 enum ChartRange: String, CaseIterable {
-    case yearly = "Yearly"
+    case oneWeek  = "1W"
+    case twoWeeks = "2W"
 }
-
-

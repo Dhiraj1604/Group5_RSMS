@@ -65,6 +65,9 @@ struct ReportsTab: View {
 
                             // Audit Logs
                             NavigationLink(destination: AuditLogsView()) {
+//                                 bentoCard(
+//                                     title: "Audit Logs",
+//                                     subtitle: "Secure tracking of all administrative actions and changes.",
                                 reportCard(
                                     icon: "shield.lefthalf.filled",
                                     title: "Audit Logs",

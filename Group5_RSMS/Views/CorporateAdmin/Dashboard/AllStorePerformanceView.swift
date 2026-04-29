@@ -211,7 +211,7 @@ struct PremiumStoreCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(storeKPI.storeName)
                         .font(.custom("HelveticaNeue-Bold", size: 26))
-                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                        .foregroundStyle(RSMSTheme.Colors.accentGoldLight)
                         .lineLimit(2)
                         .minimumScaleFactor(0.8)
                     Text(storeKPI.storeCity.uppercased())
@@ -227,12 +227,12 @@ struct PremiumStoreCard: View {
                 VStack(alignment: .leading, spacing: -2) {
                     Text("TOTAL REVENUE")
                         .font(.custom("HelveticaNeue-Bold", size: 11))
-                        .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.8))
+                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
                         .tracking(2)
                     
                     Text(viewModel.shortRevenue(storeKPI.revenue))
                         .font(.custom("HelveticaNeue-Bold", size: 28))
-                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
                         .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
                 }
                 .padding(.horizontal, 20)
