@@ -7,41 +7,131 @@
 //
 
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
+
+enum RSMSAppearanceMode: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .system: return "System"
+        case .light: return "Light"
+        case .dark: return "Dark"
+        }
+    }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+}
 
 enum RSMSTheme {
     // MARK: - Colors
     enum Colors {
-        // Backgrounds — Deep Brown/Espresso base
-        static let backgroundPrimary = Color(red: 0.059, green: 0.043, blue: 0.035)          // #0F0B09 (Espresso)
-        static let backgroundDeep = Color(red: 0.102, green: 0.078, blue: 0.071)             // #1A1412 (Rich Mocha)
-        static let backgroundElevated = Color(red: 0.149, green: 0.114, blue: 0.102)         // #261D1A (Warm Cocoa)
-        static let surfacePrimary = Color(red: 0.118, green: 0.094, blue: 0.086)          // Rich Mahogany Smoke
-        
-        // Backgrounds — Pure black base
-//         static let backgroundPrimary = Color.black                                           // #000000
-//         static let backgroundDeep = Color(red: 0.067, green: 0.067, blue: 0.067)            // #111111
-//         static let backgroundElevated = Color(red: 0.102, green: 0.102, blue: 0.102)        // #1A1A1A
-//         static let surfacePrimary = Color(red: 0.12, green: 0.12, blue: 0.12)              // #1F1F1F
+        static let backgroundPrimary = adaptiveColor(
+            dark: UIColor(red: 0.059, green: 0.043, blue: 0.035, alpha: 1),
+            darkHighContrast: UIColor(red: 0.000, green: 0.000, blue: 0.000, alpha: 1),
+            light: UIColor(red: 0.96, green: 0.95, blue: 0.93, alpha: 1), // Light gray/beige
+            lightHighContrast: UIColor(red: 0.92, green: 0.92, blue: 0.92, alpha: 1)
+        )
+        static let backgroundDeep = adaptiveColor(
+            dark: UIColor(red: 0.102, green: 0.078, blue: 0.071, alpha: 1),
+            darkHighContrast: UIColor(red: 0.045, green: 0.045, blue: 0.045, alpha: 1),
+            light: UIColor(red: 0.92, green: 0.91, blue: 0.89, alpha: 1), // Darker gray/beige
+            lightHighContrast: UIColor(red: 0.85, green: 0.85, blue: 0.85, alpha: 1)
+        )
+        static let backgroundElevated = adaptiveColor(
+            dark: UIColor(red: 0.149, green: 0.114, blue: 0.102, alpha: 1),
+            darkHighContrast: UIColor(red: 0.090, green: 0.090, blue: 0.090, alpha: 1),
+            light: UIColor.white, // Pure white for cards in light mode
+            lightHighContrast: UIColor.white
+        )
+        static let surfacePrimary = adaptiveColor(
+            dark: UIColor(red: 0.118, green: 0.094, blue: 0.086, alpha: 1),
+            darkHighContrast: UIColor(red: 0.070, green: 0.070, blue: 0.070, alpha: 1),
+            light: UIColor(red: 0.984, green: 0.973, blue: 0.949, alpha: 1),
+            lightHighContrast: UIColor(red: 1.000, green: 1.000, blue: 1.000, alpha: 1)
+        )
 
-        // Accent — Gold palette
-        static let accentGold = Color(red: 0.788, green: 0.663, blue: 0.431)                // #C9A96E
-        static let accentGoldLight = Color(red: 0.910, green: 0.835, blue: 0.639)           // #E8D5A3
-        static let accentGoldDark = Color(red: 0.659, green: 0.537, blue: 0.243)            // #A8893E
+        static let accentGold = adaptiveColor(
+            dark: UIColor(red: 0.788, green: 0.663, blue: 0.431, alpha: 1),
+            darkHighContrast: UIColor(red: 1.000, green: 0.816, blue: 0.290, alpha: 1),
+            light: UIColor(red: 0.506, green: 0.373, blue: 0.094, alpha: 1),
+            lightHighContrast: UIColor(red: 0.388, green: 0.263, blue: 0.000, alpha: 1)
+        )
+        static let accentGoldLight = adaptiveColor(
+            dark: UIColor(red: 0.910, green: 0.835, blue: 0.639, alpha: 1),
+            darkHighContrast: UIColor(red: 1.000, green: 0.925, blue: 0.580, alpha: 1),
+            light: UIColor(red: 0.373, green: 0.263, blue: 0.055, alpha: 1),
+            lightHighContrast: UIColor(red: 0.263, green: 0.169, blue: 0.000, alpha: 1)
+        )
+        static let accentGoldDark = adaptiveColor(
+            dark: UIColor(red: 0.659, green: 0.537, blue: 0.243, alpha: 1),
+            darkHighContrast: UIColor(red: 0.941, green: 0.714, blue: 0.141, alpha: 1),
+            light: UIColor(red: 0.447, green: 0.314, blue: 0.055, alpha: 1),
+            lightHighContrast: UIColor(red: 0.314, green: 0.204, blue: 0.000, alpha: 1)
+        )
 
-        
-        // Status
-        static let success = Color(red: 0.30, green: 0.75, blue: 0.45)
-        static let warning = Color(red: 0.95, green: 0.75, blue: 0.30)
-        static let error = Color(red: 0.85, green: 0.30, blue: 0.30)
+        static let success = adaptiveColor(
+            dark: UIColor(red: 0.300, green: 0.750, blue: 0.450, alpha: 1),
+            darkHighContrast: UIColor(red: 0.220, green: 0.950, blue: 0.420, alpha: 1),
+            light: UIColor(red: 0.000, green: 0.420, blue: 0.180, alpha: 1),
+            lightHighContrast: UIColor(red: 0.000, green: 0.300, blue: 0.120, alpha: 1)
+        )
+        static let warning = adaptiveColor(
+            dark: UIColor(red: 0.950, green: 0.750, blue: 0.300, alpha: 1),
+            darkHighContrast: UIColor(red: 1.000, green: 0.840, blue: 0.000, alpha: 1),
+            light: UIColor(red: 0.620, green: 0.380, blue: 0.000, alpha: 1),
+            lightHighContrast: UIColor(red: 0.450, green: 0.250, blue: 0.000, alpha: 1)
+        )
+        static let error = adaptiveColor(
+            dark: UIColor(red: 0.850, green: 0.300, blue: 0.300, alpha: 1),
+            darkHighContrast: UIColor(red: 1.000, green: 0.360, blue: 0.360, alpha: 1),
+            light: UIColor(red: 0.720, green: 0.000, blue: 0.000, alpha: 1),
+            lightHighContrast: UIColor(red: 0.540, green: 0.000, blue: 0.000, alpha: 1)
+        )
 
-        // Text
-        static let textPrimary = Color.white
-        static let textSecondary = Color(red: 0.74, green: 0.69, blue: 0.65)                // Soft Taupe
-        static let textTertiary = Color(red: 0.53, green: 0.48, blue: 0.45)
+        static let textPrimary = adaptiveColor(
+            dark: UIColor.white,
+            darkHighContrast: UIColor.white,
+            light: UIColor(red: 0.055, green: 0.043, blue: 0.035, alpha: 1),
+            lightHighContrast: UIColor.black
+        )
+        static let textSecondary = adaptiveColor(
+            dark: UIColor(red: 0.740, green: 0.690, blue: 0.650, alpha: 1),
+            darkHighContrast: UIColor(red: 0.910, green: 0.890, blue: 0.850, alpha: 1),
+            light: UIColor(red: 0.310, green: 0.270, blue: 0.235, alpha: 1),
+            lightHighContrast: UIColor(red: 0.120, green: 0.120, blue: 0.120, alpha: 1)
+        )
+        static let textTertiary = adaptiveColor(
+            dark: UIColor(red: 0.530, green: 0.480, blue: 0.450, alpha: 1),
+            darkHighContrast: UIColor(red: 0.760, green: 0.730, blue: 0.690, alpha: 1),
+            light: UIColor(red: 0.420, green: 0.370, blue: 0.330, alpha: 1),
+            lightHighContrast: UIColor(red: 0.220, green: 0.220, blue: 0.220, alpha: 1)
+        )
 
-        // Borders
-        static let border = Color(red: 0.24, green: 0.20, blue: 0.18)
-        static let borderLight = Color(red: 0.18, green: 0.14, blue: 0.12)
+        static let border = adaptiveColor(
+            dark: UIColor(red: 0.240, green: 0.200, blue: 0.180, alpha: 1),
+            darkHighContrast: UIColor(red: 0.650, green: 0.650, blue: 0.650, alpha: 1),
+            light: UIColor(red: 0.760, green: 0.710, blue: 0.650, alpha: 1),
+            lightHighContrast: UIColor(red: 0.260, green: 0.260, blue: 0.260, alpha: 1)
+        )
+        static let borderLight = adaptiveColor(
+            dark: UIColor(red: 0.180, green: 0.140, blue: 0.120, alpha: 1),
+            darkHighContrast: UIColor(red: 0.520, green: 0.520, blue: 0.520, alpha: 1),
+            light: UIColor(red: 0.840, green: 0.800, blue: 0.740, alpha: 1),
+            lightHighContrast: UIColor(red: 0.360, green: 0.360, blue: 0.360, alpha: 1)
+        )
 
         // Gradients
         static let goldGradient = LinearGradient(
@@ -61,6 +151,25 @@ enum RSMSTheme {
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
+
+        private static func adaptiveColor(
+            dark: UIColor,
+            darkHighContrast: UIColor,
+            light: UIColor,
+            lightHighContrast: UIColor
+        ) -> Color {
+            Color(UIColor { traits in
+                let isHighContrast = traits.accessibilityContrast == .high
+                let isDark = traits.userInterfaceStyle == .dark
+
+                switch (isDark, isHighContrast) {
+                case (true, true): return darkHighContrast
+                case (true, false): return dark
+                case (false, true): return lightHighContrast
+                case (false, false): return light
+                }
+            })
+        }
     }
 
     // MARK: - Typography
@@ -114,11 +223,13 @@ struct CardStyle: ViewModifier {
 }
 
 struct GoldButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) var colorScheme
+    
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)
             .fontWeight(.semibold)
-            .foregroundStyle(.black)
+            .foregroundStyle(colorScheme == .dark ? Color.black : Color.white)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
             .background(RSMSTheme.Colors.goldGradient)

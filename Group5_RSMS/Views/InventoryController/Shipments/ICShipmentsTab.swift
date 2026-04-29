@@ -92,7 +92,7 @@ struct ICShipmentsTab: View {
             .navigationTitle("Shipments")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -106,7 +106,7 @@ struct ICShipmentsTab: View {
             .task {
                 await loadOrders()
             }
-            .onChange(of: selectedTab) { _ in
+            .onChange(of: selectedTab) {
                 Task { await loadOrders() }
             }
             .sheet(item: $selectedOrderForDetails) { order in
@@ -190,7 +190,7 @@ struct ICShipmentsTab: View {
         .navigationTitle("Filter Shipments")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Done") {

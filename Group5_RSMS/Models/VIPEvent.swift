@@ -151,6 +151,14 @@ struct VIPGuest: Codable, Identifiable {
         let last  = parts.dropFirst().first?.prefix(1) ?? ""
         return (first + last).uppercased()
     }
+
+    var tierIcon: String {
+        switch (tier ?? "standard").lowercased() {
+        case "gold": return "crown.fill"
+        case "platinum": return "diamond.fill"
+        default: return "medal.fill"
+        }
+    }
 }
 
 // MARK: - VIPEventGuest (invite record per event)

@@ -42,7 +42,7 @@ struct LowStockAlertDetailView: View {
         .navigationTitle(alert.productName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
     }
 
     // MARK: - Product Image

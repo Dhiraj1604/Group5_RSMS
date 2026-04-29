@@ -57,7 +57,7 @@ struct SetPriceView: View {
             .navigationTitle(product.basePrice > 0 ? "Update Price" : "Set Retail Price")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { dismiss() } label: {

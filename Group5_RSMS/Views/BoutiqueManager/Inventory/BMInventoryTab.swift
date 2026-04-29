@@ -338,6 +338,10 @@ struct BMInventoryTab: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Top Performer: \(product.name).")
+        .accessibilityValue("Status: \(product.isOnFloor ? "On Floor" : "Backstock"). Recent units sold: \(product.recentUnitsSold). Current stock: \(product.currentStock).")
+        .accessibilityHint("Double tap to \(product.isOnFloor ? "remove from" : "place on") floor.")
     }
 
     private func compactMetricsRow(for product: FastMovingProduct) -> some View {
@@ -683,6 +687,10 @@ struct BMInventoryTab: View {
                 .stroke(RSMSTheme.Colors.borderLight, lineWidth: 0.5)
         )
         .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 4)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Low stock alert for \(alert.productName).")
+        .accessibilityValue("Current stock is \(alert.stockQuantity) units. Product SKU is \(alert.productSku). Price is \(alert.productBasePrice.formatted(.currency(code: "INR"))).")
+        .accessibilityHint("Double tap to request a stock transfer from another boutique.")
     }
 
     private var productPlaceholder: some View {
@@ -726,7 +734,7 @@ struct BMInventoryTab: View {
             VStack(spacing: 8) {
                 Text("No Stores Found")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
                 Text("Ask a Corporate Admin to register\nyour boutique location first.")
                     .font(.system(size: 15))
                     .foregroundColor(RSMSTheme.Colors.textSecondary)
@@ -769,7 +777,7 @@ struct BMInventoryTab: View {
             VStack(spacing: 8) {
                 Text("Stock Levels Healthy")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
                 Text("All products in your boutique\nare above the low-stock threshold.")
                     .font(.system(size: 15))
                     .foregroundColor(RSMSTheme.Colors.textSecondary)
@@ -788,7 +796,7 @@ struct BMInventoryTab: View {
                 .foregroundColor(RSMSTheme.Colors.error)
             Text("Insights Unavailable")
                 .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(RSMSTheme.Colors.textPrimary)
             Text(message)
                 .font(.system(size: 13))
                 .foregroundColor(RSMSTheme.Colors.textSecondary)

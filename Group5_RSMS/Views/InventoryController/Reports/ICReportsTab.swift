@@ -65,7 +65,7 @@ struct ICReportsTab: View {
             .navigationTitle("Reports")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .task {
                 await loadData()
             }

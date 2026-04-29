@@ -113,7 +113,7 @@ struct StockCheckView: View {
             .navigationTitle("Audit")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar { toolbarContent }
             .searchable(text: $searchText, prompt: "Search SKU or product")
             .task { await vm.load(storeId: effectiveStoreId, userId: appState.managerAuthId) }

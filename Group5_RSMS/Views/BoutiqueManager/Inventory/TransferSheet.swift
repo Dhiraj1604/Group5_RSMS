@@ -265,6 +265,10 @@ struct TransferSheet: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(source.storeName). Location: \(source.storeCity).")
+        .accessibilityValue("Available stock: \(source.availableQuantity) units.")
+        .accessibilityHint(isSelected ? "Selected. Double tap to deselect." : "Double tap to select this store as the transfer source.")
     }
 
     private var noSourcesView: some View {
@@ -306,11 +310,14 @@ struct TransferSheet: View {
                         )
                 }
                 .disabled(transferQuantity <= 1)
+                .accessibilityLabel("Decrease transfer quantity.")
+                .accessibilityValue("\(transferQuantity)")
 
                 Text("\(transferQuantity)")
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .foregroundColor(RSMSTheme.Colors.textPrimary)
                     .frame(minWidth: 50)
+                    .accessibilityHidden(true)
 
                 // Increase
                 Button {
@@ -323,6 +330,8 @@ struct TransferSheet: View {
                         .font(.system(size: 28))
                         .foregroundColor(RSMSTheme.Colors.accentGold)
                 }
+                .accessibilityLabel("Increase transfer quantity.")
+                .accessibilityValue("\(transferQuantity)")
             }
             .frame(maxWidth: .infinity)
         }

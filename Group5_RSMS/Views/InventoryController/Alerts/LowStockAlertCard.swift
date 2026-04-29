@@ -108,5 +108,9 @@ struct LowStockAlertCard: View {
                 .stroke(quantityColor.opacity(0.15), lineWidth: 0.5)
         )
         .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 4)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Low stock alert")
+        .accessibilityValue("\(alert.productName). SKU \(alert.productSku). \(alert.stockQuantity) units left. Status \(severityLabel). Store \(alert.storeName), \(alert.storeCity).")
+        .accessibilityHint("Double tap to view alert details.")
     }
 }

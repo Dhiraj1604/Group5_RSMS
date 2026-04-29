@@ -60,4 +60,28 @@ enum RSMSStrings {
         static let targetPacing = LocalizedStringKey("dashboard.targetPacing")
         static let pendingTasks = LocalizedStringKey("dashboard.pendingTasks")
     }
+    
+    // MARK: - Accessibility
+    enum Accessibility {
+        
+        // MARK: Dynamic Type / Larger Text
+        enum DynamicType {
+            static let title = LocalizedStringKey("accessibility.dynamicType.title")
+            static let description = LocalizedStringKey("accessibility.dynamicType.description")
+            static let commonRequirement = LocalizedStringKey("accessibility.dynamicType.commonRequirement")
+            
+            static let adminReason = LocalizedStringKey("accessibility.dynamicType.adminReason")
+            static let boutiqueManagerReason = LocalizedStringKey("accessibility.dynamicType.boutiqueManagerReason")
+            static let inventoryControllerReason = LocalizedStringKey("accessibility.dynamicType.inventoryControllerReason")
+            
+            static let loginPriority = LocalizedStringKey("accessibility.dynamicType.loginPriority")
+            static let navigationPriority = LocalizedStringKey("accessibility.dynamicType.navigationPriority")
+            static let formsPriority = LocalizedStringKey("accessibility.dynamicType.formsPriority")
+            static let errorsPriority = LocalizedStringKey("accessibility.dynamicType.errorsPriority")
+            static let primaryButtonsPriority = LocalizedStringKey("accessibility.dynamicType.primaryButtonsPriority")
+            static let productDetailsPriority = LocalizedStringKey("accessibility.dynamicType.productDetailsPriority")
+            static let stockAlertsPriority = LocalizedStringKey("accessibility.dynamicType.stockAlertsPriority")
+            static let confirmationDialogsPriority = LocalizedStringKey("accessibility.dynamicType.confirmationDialogsPriority")
+        }
+    }
 }

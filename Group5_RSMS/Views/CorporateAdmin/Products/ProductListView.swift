@@ -98,6 +98,7 @@ struct ProductListView: View {
                         ProductShopCard(product: product)
                     }
                     .buttonStyle(PlainButtonStyle())
+                    .accessibilityHint("Opens product details.")
                 }
             }
             .padding(.horizontal, RSMSTheme.Spacing.lg)
@@ -213,6 +214,9 @@ struct ProductListView: View {
                 RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
                     .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
             )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Product: \(product.name)")
+            .accessibilityValue("SKU \(product.sku). Category \(product.category.rawValue). Price ₹\(String(format: "%.0f", product.basePrice)).")
         }
         
         // Helper for placeholder
@@ -258,5 +262,8 @@ struct CategoryChip: View {
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(title) category")
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityHint("Filters the product catalogue.")
     }
 }

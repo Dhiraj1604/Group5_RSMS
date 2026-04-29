@@ -52,7 +52,7 @@ class VIPEventViewModel: ObservableObject {
             return
         }
         
-        var ev = VIPEvent(
+        let ev = VIPEvent(
             id:              UUID(),
             boutiqueId:      boutiqueId,
             title:           title,

@@ -40,8 +40,12 @@ struct DashboardTab: View {
                         Menu {
                             Button(role: .destructive) { appState.signOut() } label: { Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right") }
                         } label: {
-                            Image(systemName: "person.circle.fill").font(.title3).foregroundStyle(RSMSTheme.Colors.accentGold)
+                            Image(systemName: "person.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
                         }
+                        .accessibilityLabel("Account menu")
+                        .accessibilityHint("Opens account actions including sign out.")
                     }
                 }
                 .overlay {
@@ -251,6 +255,26 @@ struct DashboardTab: View {
             RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg, style: .continuous)
                 .stroke(LinearGradient(colors: [color.opacity(0.4), color.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(value)
+    }
+
+    private var aiForecastAccessibilitySummary: String {
+        let next7Days = viewModel.forecastRevenue.prefix(7)
+        let forecastTotal = next7Days.reduce(0) { $0 + $1.amount }
+        let topCategory = viewModel.bestPredictedCategory.isEmpty ? "not available" : viewModel.bestPredictedCategory
+        return "Forecasted revenue for the next seven days is \(viewModel.shortRevenue(forecastTotal)). Top predicted category is \(topCategory)."
+    }
+
+    private var categorySalesAccessibilitySummary: String {
+        guard !viewModel.categorySales.isEmpty else { return "No category sales data available." }
+        let total = viewModel.categorySales.reduce(0) { $0 + $1.revenue }
+        guard let top = viewModel.categorySales.max(by: { $0.revenue < $1.revenue }) else {
+            return "No category sales data available."
+        }
+        let pct = total > 0 ? Int((top.revenue / total) * 100) : 0
+        return "Top category is \(top.category), contributing \(pct) percent of category revenue."
     }
 
     // MARK: - AI Forecast
@@ -348,6 +372,9 @@ struct DashboardTab: View {
                             }
                         }
                         .frame(height: 110)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("AI revenue forecast chart")
+                        .accessibilityValue(aiForecastAccessibilitySummary)
                     }
 
                     // 3. Informative Insights Groups
@@ -1015,7 +1042,7 @@ struct RevenueDetailModal: View {
             .navigationTitle("Revenue Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { dismiss() } label: { Image(systemName: "xmark.circle.fill").font(.title3).foregroundStyle(RSMSTheme.Colors.textSecondary) }
@@ -1150,7 +1177,7 @@ struct CategoryDetailModal: View {
             .navigationTitle("Category Sales Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { dismiss() } label: { Image(systemName: "xmark.circle.fill").font(.title3).foregroundStyle(RSMSTheme.Colors.textSecondary) }

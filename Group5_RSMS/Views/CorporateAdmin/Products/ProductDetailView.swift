@@ -56,7 +56,7 @@ struct ProductDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(isEditing)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
         .toolbar {
             if isEditing {
                 ToolbarItem(placement: .topBarLeading) {

@@ -100,14 +100,15 @@ final class LowStockService {
     
     /// Fetches all pending incoming requests where currentStore is the fulfillingStore.
     func fetchIncomingRequests(forStore storeId: UUID) async throws -> [TransferRequest] {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        
-        // Setup decoding with custom date strategy for PostgREST
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let dateStr = try container.decode(String.self)
+            
+            // Create formatter inside for Sendability
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            
             if let date = formatter.date(from: dateStr) { return date }
             if let date = ISO8601DateFormatter().date(from: dateStr) { return date }
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date format")
@@ -128,13 +129,14 @@ final class LowStockService {
     /// Fetches all requests initiated by the currentStore (Outbound/My Requests).
     /// Includes all statuses (pending, fulfilled, rejected) so the manager can see the outcome.
     func fetchMyRequests(forStore storeId: UUID) async throws -> [TransferRequest] {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let dateStr = try container.decode(String.self)
+            
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            
             if let date = formatter.date(from: dateStr) { return date }
             if let date = ISO8601DateFormatter().date(from: dateStr) { return date }
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid date format")

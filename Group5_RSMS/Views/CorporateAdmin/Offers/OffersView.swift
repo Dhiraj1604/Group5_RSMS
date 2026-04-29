@@ -153,7 +153,7 @@ struct OffersView: View {
         .background(RSMSTheme.Colors.backgroundPrimary)
         .navigationTitle("Offers")
         .navigationBarTitleDisplayMode(.large)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        
         .searchable(text: $searchText, prompt: "Search offers...")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
