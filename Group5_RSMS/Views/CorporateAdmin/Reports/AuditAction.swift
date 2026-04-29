@@ -59,7 +59,7 @@ enum AuditEntity {
 
 // MARK: - Insert payload (no id / created_at — Supabase DEFAULT now())
 
-private struct AuditLogInsert: Encodable {
+private struct AuditLogInsert: @preconcurrency Encodable, Sendable {
     let action:      String
     let event_type:  String
     let user_name:   String
@@ -114,10 +114,9 @@ final class ActivityLogService {
             after_data:  afterDict
         )
 
-        Task.detached(priority: .utility) { [weak self] in
-            guard let self else { return }
+        Task.detached(priority: .utility) {
             do {
-                try await self.client
+                try await SupabaseManager.shared.client
                     .from("audit_logs")
                     .insert(payload)
                     .execute()

@@ -81,7 +81,7 @@ class CustomerShipmentService {
                         .from("employees")
                         .select("id")
                         .eq("boutique_id", value: storeId)
-                        .ilike("role", value: "%manager%")
+                        .ilike("role", pattern: "%manager%")
                         .execute()
                         .value
                     employeeId = emps.first?.id

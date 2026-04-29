@@ -7,8 +7,7 @@ import SwiftUI
 import PDFKit
 import UniformTypeIdentifiers
 
-@MainActor
-struct PDFReportDocument: Transferable {
+struct PDFReportDocument: Transferable, Sendable {
     let data: Data
     let filename: String
     

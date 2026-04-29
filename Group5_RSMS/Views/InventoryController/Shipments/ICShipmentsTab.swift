@@ -106,7 +106,7 @@ struct ICShipmentsTab: View {
             .task {
                 await loadOrders()
             }
-            .onChange(of: selectedTab) { _ in
+            .onChange(of: selectedTab) {
                 Task { await loadOrders() }
             }
             .sheet(item: $selectedOrderForDetails) { order in

@@ -40,8 +40,12 @@ struct DashboardTab: View {
                         Menu {
                             Button(role: .destructive) { appState.signOut() } label: { Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right") }
                         } label: {
-                            Image(systemName: "person.circle.fill").font(.title3).foregroundStyle(RSMSTheme.Colors.accentGold)
+                            Image(systemName: "person.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
                         }
+                        .accessibilityLabel("Account menu")
+                        .accessibilityHint("Opens account actions including sign out.")
                     }
                 }
                 .overlay {
@@ -51,8 +55,6 @@ struct DashboardTab: View {
                             ProgressView().tint(RSMSTheme.Colors.accentGold)
                         }
                     }
-                    .accessibilityLabel("Account menu")
-                    .accessibilityHint("Opens account actions including sign out.")
                 }
         }
         .task {
