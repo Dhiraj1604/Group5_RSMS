@@ -287,42 +287,78 @@ final class SupabaseSyncManager {
     }
     
 
-    // MARK: - Employee Sales Summary (date range — pass nil for all-time)
+    // MARK: - Employee Sales Summary
     func fetchSalesPerEmployee(boutiqueId: UUID, from: Date? = nil, to: Date? = nil) async throws -> [EmployeeSalesSummary] {
-        struct RawOrder: Codable {
-            let employeeId: UUID?
-            let totalAmount: Double
+        // We attempt to fetch from 'customer_orders'. 
+        // Note: If 'employee_id' is missing from the schema, this will throw an error which we catch.
+        do {
+            var query = client
+                .from("customer_orders")
+                .select("employee_id, total_amount")
+                .eq("store_id", value: boutiqueId.uuidString)
             
-            enum CodingKeys: String, CodingKey {
-                case employeeId  = "employee_id"
-                case totalAmount = "total_amount"
+            if let from = from {
+                query = query.gte("created_at", value: ISO8601DateFormatter().string(from: from))
             }
+            if let to = to {
+                query = query.lte("created_at", value: ISO8601DateFormatter().string(from: to))
+            }
+            
+            let response = try await query.execute()
+            
+            struct RawOrder: Codable {
+                let employeeId: UUID?
+                let totalAmount: Double
+                enum CodingKeys: String, CodingKey {
+                    case employeeId  = "employee_id"
+                    case totalAmount = "total_amount"
+                }
+            }
+            
+            let orders = try supabaseDecoder.decode([RawOrder].self, from: response.data)
+            
+            var salesMap: [UUID: (total: Double, count: Int)] = [:]
+            for order in orders {
+                guard let empId = order.employeeId else { continue }
+                let current = salesMap[empId] ?? (0.0, 0)
+                salesMap[empId] = (current.total + order.totalAmount, current.count + 1)
+            }
+            
+            return salesMap.map { (empId, stats) in
+                EmployeeSalesSummary(employeeId: empId, totalSales: stats.total, orderCount: stats.count)
+            }
+        } catch {
+            // If column is missing or table doesn't exist, return empty list to avoid crashing
+            print("Notice: Individual sales attribution not available (\(error.localizedDescription)). Using store-wide totals.")
+            return []
         }
-        
-        var query = client
-            .from("customer_orders")
-            .select("employee_id, total_amount")
-            .eq("store_id", value: boutiqueId.uuidString)
-        
-        if let from = from {
-            query = query.gte("created_at", value: ISO8601DateFormatter().string(from: from))
-        }
-        if let to = to {
-            query = query.lte("created_at", value: ISO8601DateFormatter().string(from: to))
-        }
-        
-        let response = try await query.execute()
-        let orders = try supabaseDecoder.decode([RawOrder].self, from: response.data)
-        
-        var salesMap: [UUID: (total: Double, count: Int)] = [:]
-        for order in orders {
-            guard let empId = order.employeeId else { continue }
-            let current = salesMap[empId] ?? (0.0, 0)
-            salesMap[empId] = (current.total + order.totalAmount, current.count + 1)
-        }
-        
-        return salesMap.map { (empId, stats) in
-            EmployeeSalesSummary(employeeId: empId, totalSales: stats.total, orderCount: stats.count)
+    }
+
+    // MARK: - Store Total Sales (sum of all customer_orders for a store)
+    func fetchStoreTotalSales(boutiqueId: UUID, from: Date? = nil, to: Date? = nil) async throws -> Double {
+        do {
+            var query = client
+                .from("customer_orders")
+                .select("total_amount")
+                .eq("store_id", value: boutiqueId.uuidString)
+            
+            if let from = from {
+                query = query.gte("created_at", value: ISO8601DateFormatter().string(from: from))
+            }
+            if let to = to {
+                query = query.lte("created_at", value: ISO8601DateFormatter().string(from: to))
+            }
+            
+            let response = try await query.execute()
+            struct Amount: Codable {
+                let totalAmount: Double
+                enum CodingKeys: String, CodingKey { case totalAmount = "total_amount" }
+            }
+            let orders = try supabaseDecoder.decode([Amount].self, from: response.data)
+            return orders.reduce(0) { $0 + $1.totalAmount }
+        } catch {
+            print("Failed to fetch store total sales: \(error)")
+            return 0.0
         }
     }
     
