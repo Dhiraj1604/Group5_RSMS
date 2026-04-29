@@ -162,11 +162,8 @@ struct AddEmployeeView: View {
                             StaffFormSectionHeader(title: "PERSONAL DETAILS")
 
                             VStack(spacing: 0) {
-                                StaffFormFieldRow(label: "Full Name *") {
+                                StaffFormFieldRow(label: "Full Name") {
                                     TextField("", text: $vm.name)
-                                        .placeholder(when: vm.name.isEmpty) {
-                                            Text("Required").foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.4))
-                                        }
                                 }
                                 
                                 StaffFormDividerRow()
@@ -188,7 +185,7 @@ struct AddEmployeeView: View {
                                     
                                     Divider().frame(height: 24).background(RSMSTheme.Colors.textSecondary.opacity(0.1))
                                     
-                                    TextField("Phone Number", text: $vm.phone)
+                                    TextField("", text: $vm.phone)
                                         .keyboardType(.phonePad)
                                         .padding(.leading, 12)
                                         .padding(.vertical, 14)
@@ -197,7 +194,7 @@ struct AddEmployeeView: View {
                                 StaffFormDividerRow()
 
                                 StaffFormFieldRow(label: "Email") {
-                                    TextField("Optional", text: $vm.email)
+                                    TextField("", text: $vm.email)
                                         .keyboardType(.emailAddress)
                                         .textInputAutocapitalization(.never)
                                 }
@@ -211,14 +208,14 @@ struct AddEmployeeView: View {
                             StaffFormSectionHeader(title: "EMPLOYMENT DETAILS")
 
                             VStack(spacing: 0) {
-                                StaffFormPickerRow(label: "Role *", value: vm.role) {
+                                StaffFormPickerRow(label: "Role", value: vm.role) {
                                     showRolePicker = true
                                 }
                                 
                                 StaffFormDividerRow()
 
-                                StaffFormFieldRow(label: "Salary (₹)") {
-                                    TextField("Required", text: $vm.salary)
+                                StaffFormFieldRow(label: "Salary") {
+                                    TextField("", text: $vm.salary)
                                         .keyboardType(.decimalPad)
                                 }
 
