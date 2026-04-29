@@ -23,8 +23,10 @@ struct Store: Identifiable, Codable, Hashable {
     var taxRate: Double? = nil
     var isActive: Bool = true
     var currencyCode: String? = nil
+    var monthlyRevenueTarget: Double? = nil
     var createdAt: Date? = Date()
     var assignedManagerId: UUID? = nil
+    var imageUrl: String? = nil
     
     // MARK: - CodingKeys for Supabase (Read)
     // All DB columns are camelCase — no mapping needed except where Swift property differs.
@@ -44,8 +46,10 @@ struct Store: Identifiable, Codable, Hashable {
         case taxRate
         case isActive
         case currencyCode
+        case monthlyRevenueTarget = "monthly_revenue_target"
         case createdAt
         case assignedManagerId = "assigned_manager_id"
+        case imageUrl = "image_url"
     }
     
     // MARK: - Insert Payload for Supabase (Write)
@@ -65,7 +69,9 @@ struct Store: Identifiable, Codable, Hashable {
         let taxRate: Double?
         let isActive: Bool?
         let currencyCode: String?
+        let monthly_revenue_target: Double?
         let assigned_manager_id: UUID?
+        let image_url: String?
     }
     
     var insertPayload: DBPayload {
@@ -84,7 +90,9 @@ struct Store: Identifiable, Codable, Hashable {
             taxRate: taxRate,
             isActive: isActive,
             currencyCode: currencyCode,
-            assigned_manager_id: assignedManagerId
+            monthly_revenue_target: monthlyRevenueTarget,
+            assigned_manager_id: assignedManagerId,
+            image_url: imageUrl
         )
     }
     
@@ -111,7 +119,8 @@ struct Store: Identifiable, Codable, Hashable {
         managerName: "Priya Sharma",
         region: "West",
         taxRate: 18.0,
-        isActive: true
+        isActive: true,
+        imageUrl: "image_1"
     )
         
     static let samples: [Store] = [
@@ -131,7 +140,26 @@ struct Store: Identifiable, Codable, Hashable {
             taxRate: 18.0,
             isActive: true,
             currencyCode: "INR",
-            createdAt: Date()
+            createdAt: Date(),
+            imageUrl: "image_2"
+        ),
+        Store(
+            name: "Dior Dubai Mall",
+            city: "Dubai",
+            country: "UAE",
+            code: "BTQ-DXB-001",
+            phone: "+971 4 330 8739",
+            email: "dubai@dior.com",
+            address: "The Dubai Mall, Fashion Avenue",
+            zipCode: "00000",
+            state: "Dubai",
+            managerName: "Omar Hassan",
+            region: "MEIA",
+            taxRate: 5.0,
+            isActive: true,
+            currencyCode: "AED",
+            monthlyRevenueTarget: 1500000.0,
+            imageUrl: "Dior Dubai Mall"
         ),
         Store(
             name: "RSMS Bangalore Store",
@@ -148,7 +176,26 @@ struct Store: Identifiable, Codable, Hashable {
             taxRate: 18.0,
             isActive: true,
             currencyCode: "INR",
-            createdAt: Date()
+            createdAt: Date(),
+            imageUrl: "image_3"
+        ),
+        Store(
+            name: "RSMS London Gallery",
+            city: "London",
+            country: "UK",
+            code: "BTQ-LON-001",
+            phone: "+44 20 7946 0000",
+            email: "london@rsms.com",
+            address: "15 Bond Street",
+            zipCode: "W1S 3SU",
+            state: "London",
+            managerName: "Emma Watson",
+            region: "Europe",
+            taxRate: 20.0,
+            isActive: true,
+            currencyCode: "GBP",
+            createdAt: Date(),
+            imageUrl: "image_4"
         )
     ]
 }

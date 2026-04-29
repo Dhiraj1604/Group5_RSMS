@@ -138,6 +138,24 @@ struct AddEditTaxView: View {
                     Button {
                         selectedCategory = category
                     } label: {
+//                         Image(systemName: "xmark.circle.fill")
+//                             .font(.system(size: 18))
+//                             .foregroundColor(RSMSTheme.Colors.error)
+//                     }
+//                 }
+//                 ToolbarItem(placement: .confirmationAction) {
+//                     Button {
+//                         attemptSave()
+//                     } label: {
+//                         if isSaving {
+//                             ProgressView()
+//                                 .tint(RSMSTheme.Colors.accentGold)
+//                                 .scaleEffect(0.8)
+//                         } else {
+//                             Image(systemName: "checkmark.circle.fill")
+//                                 .font(.system(size: 20, weight: .semibold))
+//                             .foregroundColor(isSaveDisabled ? RSMSTheme.Colors.accentGold.opacity(0.4) : RSMSTheme.Colors.accentGold)
+//                         }
                         Label(category.rawValue, systemImage: category.icon)
                     }
                 }

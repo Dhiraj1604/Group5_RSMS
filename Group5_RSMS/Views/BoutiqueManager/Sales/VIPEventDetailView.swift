@@ -58,6 +58,12 @@ struct VIPEventDetailView: View {
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
+//                 Button {
+//                     if selectedSeg == 0 { showInviteSheet = true }
+//                     else { showAddProduct = true }
+//                 } label: {
+//                     Image(systemName: "plus.circle.fill")
+//                         .foregroundStyle(RSMSTheme.Colors.accentGold)
                 HStack(spacing: 16) {
                     Button {
                         showStatusPicker = true
@@ -257,8 +263,10 @@ struct GuestInviteRow: View {
 
     private var rsvpColor: Color {
         switch invite.rsvpStatus {
-        case "confirmed": return .green
-        case "declined":   return .red
+        case "confirmed", "attended": return .green
+        case "declined", "no_show":   return .red
+//         case "confirmed": return .green
+//         case "declined":   return .red
         default:                       return RSMSTheme.Colors.accentGold
         }
     }
@@ -283,6 +291,10 @@ struct GuestInviteRow: View {
                         .font(.caption)
                         .foregroundStyle(RSMSTheme.Colors.textTertiary)
                 }
+//             }
+//             Spacer()
+//             Menu {
+//                 ForEach(["invited","confirmed","declined"], id: \.self) { s in
                 if let phone = invite.guest?.phone {
                     Text(phone)
                         .font(.caption)
