@@ -218,3 +218,39 @@ struct VIPEventCollectionItem: Codable, Identifiable {
         let is_reserved: Bool
     }
 }
+
+// MARK: - VIP Appointment
+
+struct VIPAppointment: Codable, Identifiable {
+    let id: UUID
+    let guestId: UUID
+    let boutiqueId: UUID
+    var title: String?
+    var appointmentDate: Date
+    var type: String         // e.g., "In-Store Styling", "Virtual Consultation", "Repair/Service"
+    var status: String       // e.g., "scheduled", "completed", "cancelled"
+    var notes: String?
+    let createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case guestId         = "guest_id"
+        case boutiqueId      = "boutique_id"
+        case title
+        case appointmentDate = "appointment_date"
+        case type
+        case status
+        case notes
+        case createdAt       = "created_at"
+    }
+
+    struct InsertPayload: Encodable {
+        let guest_id: UUID
+        let boutique_id: UUID
+        let title: String?
+        let appointment_date: Date
+        let type: String
+        let status: String
+        let notes: String?
+    }
+}
