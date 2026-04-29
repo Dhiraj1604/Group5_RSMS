@@ -303,7 +303,7 @@ struct GuestInviteRow: View {
             }
             Spacer()
             Menu {
-                ForEach(["invited","confirmed","declined","attended","no_show"], id: \.self) { s in
+                ForEach(["invited","confirmed","declined"], id: \.self) { s in
                     Button(s.replacingOccurrences(of: "_", with: " ").capitalized) {
                         onStatusChange(s)
                     }
