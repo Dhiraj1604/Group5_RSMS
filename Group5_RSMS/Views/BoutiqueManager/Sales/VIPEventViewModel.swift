@@ -109,7 +109,7 @@ class VIPEventViewModel: ObservableObject {
     }
 
     func addGuest(boutiqueId: UUID, name: String, email: String?,
-                  phone: String?, tier: String, preferences: String?,
+                  phone: String?, preferences: String?,
                   addedBy: UUID?) async {
         // Guard: boutiqueId must be a real store — prevents FK violation
         guard boutiqueId.uuidString != "00000000-0000-0000-0000-000000000000" else {
@@ -122,7 +122,6 @@ class VIPEventViewModel: ObservableObject {
             fullName:     name,
             email:        email?.isEmpty == true ? nil : email,
             phone:        phone?.isEmpty == true ? nil : phone,
-            tier:         tier,
             addedBy:      addedBy, // Pass the appState.managerAuthId here
             preferences:  preferences?.isEmpty == true ? nil : preferences,
             createdBy:    Date()
