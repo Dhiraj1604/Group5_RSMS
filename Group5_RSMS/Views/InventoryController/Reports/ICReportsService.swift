@@ -104,4 +104,5 @@ class ICReportsService {
             .value
         return response
     }
+
 }

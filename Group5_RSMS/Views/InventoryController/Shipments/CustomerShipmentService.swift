@@ -56,4 +56,59 @@ class CustomerShipmentService {
                 .eq("id", value: orderId)
                 .execute()
         }
+        
+        func getStoreManager(storeId: UUID) async throws -> UUID? {
+            struct StoreResult: Decodable {
+                let assigned_manager_id: UUID?
+            }
+            
+            let result: [StoreResult] = try await client
+                .from("stores")
+                .select("assigned_manager_id")
+                .eq("id", value: storeId)
+                .execute()
+                .value
+                
+            return result.first?.assigned_manager_id
+        }
+        
+        func createTransferTask(storeId: UUID, managerId: UUID?, orderNumber: String) async throws {
+            var employeeId: UUID? = nil
+            if managerId != nil {
+                struct EmployeeResult: Decodable { let id: UUID }
+                do {
+                    let emps: [EmployeeResult] = try await client
+                        .from("employees")
+                        .select("id")
+                        .eq("boutique_id", value: storeId)
+                        .ilike("role", value: "%manager%")
+                        .execute()
+                        .value
+                    employeeId = emps.first?.id
+                } catch {
+                    print("Could not find manager employee: \(error)")
+                }
+            }
+            
+            struct NewTask: Encodable {
+                let boutique_id: UUID
+                let title: String
+                let description: String
+                let assigned_to: UUID?
+                let status: String
+            }
+            
+            let task = NewTask(
+                boutique_id: storeId,
+                title: "Low Stock for Order #\(orderNumber.prefix(8).uppercased())",
+                description: "Order #\(orderNumber.prefix(8).uppercased()) has insufficient stock to ship. Please initiate a transfer.",
+                assigned_to: employeeId,
+                status: "pending"
+            )
+            
+            try await client
+                .from("store_tasks")
+                .insert(task)
+                .execute()
+        }
 }

@@ -57,6 +57,17 @@ struct VarianceReportListView: View {
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .searchable(text: $searchText, prompt: "Search by product, store or status")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                let pdfData = ICReportPDFGenerator.generateVariancePDF(data: filteredVariance, storeName: filteredVariance.first?.store?.name ?? "Current Store")
+                let pdfDoc = PDFReportDocument(data: pdfData, filename: "Variance_Report.pdf")
+                
+                ShareLink(item: pdfDoc, preview: SharePreview("Variance Report", image: Image(systemName: "doc.text.fill"))) {
+                    Image(systemName: "square.and.arrow.up")
+                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                }
+            }
+        }
     }
     
     private var emptyView: some View {
