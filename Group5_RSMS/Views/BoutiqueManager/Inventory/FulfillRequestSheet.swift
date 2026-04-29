@@ -85,6 +85,10 @@ struct FulfillRequestSheet: View {
                 }
             }
             .task {
+                // Reset shared state from any previous action
+                viewModel.transferSuccess = false
+                viewModel.transferError = nil
+
                 transferQuantity = request.quantity
                 await loadAvailableStock()
             }

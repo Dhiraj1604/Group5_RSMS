@@ -48,8 +48,8 @@ class StockAnalysisViewModel: ObservableObject {
     enum StockStatus: String, CaseIterable {
         case outOfStock = "Out of Stock"
         case low = "Low Stock"
-        case normal = "In Stock"
-        case overstock = "Overstock"
+        case normal = "Sufficient"
+        case overstock = "In Stock"
 
         var color: String {
             switch self {
@@ -73,7 +73,7 @@ class StockAnalysisViewModel: ObservableObject {
     enum StockFilter: String, CaseIterable {
         case all = "All"
         case low = "Low Stock"
-        case overstock = "Overstock"
+        case overstock = "In Stock"
         case outOfStock = "Out of Stock"
     }
 

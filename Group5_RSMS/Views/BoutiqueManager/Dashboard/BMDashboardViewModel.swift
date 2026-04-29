@@ -87,55 +87,57 @@ final class BMDashboardViewModel: ObservableObject {
         isLoadingStaff = true
         
         let calendar = Calendar.current
-        let currentMonth = calendar.component(.month, from: Date())
-        let currentYear  = calendar.component(.year,  from: Date())
+        let today = Date()
+        guard let startOfYear = calendar.date(from: calendar.dateComponents([.year], from: today)),
+              let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today)) else {
+            isLoadingStaff = false
+            return
+        }
         
         do {
             async let employeesFetch = sync.fetchEmployees(boutiqueId: boutiqueId)
-            async let payoutsFetch   = sync.fetchAllPayouts(boutiqueId: boutiqueId)  // ← new
+            async let yearlySalesFetch = sync.fetchSalesPerEmployee(boutiqueId: boutiqueId, from: startOfYear)
+            async let monthlySalesFetch = sync.fetchSalesPerEmployee(boutiqueId: boutiqueId, from: startOfMonth)
+            async let totalPerformanceFetch = MerchandisingService.shared.fetchYearlyPerformance(forStore: boutiqueId)
             
             let employees = try await employeesFetch
-            let payouts   = try await payoutsFetch
+            let yearlySales = try await yearlySalesFetch
+            let monthlySales = try await monthlySalesFetch
+            let totalPerf = try await totalPerformanceFetch
             
-            // Group payouts by employee_id
-            var payoutsByEmployee: [UUID: [CommissionPayout]] = [:]
-            for payout in payouts {
-                payoutsByEmployee[payout.employeeId, default: []].append(payout)
-            }
+            // Map stats by employee ID
+            var yearlyMap: [UUID: EmployeeSalesSummary] = [:]
+            for s in yearlySales { yearlyMap[s.employeeId] = s }
+            
+            var monthlyMap: [UUID: EmployeeSalesSummary] = [:]
+            for s in monthlySales { monthlyMap[s.employeeId] = s }
             
             var entries: [StaffPerformanceEntry] = []
-            var tSales      = 0.0
-            var tMonthSales = 0.0
-            var tOrders     = 0
             
             for emp in employees {
-                let empPayouts  = payoutsByEmployee[emp.id] ?? []
-                let total       = empPayouts.reduce(0) { $0 + $1.totalSalesAmount }
-                let monthSales  = empPayouts.filter {
-                    calendar.component(.month, from: $0.periodEnd) == currentMonth &&
-                    calendar.component(.year,  from: $0.periodEnd) == currentYear
-                }.reduce(0) { $0 + $1.totalSalesAmount }
-                let count = empPayouts.count
-                let avg   = count > 0 ? total / Double(count) : 0
+                let yStats = yearlyMap[emp.id]
+                let mStats = monthlyMap[emp.id]
+                
+                let ySales = yStats?.totalSales ?? 0.0
+                let mSales = mStats?.totalSales ?? 0.0
+                let yCount = yStats?.orderCount ?? 0
+                
+                let avg = yCount > 0 ? ySales / Double(yCount) : 0
                 
                 entries.append(StaffPerformanceEntry(
                     id: emp.id,
                     name: emp.name,
-                    totalSales: total,
-                    thisMonthSales: monthSales,
-                    totalOrders: count,
+                    totalSales: ySales,
+                    thisMonthSales: mSales,
+                    totalOrders: yCount,
                     avgOrderValue: avg
                 ))
-                
-                tSales      += total
-                tMonthSales += monthSales
-                tOrders     += count
             }
             
             self.staffPerformance   = entries.sorted { $0.totalSales > $1.totalSales }
-            self.teamTotalSales     = tSales
-            self.teamThisMonthSales = tMonthSales
-            self.teamTotalOrders    = tOrders
+            self.teamTotalSales     = totalPerf.totalSales
+            self.teamThisMonthSales = monthlySales.reduce(0) { $0 + $1.totalSales }
+            self.teamTotalOrders    = totalPerf.totalOrders
             
         } catch {
             print("Failed to load staff performance: \(error)")

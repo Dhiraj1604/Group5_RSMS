@@ -302,7 +302,7 @@ final class SupabaseSyncManager {
         var query = client
             .from("customer_orders")
             .select("employee_id, total_amount")
-            .eq("boutique_id", value: boutiqueId.uuidString)
+            .eq("store_id", value: boutiqueId.uuidString)
         
         if let from = from {
             query = query.gte("created_at", value: ISO8601DateFormatter().string(from: from))
@@ -314,12 +314,16 @@ final class SupabaseSyncManager {
         let response = try await query.execute()
         let orders = try supabaseDecoder.decode([RawOrder].self, from: response.data)
         
-        var salesMap: [UUID: Double] = [:]
+        var salesMap: [UUID: (total: Double, count: Int)] = [:]
         for order in orders {
             guard let empId = order.employeeId else { continue }
-            salesMap[empId, default: 0.0] += order.totalAmount
+            let current = salesMap[empId] ?? (0.0, 0)
+            salesMap[empId] = (current.total + order.totalAmount, current.count + 1)
         }
-        return salesMap.map { EmployeeSalesSummary(employeeId: $0.key, totalSales: $0.value) }
+        
+        return salesMap.map { (empId, stats) in
+            EmployeeSalesSummary(employeeId: empId, totalSales: stats.total, orderCount: stats.count)
+        }
     }
     
     // MARK: - Staff Shifts

@@ -43,8 +43,6 @@ struct DashboardTab: View {
             }
             .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
