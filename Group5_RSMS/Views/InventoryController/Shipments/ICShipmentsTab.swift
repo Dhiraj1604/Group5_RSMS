@@ -273,7 +273,7 @@ struct ICShipmentsTab: View {
                                         .fill(RSMSTheme.Colors.border.opacity(0.3))
                                         .frame(width: 60, height: 60)
                                     
-                                    if let urlString = item.product?.imageUrl ?? item.productImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
+                                    if let url = resolvePublicImageUrl(for: item.product?.imageUrl ?? item.productImageUrl) {
                                         AsyncImage(url: url) { image in
                                             image
                                                 .resizable()
@@ -542,7 +542,7 @@ struct OrderDetailsSheet: View {
                             .fill(RSMSTheme.Colors.border.opacity(0.3))
                             .frame(width: 70, height: 70)
                         
-                        if let urlString = item.product?.imageUrl ?? item.productImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
+                        if let url = resolvePublicImageUrl(for: item.product?.imageUrl ?? item.productImageUrl) {
                             AsyncImage(url: url) { image in
                                 image
                                     .resizable()
@@ -649,4 +649,13 @@ struct OrderDetailsSheet: View {
         .background(RSMSTheme.Colors.border.opacity(0.3))
         .cornerRadius(6)
     }
+}
+
+// MARK: - Image Helper
+fileprivate func resolvePublicImageUrl(for path: String?) -> URL? {
+    guard let path = path, !path.isEmpty else { return nil }
+    if path.hasPrefix("http") { return URL(string: path) }
+    let supabaseProjectID = "https://bdgwzkpteyxhlgprlmye.supabase.co"
+    let bucketName = "product-images"
+    return URL(string: "\(supabaseProjectID)/storage/v1/object/public/\(bucketName)/\(path)")
 }

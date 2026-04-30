@@ -5,7 +5,7 @@
 
 import Foundation
 
-struct Shift: Codable, Identifiable {
+struct Shift: Codable, Identifiable, Equatable {
     let id: UUID
     let boutiqueId: UUID
     let employeeId: UUID

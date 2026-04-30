@@ -2,18 +2,15 @@
 //  StaffListView.swift
 //  Group5_RSMS
 //
-//  Content-only view — no NavigationStack, no toolbar, no secondary filters.
-//  BMStaffTab owns navigation and the + button.
-//
 
 import SwiftUI
 
 struct StaffListView: View {
     let boutiqueId: UUID
     @ObservedObject var staffVM: StaffViewModel
+    @Binding var searchText: String
     @Binding var showAddEmployee: Bool
     
-    @State private var searchText = ""
     @State private var employeeToDelete: Employee?
     @State private var showingDeleteAlert = false
 
@@ -29,13 +26,17 @@ struct StaffListView: View {
     }
 
     var body: some View {
-        Group {
+        ZStack {
+            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+            
             if staffVM.isLoading {
                 ProgressView()
                     .tint(RSMSTheme.Colors.accentGold)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if staffVM.employees.isEmpty {
                 emptyState
+            } else if filteredEmployees.isEmpty && !searchText.isEmpty {
+                noResultsState
             } else {
                 List {
                     ForEach(filteredEmployees) { employee in
@@ -63,17 +64,12 @@ struct StaffListView: View {
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
-                            .accessibilityLabel("Delete \(employee.name)")
-                            .accessibilityHint("Shows a confirmation before deleting this staff member.")
                         }
                     }
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 .background(RSMSTheme.Colors.backgroundDeep)
-                .cornerRadius(12)
-                .padding()
-                .searchable(text: $searchText, prompt: "Search staff members")
                 .alert("Delete Staff", isPresented: $showingDeleteAlert, presenting: employeeToDelete) { emp in
                     Button("Cancel", role: .cancel) { }
                     Button("Delete", role: .destructive) {
@@ -89,7 +85,6 @@ struct StaffListView: View {
         }
     }
 
-    // MARK: - Empty State
     private var emptyState: some View {
         VStack(spacing: 16) {
             Spacer()
@@ -108,12 +103,22 @@ struct StaffListView: View {
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
                     .background(RSMSTheme.Colors.accentGold)
-                    .cornerRadius(10)
+                    .cornerRadius(12)
             }
-            .accessibilityLabel("Add staff member")
-            .accessibilityHint("Opens the form to add a new staff member.")
             Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var noResultsState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "person.text.rectangle")
+                .font(.system(size: 44))
+                .foregroundStyle(RSMSTheme.Colors.textTertiary)
+            Text("No staff match \"\(searchText)\"")
+                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -123,7 +128,7 @@ struct StaffDirectoryCard: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            // Avatar with Gradient
+            // Avatar
             ZStack {
                 Circle()
                     .fill(RSMSTheme.Colors.accentGold.opacity(0.1))
@@ -161,13 +166,5 @@ struct StaffDirectoryCard: View {
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
         .contentShape(Rectangle())
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilitySummary)
-        .accessibilityHint("Double tap to view sales details.")
-    }
-
-    private var accessibilitySummary: String {
-        let status = (employee.isActive ?? true) ? "Active" : "Inactive"
-        return "Employee: \(employee.name). Role: \(employee.role). Status: \(status)."
     }
 }
