@@ -147,7 +147,7 @@ final class BMReportsViewModel: ObservableObject {
 //         let activeEmployees = employees.filter { $0.isActive ?? true }
 //         self.dormantStaffDetails = activeEmployees.filter {
 //             !recentEmployeeIds.contains($0.id)
-        // ── Compute everything locally first ───────────────────────────────────
+        // Compute everything locally first
         let recentPayouts   = payouts.filter { $0.periodEnd >= thirtyDaysAgo }
         let newTotalSales   = recentPayouts.reduce(0.0) { $0 + $1.totalSalesAmount }
         let newTotalRevenue = newTotalSales * 0.72
@@ -201,7 +201,7 @@ final class BMReportsViewModel: ObservableObject {
         if slowItems.isEmpty       { flags["Slow Items"] = true }
         if soldItems.isEmpty       { flags["Products"] = true }
         
-        // ── Assign all at once so SwiftUI sees one coherent update ─────────────
+        // Assign all at once so SwiftUI sees one coherent update
         self.totalSales          = newTotalSales
         self.totalRevenue        = newTotalRevenue
         self.totalOrders         = newTotalOrders

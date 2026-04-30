@@ -2,20 +2,6 @@
 //  AuditAction.swift
 //  Group5_RSMS
 //
-//  Sprint 1 — Task #8 (User Activity Monitor) — Zeeshan
-//
-//  Single source of truth for audit action/entity types + ActivityLogService singleton.
-//
-//  KEY DESIGN: ActivityLogService.shared.currentUserEmail is set once in AppState.login()
-//  so that any service (TaxSettingsViewModel, OfferService, etc.) can call log() without
-//  needing @Environment(AppState.self) — avoiding threading the email through every call site.
-//
-//  Entities that produce audit logs:
-//   ✅ Products    — AppState product mutations
-//   ✅ Stores      — AppState store mutations
-//   ✅ Tax Rules   — TaxSettingsViewModel.saveRule / deleteRule
-//   ✅ Promotions  — OfferService.addOffer / updateOffer / permanentlyDeleteOffer
-//   ✅ Users       — AppState.login / UserManagementService (when implemented)
 //
 
 import Foundation
@@ -120,9 +106,9 @@ final class ActivityLogService {
                     .from("audit_logs")
                     .insert(payload)
                     .execute()
-                print("✅ [Audit] \(payload.action) — \(entityName)")
+                print("[Audit] \(payload.action) — \(entityName)")
             } catch {
-                print("⚠️ [Audit] Persist failed: \(error.localizedDescription)")
+                print("[Audit] Persist failed: \(error.localizedDescription)")
             }
         }
     }

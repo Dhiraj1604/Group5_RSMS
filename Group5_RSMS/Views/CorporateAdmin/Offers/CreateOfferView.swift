@@ -2,9 +2,6 @@
 //  CreateOfferView.swift
 //  Group5_RSMS
 //
-//  Corporate Admin — Create a time-bound offer and assign to stores.
-//  Strictly iOS-native: Form + Section + native DatePicker, Picker, Toggle.
-//  User Stories #10 (create offer, assign stores) & #17 (start/end dates).
 //
 
 import SwiftUI
@@ -16,7 +13,7 @@ struct CreateOfferView: View {
     @ObservedObject var service: OfferService
     @Environment(\.dismiss) private var dismiss
 
-    // ── Form state ─────────────────────────────────────────────────
+    // Form state
     @State private var name               = ""
     @State private var discountType       = DiscountType.percentage
     @State private var discountValue      = ""
@@ -31,7 +28,7 @@ struct CreateOfferView: View {
     @State private var couponCode         = ""
     @State private var storeSearchText    = ""
 
-    // ── UX state ───────────────────────────────────────────────────
+    // UX state
     @State private var showErrors    = false
     @State private var isSubmitting  = false
     @State private var showErrorAlert = false
@@ -97,7 +94,7 @@ struct CreateOfferView: View {
         NavigationStack {
             Form {
 
-                // ── 1. Promotion Details ───────────────────────────
+                // 1. Promotion Details
                 Section {
                     TextField("e.g. Diwali Collection Launch", text: $name)
                         .foregroundStyle(RSMSTheme.Colors.textPrimary)
@@ -111,7 +108,7 @@ struct CreateOfferView: View {
                 }
                 .listRowBackground(RSMSTheme.Colors.backgroundDeep)
 
-                // ── 2. Discount ────────────────────────────────────
+                // 2. Discount
                 Section {
                     Picker("Type", selection: $discountType) {
                         ForEach(DiscountType.allCases, id: \.self) { dt in
@@ -152,7 +149,7 @@ struct CreateOfferView: View {
                 }
                 .listRowBackground(RSMSTheme.Colors.backgroundDeep)
 
-                // ── 3. Offer Period ────────────────────────────────
+                // 3. Offer Period
                 Section {
                     // Status preview
                     HStack {
@@ -200,7 +197,7 @@ struct CreateOfferView: View {
                 }
                 .listRowBackground(RSMSTheme.Colors.backgroundDeep)
 
-                // ── 4. Store Assignment ────────────────────────────
+                // 4. Store Assignment
                 Section {
                     // Search bar
                     HStack {
@@ -279,7 +276,7 @@ struct CreateOfferView: View {
                 }
                 .listRowBackground(RSMSTheme.Colors.backgroundDeep)
 
-                // ── 5. Configuration ───────────────────────────────
+                // 5. Configuration
                 Section {
                     Picker("Activation Method", selection: $activationMethod) {
                         Text("Auto Apply").tag("auto")
@@ -319,7 +316,7 @@ struct CreateOfferView: View {
                 }
                 .listRowBackground(RSMSTheme.Colors.backgroundDeep)
 
-                // ── 6. Conditions (optional) ───────────────────────
+                // 6. Conditions (optional)
                 Section {
                     TextField(
                         "e.g. Void if basket < ₹5,000",

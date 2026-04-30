@@ -283,7 +283,7 @@ struct BMDashboardTab: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
             } else {
-                // ✅ Show top 3 based on potential commission
+                // Show top 3 based on potential commission
                 let maxComm = dashboardVM.staffPerformance.map { $0.potentialCommission }.max() ?? 1
                 VStack(spacing: 10) {
                     ForEach(Array(dashboardVM.staffPerformance.prefix(3).enumerated()), id: \.element.id) { idx, entry in

@@ -2,10 +2,6 @@
 //  Offer.swift
 //  Group5_RSMS
 //
-//  Task #8 (Zeeshan): OfferService.addOffer / updateOffer / permanentlyDeleteOffer
-//  now call ActivityLogService.shared.log(entity: .promotion, ...) so every
-//  offer mutation appears in Audit Logs under the "Promotions" category.
-//  All original Offer / OfferService code preserved exactly otherwise.
 //
 
 import Foundation
@@ -214,7 +210,7 @@ final class OfferService: ObservableObject {
                 do {
                     self?.offers = try self?.jsonDecoder.decode([Offer].self, from: data) ?? []
                 } catch {
-                    if let raw = String(data: data, encoding: .utf8) { print("❌ Raw: \(raw)") }
+                    if let raw = String(data: data, encoding: .utf8) { print("Raw: \(raw)") }
                     self?.errorMessage = "Decoding error: \(error.localizedDescription)"
                 }
             }
@@ -242,7 +238,6 @@ final class OfferService: ObservableObject {
                 let saved = inserted.first ?? offer
                 self?.offers.insert(saved, at: 0)
 
-                // ── Task #8 — Audit log ──────────────────────────────
                 ActivityLogService.shared.log(
                     action: .created,
                     entity: .promotion,
@@ -284,7 +279,6 @@ final class OfferService: ObservableObject {
                     let updated = (try? self?.jsonDecoder.decode([Offer].self, from: data))?.first ?? updatedOffer
                     self?.offers[index] = updated
 
-                    // ── Task #8 — Audit log ──────────────────────────
                     ActivityLogService.shared.log(
                         action: .updated,
                         entity: .promotion,
@@ -322,7 +316,6 @@ final class OfferService: ObservableObject {
                 }
                 self?.offers.removeAll(where: { $0.id == offer.id })
 
-                // ── Task #8 — Audit log ──────────────────────────────
                 ActivityLogService.shared.log(
                     action: .deleted,
                     entity: .promotion,
