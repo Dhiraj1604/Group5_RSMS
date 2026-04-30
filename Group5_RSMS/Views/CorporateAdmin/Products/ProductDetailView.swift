@@ -1,335 +1,491 @@
-//
-//  ProductDetailView.swift
-//  Group5_RSMS
-//
-//  Created by Dhiraj on 15/04/26.
-
-//  Corporate Admin — Product Detail View. SPRINT 1 STORY 4.
-//  Shows current retail price, allows setting/updating it,
-//  and displays the full price_history audit trail.
-//
-//  The price_history audit trail must exist before POS goes live.
-//  Every transaction records a unit_price at time of sale.
-//
-
 import SwiftUI
 import Supabase
-import PostgREST
-
-
-// MARK: - Price History model (maps to `price_history` Supabase table)
-
-struct PriceHistoryEntry: Identifiable, Codable {
-    let id: UUID
-    let productId: UUID
-    let previousPrice: Double?
-    let newPrice: Double
-    let changedBy: String
-    let changedAt: Date
-    let note: String?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case productId  = "product_id"
-        case previousPrice = "previous_price"
-        case newPrice   = "new_price"
-        case changedBy  = "changed_by"
-        case changedAt  = "changed_at"
-        case note
-    }
-
-    var formattedDate: String {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .short
-        return f.string(from: changedAt)
-    }
-
-    var formattedNewPrice: String { formatUSD(newPrice) }
-    var formattedPreviousPrice: String {
-        guard let p = previousPrice else { return "—" }
-        return formatUSD(p)
-    }
-
-    private func formatUSD(_ value: Double) -> String {
-        let f = NumberFormatter()
-        f.numberStyle = .currency
-        f.currencyCode = "USD"
-        return f.string(from: NSNumber(value: value)) ?? "$\(value)"
-    }
-}
-
-// MARK: - View
 
 struct ProductDetailView: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
+
     let product: Product
     var onPriceUpdated: (() -> Void)? = nil
 
-    @State private var priceHistory: [PriceHistoryEntry] = []
-    @State private var isLoadingHistory = false
-    @State private var showSetPrice = false
-    @State private var currentProduct: Product
+    // 🛠️ CONFIGURATION
+    private let supabaseURL = "https://bdgwzkpteyxhlgprlmye.supabase.co"
+    private let bucketName = "product-images"
 
-    init(product: Product, onPriceUpdated: (() -> Void)? = nil) {
-        self.product = product
-        self.onPriceUpdated = onPriceUpdated
-        _currentProduct = State(initialValue: product)
+    // MARK: - State
+    @State private var isEditing: Bool = false
+    @State private var showSetPrice: Bool = false
+    @State private var showDeleteConfirm: Bool = false
+    @State private var updateError: String? = nil
+
+    // MARK: - Editable Fields
+    @State private var sku: String = ""
+    @State private var selectedCategory: ProductCategory = .other
+    @State private var material: String = ""
+    @State private var originCountry: String = ""
+    @State private var selectedCraftsmanship: CraftsmanshipLevel = .handcrafted
+    @State private var craftsmanshipNotes: String = ""
+    @State private var collectionName: String = ""
+    @State private var artisanStudio: String = ""
+    @State private var isGloballyListed: Bool = true
+
+    private var currentProduct: Product {
+        appState.products.first(where: { $0.id == product.id }) ?? product
     }
 
     var body: some View {
         ZStack {
-            RSMSTheme.Colors.backgroundPrimary
-                .ignoresSafeArea()
+            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: RSMSTheme.Spacing.xl) {
-                    productInfoCard
-                    priceSection
-                    if !priceHistory.isEmpty {
-                        priceHistorySection
-                    }
-                    Spacer().frame(height: RSMSTheme.Spacing.xxl)
+                HStack(alignment: .top, spacing: RSMSTheme.Spacing.xl) {
+                    // LEFT COLUMN: Image + Name + SKU + Price
+                    leftColumn
+                        .frame(width: 320)
+                        .frame(maxHeight: .infinity, alignment: .top)
+
+                    // RIGHT COLUMN: All detail sections
+                    rightColumn
                 }
                 .padding(.horizontal, RSMSTheme.Spacing.lg)
                 .padding(.top, RSMSTheme.Spacing.md)
+                .padding(.bottom, RSMSTheme.Spacing.xxl)
             }
         }
-        .navigationTitle(currentProduct.name)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(isEditing)
         .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
-        .sheet(isPresented: $showSetPrice, onDismiss: {
-            Task { await refreshAfterPriceSet() }
-        }) {
+        
+        .toolbar {
+            if isEditing {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { cancelEditing() } label: {
+                        Image(systemName: "xmark").font(.body.weight(.semibold))
+                    }
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { saveProduct() } label: {
+                        Image(systemName: "checkmark").font(.body.weight(.semibold))
+                    }
+                    .foregroundStyle(RSMSTheme.Colors.accentGold)
+                }
+            } else {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { startEditing() } label: {
+//                         Image(systemName: "pencil.circle.fill")
+//                             .font(.title3)
+//                             .foregroundStyle(RSMSTheme.Colors.accentGold)
+//                     }
+                        Image(systemName: "pencil")
+                    }
+                    .foregroundStyle(RSMSTheme.Colors.accentGold)
+                }
+            }
+        }
+        .sheet(isPresented: $showSetPrice, onDismiss: { onPriceUpdated?() }) {
             SetPriceView(product: currentProduct)
         }
-        .task {
-            await fetchPriceHistory()
+        .alert("Update Failed", isPresented: Binding<Bool>(
+            get: { updateError != nil },
+            set: { if !$0 { updateError = nil } }
+        )) {
+            Button("OK") { }
+        } message: {
+            Text(updateError ?? "Unknown error")
+        }
+        .onAppear { populateFields() }
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // MARK: - LEFT COLUMN
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    private var leftColumn: some View {
+        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.lg) {
+            // Product Image
+            productImage
+
+            // Product Name + Active dot
+            HStack(spacing: RSMSTheme.Spacing.sm) {
+                Text(currentProduct.name)
+                    .font(.title2).fontWeight(.bold)
+                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Circle()
+                    .fill(currentProduct.isActive ? RSMSTheme.Colors.success : Color.gray)
+                    .frame(width: 10, height: 10)
+            }
+
+            // SKU + Category
+            HStack(spacing: RSMSTheme.Spacing.sm) {
+                TextField("SKU", text: $sku)
+                    .font(.subheadline).fontWeight(.medium)
+                    .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    .textInputAutocapitalization(.characters)
+                    .disabled(!isEditing)
+
+                Text("·")
+                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
+
+                if isEditing {
+                    Picker("", selection: $selectedCategory) {
+                        ForEach(ProductCategory.allCases) { cat in
+                            Text(cat.rawValue).tag(cat)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(RSMSTheme.Colors.textSecondary)
+                } else {
+                    Text(currentProduct.category.rawValue)
+                        .font(.subheadline)
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                }
+            }
+
+            Divider().background(RSMSTheme.Colors.borderLight)
+
+            // Price
+            priceBlock
+
+            Spacer(minLength: RSMSTheme.Spacing.sm)
+
+            // Action buttons
+            actionButtons
         }
     }
 
-    // MARK: - Product Info Card
+    private var productImage: some View {
+        ZStack {
+            RSMSTheme.Colors.backgroundDeep
 
-    private var productInfoCard: some View {
-        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.lg) {
-            HStack(spacing: RSMSTheme.Spacing.lg) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                        .fill(RSMSTheme.Colors.accentGold.opacity(0.12))
-                        .frame(width: 60, height: 60)
-                    Image(systemName: "tag.fill")
-                        .font(.system(size: 26))
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+            if let path = currentProduct.imageUrl,
+               let url = path.hasPrefix("http")
+                   ? URL(string: path)
+                   : URL(string: "\(supabaseURL)/storage/v1/object/public/\(bucketName)/\(path)") {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                            .frame(width: 320, height: 320)
+                            .clipped()
+                    case .failure:
+                        categoryPlaceholder
+                            .frame(width: 320, height: 320)
+                    case .empty:
+                        ProgressView().tint(RSMSTheme.Colors.accentGold)
+                            .frame(width: 320, height: 320)
+                    @unknown default:
+                        EmptyView()
+                    }
                 }
-                VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
-                    Text(currentProduct.name)
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                    Text(currentProduct.sku)
-                        .font(.subheadline)
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
-                }
-                Spacer()
+            } else {
+                categoryPlaceholder
+                    .frame(width: 320, height: 320)
             }
         }
-        .padding(RSMSTheme.Spacing.lg)
-        .background(RSMSTheme.Colors.backgroundDeep)
+        .frame(width: 320, height: 320)
         .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
-        .overlay(
-            RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
-                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
-        )
+        .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+            .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
     }
 
-    // MARK: - Price Section
+    private var categoryPlaceholder: some View {
+        ZStack {
+            RSMSTheme.Colors.backgroundDeep
+            Image(systemName: currentProduct.category.icon)
+                .font(.system(size: 60))
+                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.2))
+        }
+    }
 
-    private var priceSection: some View {
-        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-            Label("Official Retail Price", systemImage: "dollarsign.circle.fill")
-                .font(.headline)
-                .foregroundStyle(RSMSTheme.Colors.textPrimary)
+    private var priceBlock: some View {
+        VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
+            Text("RETAIL PRICE")
+                .font(.caption2).fontWeight(.bold)
+                .foregroundStyle(RSMSTheme.Colors.textTertiary).textCase(.uppercase)
 
             if currentProduct.basePrice > 0 {
-                // Price is set — show current + edit button
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
-                        Text("CURRENT PRICE")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                            .textCase(.uppercase)
-                        Text(currentProduct.formattedPrice)
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
-                            .foregroundStyle(RSMSTheme.Colors.accentGold)
-                    }
+                HStack {
+                    Text(currentProduct.formattedPrice)
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+
                     Spacer()
+
                     Button { showSetPrice = true } label: {
-                        Label("Update", systemImage: "pencil")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
+                        Image(systemName: "pencil")
+                            .font(.caption).fontWeight(.semibold)
                             .foregroundStyle(RSMSTheme.Colors.accentGold)
-                            .padding(.horizontal, RSMSTheme.Spacing.lg)
-                            .padding(.vertical, RSMSTheme.Spacing.md)
+                            .padding(8)
                             .background(RSMSTheme.Colors.accentGold.opacity(0.12))
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(RSMSTheme.Colors.accentGold.opacity(0.3), lineWidth: 1))
+                            .clipShape(Circle())
                     }
                 }
-                .padding(RSMSTheme.Spacing.xl)
-                .background(RSMSTheme.Colors.backgroundDeep)
-                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
-                .overlay(
-                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
-                        .stroke(RSMSTheme.Colors.accentGold.opacity(0.25), lineWidth: 1)
-                )
-
             } else {
-                // No price — warning + CTA
-                VStack(spacing: RSMSTheme.Spacing.lg) {
-                    HStack(spacing: RSMSTheme.Spacing.md) {
+                Button { showSetPrice = true } label: {
+                    HStack(spacing: RSMSTheme.Spacing.sm) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(RSMSTheme.Colors.warning)
-                            .font(.title3)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("No Price Set")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                            Text("This product cannot be sold until a retail price is set.")
-                                .font(.caption)
-                                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                        Text("Set Price")
+                            .font(.subheadline).fontWeight(.semibold)
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    }
+                }
+            }
+        }
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // MARK: - RIGHT COLUMN
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    private var rightColumn: some View {
+        VStack(spacing: RSMSTheme.Spacing.xl) {
+            statusCard
+            craftsmanshipCard
+            heritageCard
+        }
+    }
+
+    // MARK: - Status Card
+    private var statusCard: some View {
+        detailSection(title: "Visibility & Status") {
+            HStack(spacing: RSMSTheme.Spacing.md) {
+                Image(systemName: "globe").font(.caption)
+                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
+                Text("Global Listing").font(.subheadline)
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                Spacer()
+                if isEditing {
+                    Toggle("", isOn: $isGloballyListed)
+                        .tint(RSMSTheme.Colors.accentGold)
+                        .labelsHidden()
+                } else {
+                    Text(currentProduct.isGloballyListed ? "Listed on all boutiques" : "Unlisted")
+                        .font(.subheadline).fontWeight(.medium)
+                        .foregroundStyle(currentProduct.isGloballyListed ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.warning)
+                }
+            }
+            .padding(.vertical, RSMSTheme.Spacing.md)
+        }
+    }
+
+    // MARK: - Craftsmanship Card
+    private var craftsmanshipCard: some View {
+        detailSection(title: "Materials & Craftsmanship") {
+            editableRow(icon: "atom", label: "Materials", text: $material)
+            Divider().background(RSMSTheme.Colors.borderLight)
+            editableRow(icon: "globe.europe.africa", label: "Country of Origin", text: $originCountry)
+            Divider().background(RSMSTheme.Colors.borderLight)
+
+            HStack(spacing: RSMSTheme.Spacing.md) {
+                Image(systemName: "star.fill").font(.caption)
+                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
+                Text("Craftsmanship").font(.subheadline)
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                Spacer()
+                if isEditing {
+                    Picker("", selection: $selectedCraftsmanship) {
+                        ForEach(CraftsmanshipLevel.allCases, id: \.self) { level in
+                            Text(level.rawValue).tag(level)
                         }
-                        Spacer()
                     }
-                    Button { showSetPrice = true } label: {
-                        Label("Set Retail Price", systemImage: "dollarsign.circle")
-                    }
-                    .buttonStyle(GoldButtonStyle())
+                    .pickerStyle(.menu)
+                    .tint(RSMSTheme.Colors.accentGold)
+                } else {
+                    Text(currentProduct.craftsmanshipLevel.rawValue)
+                        .font(.subheadline).fontWeight(.medium)
+                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
                 }
-                .padding(RSMSTheme.Spacing.lg)
-                .background(RSMSTheme.Colors.warning.opacity(0.06))
-                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
-                .overlay(
-                    RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
-                        .stroke(RSMSTheme.Colors.warning.opacity(0.25), lineWidth: 1)
-                )
             }
+            .padding(.vertical, RSMSTheme.Spacing.md)
+
+            Divider().background(RSMSTheme.Colors.borderLight)
+
+            // Artisan Notes
+            HStack(alignment: .top, spacing: RSMSTheme.Spacing.md) {
+                Image(systemName: "text.quote").font(.caption)
+                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
+                    .padding(.top, 2)
+                VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
+                    Text("Artisan Notes")
+                        .font(.caption).fontWeight(.semibold)
+                        .foregroundStyle(RSMSTheme.Colors.textSecondary).textCase(.uppercase)
+                    TextField("Artisan notes", text: $craftsmanshipNotes, axis: .vertical)
+                        .font(.subheadline).foregroundStyle(RSMSTheme.Colors.textPrimary)
+                        .lineLimit(1...5)
+                        .disabled(!isEditing)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, RSMSTheme.Spacing.sm)
         }
     }
 
-    // MARK: - Price History Section
+    // MARK: - Heritage Card
+    private var heritageCard: some View {
+        detailSection(title: "Heritage & Provenance") {
+            editableRow(icon: "crown.fill", label: "Collection", text: $collectionName)
+            Divider().background(RSMSTheme.Colors.borderLight)
+            editableRow(icon: "paintpalette.fill", label: "Artisan Studio", text: $artisanStudio)
+            Divider().background(RSMSTheme.Colors.borderLight)
+            staticRow(icon: "calendar", label: "Added",
+                      value: currentProduct.createdAt.formatted(date: .abbreviated, time: .shortened))
+        }
+    }
 
-    private var priceHistorySection: some View {
+    // MARK: - Action Buttons
+    private var actionButtons: some View {
+        VStack(spacing: RSMSTheme.Spacing.md) {
+            Button {
+                Task { await appState.toggleProductActive(currentProduct) }
+            } label: {
+                HStack {
+                    Image(systemName: currentProduct.isActive ? "pause.circle.fill" : "play.circle.fill")
+                    Text(currentProduct.isActive ? "Deactivate Product" : "Activate Product")
+                }
+            }
+            .buttonStyle(SecondaryButtonStyle())
+
+            Button { showDeleteConfirm = true } label: {
+                HStack {
+                    Image(systemName: "trash.fill")
+                    Text("Delete Product")
+                }
+                .font(.headline).fontWeight(.medium)
+                .foregroundStyle(RSMSTheme.Colors.error)
+                .frame(maxWidth: .infinity).frame(height: 52)
+                .background(RSMSTheme.Colors.error.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
+                .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                    .stroke(RSMSTheme.Colors.error.opacity(0.3), lineWidth: 1))
+            }
+            .confirmationDialog("Delete \(currentProduct.name)?",
+                                isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    Task { dismiss(); await appState.deleteProduct(currentProduct) }
+                }
+            } message: {
+                Text("This cannot be undone. The product will be permanently removed.")
+            }
+        }
+        .padding(.top, RSMSTheme.Spacing.sm)
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // MARK: - Reusable Components
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    private func detailSection(title: String, @ViewBuilder content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-            Label("Price History", systemImage: "clock.arrow.circlepath")
-                .font(.headline)
-                .foregroundStyle(RSMSTheme.Colors.textPrimary)
-
-            VStack(spacing: RSMSTheme.Spacing.sm) {
-                ForEach(priceHistory) { entry in
-                    historyRow(entry: entry)
-                }
+            HStack(spacing: RSMSTheme.Spacing.sm) {
+                Rectangle().fill(RSMSTheme.Colors.accentGold).frame(width: 3, height: 16).clipShape(Capsule())
+                Text(title).font(.headline).fontWeight(.semibold).foregroundStyle(RSMSTheme.Colors.textPrimary)
             }
+            VStack(spacing: 0) { content() }
+                .padding(.horizontal, RSMSTheme.Spacing.lg)
+                .padding(.vertical, RSMSTheme.Spacing.sm)
+                .background(RSMSTheme.Colors.backgroundDeep)
+                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
+                .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg)
+                    .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
         }
     }
 
-    private func historyRow(entry: PriceHistoryEntry) -> some View {
+    private func editableRow(icon: String, label: String, text: Binding<String>,
+                             keyboard: UIKeyboardType = .default) -> some View {
         HStack(spacing: RSMSTheme.Spacing.md) {
-            ZStack {
-                Circle()
-                    .fill(RSMSTheme.Colors.accentGold.opacity(0.1))
-                    .frame(width: 36, height: 36)
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.caption)
-                    .foregroundStyle(RSMSTheme.Colors.accentGold)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: RSMSTheme.Spacing.sm) {
-                    if entry.previousPrice != nil {
-                        Text(entry.formattedPreviousPrice)
-                            .font(.caption)
-                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                            .strikethrough(true, color: RSMSTheme.Colors.textSecondary)
-                        Image(systemName: "arrow.right")
-                            .font(.caption2)
-                            .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                    }
-                    Text(entry.formattedNewPrice)
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(RSMSTheme.Colors.success)
-                }
-                Text(entry.changedBy)
-                    .font(.caption2)
-                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                if let note = entry.note, !note.isEmpty {
-                    Text(note)
-                        .font(.caption2)
-                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                        .italic()
-                }
-            }
-
+            Image(systemName: icon).font(.caption)
+                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
+            Text(label).font(.subheadline).foregroundStyle(RSMSTheme.Colors.textSecondary)
             Spacer()
-
-            Text(entry.formattedDate)
-                .font(.caption2)
-                .foregroundStyle(RSMSTheme.Colors.textTertiary)
+            TextField("—", text: text)
+                .font(.subheadline).fontWeight(.medium)
+                .foregroundStyle(RSMSTheme.Colors.textPrimary)
                 .multilineTextAlignment(.trailing)
+                .keyboardType(keyboard)
+                .autocorrectionDisabled()
+                .disabled(!isEditing)
         }
-        .padding(RSMSTheme.Spacing.md)
-        .background(RSMSTheme.Colors.backgroundDeep)
-        .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
-        .overlay(
-            RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
+        .padding(.vertical, RSMSTheme.Spacing.md)
+    }
+
+    private func staticRow(icon: String, label: String, value: String,
+                           valueColor: Color = RSMSTheme.Colors.textPrimary) -> some View {
+        HStack(spacing: RSMSTheme.Spacing.md) {
+            Image(systemName: icon).font(.caption)
+                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7)).frame(width: 24)
+            Text(label).font(.subheadline).foregroundStyle(RSMSTheme.Colors.textSecondary)
+            Spacer()
+            Text(value).font(.subheadline).fontWeight(.medium)
+                .foregroundStyle(valueColor).multilineTextAlignment(.trailing)
+        }
+        .padding(.vertical, RSMSTheme.Spacing.md)
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // MARK: - Editing Actions
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    private func populateFields() {
+        sku = currentProduct.sku
+        selectedCategory = currentProduct.category
+        material = currentProduct.material
+        originCountry = currentProduct.originCountry
+        selectedCraftsmanship = currentProduct.craftsmanshipLevel
+        craftsmanshipNotes = currentProduct.craftsmanshipNotes
+        collectionName = currentProduct.collectionName
+        artisanStudio = currentProduct.artisanStudio
+        isGloballyListed = currentProduct.isGloballyListed
+    }
+
+    private func startEditing() {
+        populateFields()
+        isEditing = true
+    }
+
+    private func cancelEditing() {
+        populateFields()
+        isEditing = false
+    }
+
+    private func saveProduct() {
+        let productToSave = Product(
+            id: currentProduct.id,
+            sku: sku.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(),
+            name: currentProduct.name,
+            imageUrl: currentProduct.imageUrl,
+            category: selectedCategory,
+            isActive: currentProduct.isActive,
+            isGloballyListed: isGloballyListed,
+            createdAt: currentProduct.createdAt,
+            updatedAt: Date(),
+            basePrice: currentProduct.basePrice,
+            material: material.trimmingCharacters(in: .whitespacesAndNewlines),
+            originCountry: originCountry.trimmingCharacters(in: .whitespacesAndNewlines),
+            craftsmanshipLevel: selectedCraftsmanship,
+            craftsmanshipNotes: craftsmanshipNotes.trimmingCharacters(in: .whitespacesAndNewlines),
+            collectionName: collectionName.trimmingCharacters(in: .whitespacesAndNewlines),
+            artisanStudio: artisanStudio.trimmingCharacters(in: .whitespacesAndNewlines)
         )
-    }
 
-    // MARK: - Supabase
-
-    @MainActor
-    private func fetchPriceHistory() async {
-        isLoadingHistory = true
-        do {
-            let entries: [PriceHistoryEntry] = try await SupabaseManager.shared.client
-                .from("price_history")
-                .select()
-                .eq("product_id", value: currentProduct.id)
-                .order("changed_at", ascending: false)
-                .execute()
-                .value
-            self.priceHistory = entries
-        } catch {
-            print("❌ Failed to fetch price history: \(error)")
+        Task {
+            await appState.updateProduct(productToSave)
+            if appState.productError == nil {
+                isEditing = false
+            } else {
+                updateError = appState.productError
+            }
         }
-        isLoadingHistory = false
-    }
-
-    @MainActor
-    private func refreshAfterPriceSet() async {
-        // Re-fetch the product to get the updated base_price
-        do {
-            let updated: [Product] = try await SupabaseManager.shared.client
-                .from("products")
-                .select()
-                .eq("id", value: currentProduct.id)
-                .limit(1)
-                .execute()
-                .value
-            if let p = updated.first { currentProduct = p }
-        } catch {
-            print("❌ Failed to refresh product: \(error)")
-        }
-        await fetchPriceHistory()
-        onPriceUpdated?()
     }
 }
 
 #Preview {
     NavigationStack {
-        ProductDetailView(product: Product(sku: "LUX-001", name: "Signature Watch", basePrice: 0))
+        ProductDetailView(product: Product.sample)
     }
+    .environment(AppState())
 }

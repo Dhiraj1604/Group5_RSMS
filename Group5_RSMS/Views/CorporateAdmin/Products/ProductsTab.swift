@@ -1,37 +1,29 @@
-//
-//  ProductsTab.swift
-//  Group5_RSMS
-//
-//  Corporate Admin — Products tab placeholder.
-//
-
-//
-//  ProductsTab.swift
-//  Group5_RSMS
-//
-//  Corporate Admin — Products tab. SPRINT 1 STORY 4.
-//  Story: "Set the official retail price for a product"
-//  so it can be sold at a consistent value across every international boutique.
-//
-//  Uses Product from Core/Pricing/PricingModels.swift (base_price maps to Supabase `products` table).
-//
-
 import SwiftUI
 import Supabase
 import PostgREST
 
 struct ProductsTab: View {
-    @State private var products: [Product] = []
-    @State private var isLoading = false
-    @State private var errorMessage: String? = nil
+    @Environment(AppState.self) private var appState
     @State private var searchText = ""
-    @State private var filterUnpriced = false
-
+    @State private var selectedCategories: Set<ProductCategory> = []   // empty = All
+    @State private var filterActive: Bool? = nil
+    @State private var showAddProduct = false
+    @State private var showingProfile = false
+    
+    // 🛠️ CONFIGURATION
+    private let supabaseURL = "https://bdgwzkpteyxhlgprlmye.supabase.co"
+    private let bucketName = "product-images"
+    
+    // Amazon-style Grid Columns
+    private let columns = [
+        GridItem(.flexible(), spacing: 16),
+        GridItem(.flexible(), spacing: 16)
+    ]
+    
     private var filteredProducts: [Product] {
-        var list = products
-        if filterUnpriced {
-            list = list.filter { $0.basePrice == 0 }
-        }
+        var list = appState.products
+        if !selectedCategories.isEmpty { list = list.filter { selectedCategories.contains($0.category) } }
+        if let active = filterActive { list = list.filter { $0.isActive == active } }
         if !searchText.isEmpty {
             list = list.filter {
                 $0.name.localizedCaseInsensitiveContains(searchText) ||
@@ -40,237 +32,121 @@ struct ProductsTab: View {
         }
         return list
     }
-
-    private var unpricedCount: Int {
-        products.filter { $0.basePrice == 0 }.count
-    }
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
-                RSMSTheme.Colors.backgroundPrimary
-                    .ignoresSafeArea()
-
-                if isLoading {
+                RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
+                
+                if appState.isLoadingProducts && appState.products.isEmpty {
                     loadingView
-                } else if products.isEmpty {
+                } else if appState.products.isEmpty {
                     emptyState
                 } else {
-                    productsList
+                    ScrollView {
+                        VStack(spacing: RSMSTheme.Spacing.md) {
+                            categoryFilterRow
+                            
+                            // Cinematic Square Boutique Grid
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 20)], spacing: 24) {
+                                ForEach(filteredProducts) { product in
+                                    NavigationLink(value: product) {
+                                        BoutiqueSquareProductCard(product: product, baseURL: supabaseURL, bucket: bucketName)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.top, RSMSTheme.Spacing.sm)
+                        }
+                        .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+                        .padding(.bottom, 100)
+                    }
                 }
             }
             .navigationTitle("Products")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .searchable(text: $searchText, prompt: "Search by name or SKU...")
-            .task {
-                await fetchProducts()
-            }
-            .refreshable {
-                await fetchProducts()
-            }
-            .alert("Error", isPresented: Binding<Bool>(
-                get: { errorMessage != nil },
-                set: { if !$0 { errorMessage = nil } }
-            )) {
-                Button("Retry") { Task { await fetchProducts() } }
-                Button("Dismiss", role: .cancel) { }
-            } message: {
-                Text(errorMessage ?? "Unknown error.")
-            }
-        }
-    }
-
-    // MARK: - Loading
-
-    private var loadingView: some View {
-        VStack(spacing: RSMSTheme.Spacing.md) {
-            ProgressView()
-                .scaleEffect(1.5)
-                .tint(RSMSTheme.Colors.accentGold)
-            Text("Loading Products...")
-                .font(.subheadline)
-                .foregroundStyle(RSMSTheme.Colors.textSecondary)
-        }
-    }
-
-    // MARK: - Products List
-
-    private var productsList: some View {
-        ScrollView {
-            VStack(spacing: RSMSTheme.Spacing.md) {
-
-                // Unpriced warning banner
-                if unpricedCount > 0 {
-                    unpricedBanner
-                }
-
-                // Filter chips
-                filterChipsRow
-
-                // Count label
-                HStack {
-                    Text("\(filteredProducts.count) product\(filteredProducts.count == 1 ? "" : "s")")
-                        .font(.caption)
-                        .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                    Spacer()
-                }
-                .padding(.horizontal, RSMSTheme.Spacing.xs)
-
-                // Product cards
-                if filteredProducts.isEmpty {
-                    noResultsView
-                } else {
-                    ForEach(filteredProducts) { product in
-                        NavigationLink(value: product) {
-                            productCard(product: product)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    HStack(spacing: 14) {
+                        Button { showAddProduct = true } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
                         }
-                        .buttonStyle(.plain)
+                        .accessibilityLabel("Add Product")
+                        
+                        Button {
+                            showingProfile = true
+                        } label: {
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                        .accessibilityLabel("My Profile")
                     }
                 }
-
-                Spacer().frame(height: RSMSTheme.Spacing.xxl)
             }
-            .padding(.horizontal, RSMSTheme.Spacing.lg)
-            .padding(.top, RSMSTheme.Spacing.md)
-        }
-        .navigationDestination(for: Product.self) { product in
-            ProductDetailView(product: product, onPriceUpdated: {
-                Task { await fetchProducts() }
-            })
+            .searchable(text: $searchText, prompt: "Search products...")
+            .task {
+                await appState.fetchProducts()
+            }
+            .refreshable { await appState.fetchProducts() }
+            .sheet(isPresented: $showAddProduct) { AddProductView() }
+            .sheet(isPresented: $showingProfile) {
+                AdminProfileView()
+                    .presentationDetents([.large])
+            }
+            .navigationDestination(for: Product.self) { product in
+                ProductDetailView(product: product)
+            }
+            .alert("Product Update", isPresented: Binding<Bool>(
+                get: { appState.productError != nil },
+                set: { if !$0 { appState.productError = nil } }
+            )) {
+                Button("OK") { }
+            } message: {
+                Text(appState.productError ?? "Unknown error")
+            }
         }
     }
-
-    // MARK: - Unpriced Banner
-
-    private var unpricedBanner: some View {
-        Button {
-            withAnimation(.easeInOut) { filterUnpriced.toggle() }
-        } label: {
-            HStack(spacing: RSMSTheme.Spacing.md) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(RSMSTheme.Colors.warning)
-                    .font(.title3)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(unpricedCount) product\(unpricedCount == 1 ? "" : "s") without a price")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                    Text("No transaction can happen without a price set")
-                        .font(.caption)
-                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                }
-
-                Spacer()
-
-                Text(filterUnpriced ? "Show All" : "Filter")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(RSMSTheme.Colors.accentGold)
-            }
-            .padding(RSMSTheme.Spacing.lg)
-            .background(RSMSTheme.Colors.warning.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
-            .overlay(
-                RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                    .stroke(RSMSTheme.Colors.warning.opacity(0.3), lineWidth: 1)
-            )
-        }
-    }
-
-    // MARK: - Filter Chips
-
-    private var filterChipsRow: some View {
+    
+    // MARK: - Category Filter Row (multi-select)
+    private var categoryFilterRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: RSMSTheme.Spacing.sm) {
-                filterChip(label: "All", isSelected: !filterUnpriced) {
-                    filterUnpriced = false
+            HStack(spacing: 10) {
+                // "All" pill — clears selection
+                filterChip(label: "All", isSelected: selectedCategories.isEmpty) {
+                    selectedCategories.removeAll()
                 }
-                filterChip(label: "Unpriced", isSelected: filterUnpriced) {
-                    filterUnpriced = true
+                ForEach(ProductCategory.allCases) { cat in
+                    filterChip(label: cat.rawValue, isSelected: selectedCategories.contains(cat)) {
+                        if selectedCategories.contains(cat) {
+                            selectedCategories.remove(cat)
+                        } else {
+                            selectedCategories.insert(cat)
+                        }
+                    }
                 }
             }
+            .padding(.vertical, 8)
         }
     }
-
+    
     private func filterChip(label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(label)
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundStyle(isSelected ? .black : RSMSTheme.Colors.textSecondary)
-                .padding(.horizontal, RSMSTheme.Spacing.lg)
-                .padding(.vertical, RSMSTheme.Spacing.sm)
-                .background(isSelected ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.backgroundDeep)
+                .font(.caption).fontWeight(.medium)
+                .padding(.horizontal, 16).padding(.vertical, 8)
+                .background(isSelected ? RSMSTheme.Colors.accentGold : RSMSTheme.Colors.backgroundElevated)
+                .foregroundStyle(isSelected ? .black : RSMSTheme.Colors.textPrimary)
                 .clipShape(Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(isSelected ? Color.clear : RSMSTheme.Colors.borderLight, lineWidth: 1)
-                )
         }
     }
-
-    // MARK: - Product Card
-
-    private func productCard(product: Product) -> some View {
-        HStack(spacing: RSMSTheme.Spacing.lg) {
-            // Icon
-            ZStack {
-                RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                    .fill(product.basePrice > 0
-                          ? RSMSTheme.Colors.accentGold.opacity(0.12)
-                          : RSMSTheme.Colors.warning.opacity(0.12))
-                    .frame(width: 50, height: 50)
-                Image(systemName: "tag.fill")
-                    .font(.title3)
-                    .foregroundStyle(product.basePrice > 0
-                                     ? RSMSTheme.Colors.accentGold
-                                     : RSMSTheme.Colors.warning)
-            }
-
-            // Info
-            VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
-                Text(product.name)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                    .lineLimit(1)
-                Text(product.sku)
-                    .font(.caption)
-                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
-            }
-
-            Spacer()
-
-            // Price badge
-            VStack(alignment: .trailing, spacing: RSMSTheme.Spacing.xs) {
-                if product.basePrice > 0 {
-                    Text(product.formattedPrice)
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
-                } else {
-                    Text("Set Price")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.black)
-                        .padding(.horizontal, RSMSTheme.Spacing.md)
-                        .padding(.vertical, RSMSTheme.Spacing.xs)
-                        .background(RSMSTheme.Colors.warning)
-                        .clipShape(Capsule())
-                }
-                Image(systemName: "chevron.right")
-                    .font(.caption2)
-                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
-            }
-        }
-        .cardStyle()
+    
+    private var loadingView: some View {
+        ProgressView().tint(RSMSTheme.Colors.accentGold)
     }
-
-    // MARK: - Empty States
-
+    
     private var emptyState: some View {
         VStack(spacing: RSMSTheme.Spacing.xl) {
             ZStack {
@@ -293,51 +169,158 @@ struct ProductsTab: View {
             }
         }
     }
-
-    private var noResultsView: some View {
-        VStack(spacing: RSMSTheme.Spacing.lg) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 36))
-                .foregroundStyle(RSMSTheme.Colors.textTertiary)
-            Text(filterUnpriced ? "All products are priced" : "No matching products")
-                .font(.subheadline)
-                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+    
+    // MARK: - Cinematic Boutique Product Tile
+    struct BoutiqueSquareProductCard: View {
+        let product: Product
+        let baseURL: String
+        let bucket: String
+        
+        private var imageURL: URL? {
+            guard let path = product.imageUrl else { return nil }
+            if path.hasPrefix("http") {
+                return URL(string: path)
+            } else {
+                return URL(string: "\(baseURL)/storage/v1/object/public/\(bucket)/\(path)")
+            }
         }
-        .padding(.top, RSMSTheme.Spacing.xxxl)
-    }
-
-    // MARK: - Supabase Fetch
-
-    @MainActor
-    private func fetchProducts() async {
-        isLoading = products.isEmpty
-        errorMessage = nil
-        do {
-            let fetched: [Product] = try await SupabaseManager.shared.client
-                .from("products")
-                .select()
-                .order("created_at", ascending: false)
-                .execute()
-                .value
-            self.products = fetched
-        } catch {
-            print("❌ Failed to fetch products: \(error)")
-            self.errorMessage = "Failed to load products: \(error.localizedDescription)"
+        
+        var body: some View {
+            ZStack(alignment: .bottomLeading) {
+                // 1. Full-Bleed Background Image (Fixed Height, Flexible Width)
+                ZStack {
+                    if let url = imageURL {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .clipped()
+                            case .empty, .failure:
+                                RSMSTheme.Colors.backgroundDeep
+                                    .overlay(
+                                        ProgressView()
+                                            .tint(RSMSTheme.Colors.accentGold.opacity(0.3))
+                                    )
+                            @unknown default:
+                                RSMSTheme.Colors.backgroundDeep
+                            }
+                        }
+                    } else {
+                        RSMSTheme.Colors.backgroundDeep
+                    }
+                }
+                .frame(height: 280)
+                .frame(maxWidth: .infinity)
+                .clipped()
+                
+                // 2. Luxurious Overlays
+                ZStack {
+                    // Overall dark atmospheric overlay
+                    Color.black.opacity(0.5)
+                    
+                    // The Signature Golden floor-glow
+                    VStack {
+                        Spacer()
+                        LinearGradient(
+                            colors: [RSMSTheme.Colors.accentGold.opacity(0.4), .clear],
+                            startPoint: .bottom,
+                            endPoint: .center
+                        )
+                        .frame(height: 120)
+                    }
+                    
+                    // 'Guilloché' Dot Matrix Texture
+                    Canvas { context, size in
+                        let spacing: CGFloat = 12
+                        let dotSize: CGFloat = 1.0
+                        for y in stride(from: spacing/2, through: size.height, by: spacing) {
+                            for x in stride(from: spacing/2, through: size.width, by: spacing) {
+                                let rect = CGRect(x: x, y: y, width: dotSize, height: dotSize)
+                                context.fill(Path(ellipseIn: rect), with: .color(.white.opacity(0.15)))
+                            }
+                        }
+                    }
+                    .blendMode(.plusLighter)
+                }
+                
+                // 3. Editorial Typography Layout
+                // Use a single overlay for all text to ensure consistent coordinate space
+                VStack(spacing: 0) {
+                    // Top Row: Category & Name
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(product.category.rawValue.uppercased())
+                                .font(.custom("HelveticaNeue-Bold", size: 10))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                                .tracking(2)
+                                .shadow(color: .black.opacity(0.8), radius: 2)
+                            
+                            Text(product.name)
+                                .font(.custom("HelveticaNeue-Bold", size: 22))
+                                .foregroundStyle(.white)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                                .shadow(color: .black.opacity(0.8), radius: 4)
+                        }
+                        Spacer()
+                    }
+                    
+                    Spacer()
+                    
+                    // Bottom Row: Price Hero
+                    HStack(alignment: .bottom) {
+                        Spacer()
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text("₹")
+                                .font(.custom("HelveticaNeue", size: 16))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                            
+                            Text(product.basePrice > 0 ? (Self.indianFormatter.string(from: NSNumber(value: product.basePrice)) ?? "0") : "On Request")
+                                .font(.custom("HelveticaNeue-Bold", size: 28))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                        .shadow(color: .black.opacity(0.8), radius: 3)
+                    }
+                }
+                .padding(24) // Luxury padding
+            }
+            .frame(height: 280)
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .overlay(
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.2), .clear, RSMSTheme.Colors.accentGold.opacity(0.3)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: .black.opacity(0.5), radius: 15, x: 0, y: 10)
         }
-        isLoading = false
+        
+        private static let indianFormatter: NumberFormatter = {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.locale = Locale(identifier: "en_IN")
+            return formatter
+        }()
+        
+        private var imagePlaceholder: some View {
+            VStack(spacing: 12) {
+                Image(systemName: product.category.icon)
+                    .font(.system(size: 36))
+                    .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.25))
+                Text(product.category.rawValue.uppercased())
+                    .font(.custom("HelveticaNeue-Bold", size: 9))
+                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                    .tracking(2)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
-}
-
-// MARK: - Product formatted price helper
-extension Product {
-    var formattedPrice: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "USD"
-        return formatter.string(from: NSNumber(value: basePrice)) ?? "$\(basePrice)"
-    }
-}
-
-#Preview {
-    ProductsTab()
 }

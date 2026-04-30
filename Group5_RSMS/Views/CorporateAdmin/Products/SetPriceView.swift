@@ -1,22 +1,14 @@
-
-//  Created by Dhiraj on 15/04/26.
-
+//
 //  SetPriceView.swift
 //  Group5_RSMS
 //
-//  Corporate Admin — Set / Update Official Retail Price. SPRINT 1 STORY 4.
-//
-//  Writes to Supabase:
-//    1. Updates `products.base_price`
-//    2. Inserts a row into `price_history` (audit trail required before POS goes live)
-//
-//  Every transaction records a unit_price at time of sale.
-//  Building this now ensures pricing data is clean from the very first test transaction.
+//  Created by Dhiraj on 15/04/26.
 //
 
 import SwiftUI
 import Supabase
 import PostgREST
+import Foundation
 
 struct SetPriceView: View {
     @Environment(AppState.self) private var appState
@@ -34,7 +26,7 @@ struct SetPriceView: View {
     private var parsedPrice: Double? {
         let cleaned = priceInput
             .trimmingCharacters(in: .whitespaces)
-            .replacingOccurrences(of: "$", with: "")
+            .replacingOccurrences(of: "₹", with: "")
             .replacingOccurrences(of: ",", with: "")
         return Double(cleaned)
     }
@@ -56,7 +48,6 @@ struct SetPriceView: View {
                         priceInputSection
                         noteSection
                         auditNotice
-                        confirmButton
                         Spacer().frame(height: RSMSTheme.Spacing.xxl)
                     }
                     .padding(.horizontal, RSMSTheme.Spacing.lg)
@@ -66,12 +57,27 @@ struct SetPriceView: View {
             .navigationTitle(product.basePrice > 0 ? "Update Price" : "Set Retail Price")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                        .disabled(isLoading)
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                    }
+                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                    .disabled(isLoading)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { submitPrice() } label: {
+                        if isLoading {
+                            ProgressView().tint(RSMSTheme.Colors.accentGold)
+                        } else {
+                            Image(systemName: "checkmark")
+                                .font(.body.weight(.semibold))
+                        }
+                    }
+                    .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    .disabled(!isValidPrice || isLoading)
                 }
             }
             .alert("Error", isPresented: Binding<Bool>(
@@ -84,7 +90,7 @@ struct SetPriceView: View {
             }
         }
         .presentationDragIndicator(.visible)
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
     }
 
     // MARK: - Product Summary
@@ -136,14 +142,14 @@ struct SetPriceView: View {
 
     private var priceInputSection: some View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
-            Text("New Retail Price (USD)")
+            Text("New Retail Price (INR)")
                 .font(.caption)
                 .fontWeight(.semibold)
                 .foregroundStyle(RSMSTheme.Colors.textSecondary)
                 .textCase(.uppercase)
 
             HStack(spacing: RSMSTheme.Spacing.md) {
-                Text("$")
+                Text("₹")
                     .font(.system(size: 30, weight: .semibold))
                     .foregroundStyle(RSMSTheme.Colors.accentGold)
 
@@ -213,62 +219,27 @@ struct SetPriceView: View {
     // MARK: - Audit Notice
 
     private var auditNotice: some View {
-        HStack(spacing: RSMSTheme.Spacing.md) {
+        HStack(spacing: 6) {
             Image(systemName: "shield.checkered")
-                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7))
-                .font(.title3)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Audit Trail")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                Text("This change is recorded in price_history with your account, previous price, and timestamp. Every POS transaction records the unit_price at time of sale.")
-                    .font(.caption2)
-                    .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+                .font(.system(size: 10))
+            Text("This change will be recorded in the audit trail")
+                .font(.system(size: 10, weight: .medium))
         }
-        .padding(RSMSTheme.Spacing.lg)
-        .background(RSMSTheme.Colors.accentGold.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
-        .overlay(
-            RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                .stroke(RSMSTheme.Colors.accentGold.opacity(0.15), lineWidth: 1)
-        )
+        .foregroundStyle(RSMSTheme.Colors.textTertiary)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.vertical, RSMSTheme.Spacing.md)
     }
 
-    // MARK: - Confirm Button
-
-    private var confirmButton: some View {
-        Button { submitPrice() } label: {
-            HStack(spacing: RSMSTheme.Spacing.sm) {
-                if isLoading {
-                    ProgressView()
-                        .tint(.black)
-                        .padding(.trailing, 4)
-                } else {
-                    Image(systemName: "checkmark.circle.fill")
-                }
-                Text(isLoading ? "Saving..." : (product.basePrice > 0 ? "Update Retail Price" : "Set Retail Price"))
-            }
-        }
-        .buttonStyle(GoldButtonStyle())
-        .disabled(!isValidPrice || isLoading)
-        .opacity(isValidPrice && !isLoading ? 1.0 : 0.5)
-    }
-
-    // MARK: - Submit
+    // MARK: - Submit Logic
 
     private func submitPrice() {
         guard let price = parsedPrice, price > 0 else {
             withAnimation {
                 showValidationError = true
-                validationMessage = "Please enter a valid price greater than $0."
+                validationMessage = "Please enter a valid price greater than ₹0."
             }
             return
         }
-
-        isLoading = true
 
         Task {
             await savePrice(newPrice: price)
@@ -277,23 +248,34 @@ struct SetPriceView: View {
 
     @MainActor
     private func savePrice(newPrice: Double) async {
+        // Nested struct for DTO
+        struct PriceHistoryInsert: Encodable {
+            let product_id: UUID
+            let previous_price: Double?
+            let new_price: Double
+            let changed_by: String
+            let note: String?
+        }
+
+        isLoading = true
+        errorMessage = nil
+
+        // 1. Update the products table — this is the critical operation
         do {
-            // 1. Update base_price on the product
             try await SupabaseManager.shared.client
                 .from("products")
                 .update(["base_price": newPrice])
                 .eq("id", value: product.id)
                 .execute()
+        } catch {
+            print("❌ Price update failed: \(error)")
+            errorMessage = "Error: \(error.localizedDescription)"
+            isLoading = false
+            return
+        }
 
-            // 2. Insert price_history audit record
-            struct PriceHistoryInsert: Encodable {
-                let product_id: UUID
-                let previous_price: Double?
-                let new_price: Double
-                let changed_by: String
-                let note: String?
-            }
-
+        // 2. Insert Audit History Row (best-effort; don't block the user if this fails)
+        do {
             let historyRecord = PriceHistoryInsert(
                 product_id: product.id,
                 previous_price: product.basePrice > 0 ? product.basePrice : nil,
@@ -306,19 +288,37 @@ struct SetPriceView: View {
                 .from("price_history")
                 .insert(historyRecord)
                 .execute()
-
-            isLoading = false
-            dismiss()
-
         } catch {
-            print("❌ Failed to set price: \(error)")
-            errorMessage = "Failed to save price: \(error.localizedDescription)"
-            isLoading = false
+            // Audit trail failed but price IS updated — log and continue
+            print("⚠️ Price updated but audit history insert failed: \(error)")
         }
+
+        // 3. Update AppState directly for immediate UI reaction
+        if let index = appState.products.firstIndex(where: { $0.id == product.id }) {
+            appState.products[index].basePrice = newPrice
+        }
+
+        // 4. Log to audit trail
+        ActivityLogService.shared.log(
+            userEmail: appState.userEmail,
+            action: .updated,
+            entity: .product,
+            entityName: product.name,
+            entityId: product.id.uuidString,
+            details: "Price updated",
+            before: ["base_price": String(format: "%.2f", product.basePrice)],
+            after: ["base_price": String(format: "%.2f", newPrice)]
+        )
+
+        // 5. Background sync to pick up updated_at and any server-side changes
+        await appState.fetchProducts()
+
+        isLoading = false
+        dismiss()
     }
 }
 
 #Preview {
-    SetPriceView(product: Product(sku: "LUX-001", name: "Signature Watch", basePrice: 0))
+    SetPriceView(product: Product.sample)
         .environment(AppState())
 }

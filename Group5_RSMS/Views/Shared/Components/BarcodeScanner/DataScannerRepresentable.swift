@@ -32,7 +32,7 @@ struct DataScannerRepresentable: UIViewControllerRepresentable {
             recognizedDataTypes: [.barcode()],
             qualityLevel: .accurate,
             recognizesMultipleItems: false,
-            isHighFrameRateTrackingEnabled: false,
+            isHighFrameRateTrackingEnabled: true,
             isHighlightingEnabled: true
         )
         scanner.delegate = context.coordinator

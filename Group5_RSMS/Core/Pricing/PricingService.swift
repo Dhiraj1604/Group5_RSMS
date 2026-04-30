@@ -8,42 +8,31 @@
 import Foundation
 
 /// A stateless engine for executing product pricing and tax calculations.
-public struct PricingService {
+struct PricingService {
     
-    /// Calculates the full receipt breakdown for a given product and tax rule.
+    /// Calculates the receipt breakdown for a given product considering additional category tax.
     /// - Parameters:
-    ///   - product: The product containing the base price.
-    ///   - taxRule: The tax rule containing rate and inclusiveness settings.
+    ///   - product: The product containing the base price and category.
+    ///   - additionalTaxRule: An optional admin-defined additional tax for the product's category.
     /// - Returns: A calculated `PricingBreakdown`.
-    public static func calculate(product: Product, taxRule: TaxRule) -> PricingBreakdown {
+    static func calculate(product: Product, additionalTaxRule: TaxRule?) -> PricingBreakdown {
         let base = product.basePrice
-        let rate = taxRule.rate
+        let additionalRate = additionalTaxRule?.rate ?? 0.0
         
         let subtotal: Double
-        let taxAmount: Double
+        let additionalTaxAmt: Double
         let total: Double
         
-        if taxRule.isInclusive {
-            // Price already includes the tax
-            // Example: $120 total with 20% VAT
-            // subtotal = 120 / 1.20 = 100
-            // tax = 120 - 100 = 20
-            total = base
-            subtotal = base / (1 + rate)
-            taxAmount = total - subtotal
-        } else {
-            // Tax is added ON TOP of the base price
-            // Example: $100 base with 10% sales tax
-            // tax = 10
-            // total = 110
-            subtotal = base
-            taxAmount = base * rate
-            total = subtotal + taxAmount
-        }
+        // Logic: 
+        // Tax is always added on top of the base price per recent requirement.
+        
+        subtotal = base
+        additionalTaxAmt = base * additionalRate
+        total = subtotal + additionalTaxAmt
         
         return PricingBreakdown(
             subtotal: subtotal,
-            taxAmount: taxAmount,
+            additionalTaxAmount: additionalTaxAmt,
             total: total
         )
     }

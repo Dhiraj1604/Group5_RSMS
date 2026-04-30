@@ -13,6 +13,9 @@ struct StoresTab: View {
     @State private var showAddStore = false
     @State private var searchText = ""
     @State private var filterActive: Bool? = nil
+    @State private var isLoading = false              // ← NEW
+    @State private var showingProfile = false
+//     @State private var isLoading = false
 
     private var filteredStores: [Store] {
         var result = appState.stores
@@ -36,19 +39,10 @@ struct StoresTab: View {
                 RSMSTheme.Colors.backgroundPrimary
                     .ignoresSafeArea()
 
-                if appState.stores.isEmpty {
-                    if appState.isLoadingStores {
-                        VStack(spacing: RSMSTheme.Spacing.md) {
-                            ProgressView()
-                                .scaleEffect(1.5)
-                                .tint(RSMSTheme.Colors.accentGold)
-                            Text("Loading Boutiques...")
-                                .font(.subheadline)
-                                .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                        }
-                    } else {
-                        emptyState
-                    }
+                if isLoading {
+                    loadingState
+                } else if appState.stores.isEmpty {
+                    emptyState
                 } else {
                     storesList
                 }
@@ -56,15 +50,27 @@ struct StoresTab: View {
             .navigationTitle("Stores")
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showAddStore = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    HStack(spacing: 14) {
+                        Button {
+                            showAddStore = true
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                        .accessibilityLabel("Add Store")
+                        
+                        Button {
+                            showingProfile = true
+                        } label: {
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                        .accessibilityLabel("My Profile")
                     }
                 }
             }
@@ -72,26 +78,36 @@ struct StoresTab: View {
             .sheet(isPresented: $showAddStore) {
                 AddStoreView()
             }
-            .task {
-                if appState.stores.isEmpty {
-                    await appState.fetchStores()
-                }
+            .sheet(isPresented: $showingProfile) {
+                AdminProfileView()
+                    .presentationDetents([.large])
             }
-            .refreshable {
-                await appState.fetchStores()
-            }
-            .alert("Error Loading Boutiques", isPresented: Binding<Bool>(
-                get: { appState.storeError != nil },
-                set: { if !$0 { appState.storeError = nil } }
-            )) {
-                Button("Retry", role: .cancel) {
-                    Task { await appState.fetchStores() }
-                }
-                Button("Dismiss", role: .none) { }
+            .alert("Error", isPresented: .constant(appState.storeError != nil)) {
+                Button("OK") { appState.storeError = nil }
             } message: {
-                Text(appState.storeError ?? "Unknown error occurred.")
+                Text(appState.storeError ?? "")
+            }
+            .task {
+                guard appState.stores.isEmpty else { return }
+                isLoading = true
+                await appState.loadStores()
+                isLoading = false
             }
         }
+    }
+
+    // MARK: - Loading State
+    private var loadingState: some View {
+        VStack(spacing: RSMSTheme.Spacing.lg) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: RSMSTheme.Colors.accentGold))
+                .scaleEffect(1.4)
+            Text("Loading Stores...")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundStyle(RSMSTheme.Colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Empty State
@@ -119,7 +135,7 @@ struct StoresTab: View {
                 showAddStore = true
             } label: {
                 HStack(spacing: RSMSTheme.Spacing.sm) {
-                    Image(systemName: "plus")
+                    Image(systemName: "plus.circle.fill")
                     Text("Register First Boutique")
                 }
             }
@@ -127,7 +143,6 @@ struct StoresTab: View {
             .padding(.horizontal, RSMSTheme.Spacing.xxxl)
         }
     }
-
     // MARK: - Stores List
     private var storesList: some View {
         ScrollView {
@@ -141,19 +156,172 @@ struct StoresTab: View {
                 }
                 .padding(.horizontal, RSMSTheme.Spacing.xs)
 
-                ForEach(filteredStores) { store in
-                    NavigationLink(value: store) {
-                        storeCard(store: store)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 20)], spacing: 24) {
+                    ForEach(filteredStores) { store in
+                        NavigationLink(value: store) {
+                            BoutiqueStoreCard(store: store)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(.top, RSMSTheme.Spacing.sm)
             }
-            .padding(.horizontal, RSMSTheme.Spacing.lg)
+            .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
             .padding(.top, RSMSTheme.Spacing.md)
             .padding(.bottom, RSMSTheme.Spacing.xxl)
         }
         .navigationDestination(for: Store.self) { store in
             StoreDetailView(store: store)
+        }
+    }
+
+    // MARK: - Boutique Store Card
+    struct BoutiqueStoreCard: View {
+        let store: Store
+        
+        var body: some View {
+            ZStack(alignment: .bottomLeading) {
+                // 1. Full-Bleed Background Image (Smart Discovery)
+                ZStack {
+                    if let imagePath = store.imageUrl, imagePath.hasPrefix("http") {
+                        // Remote Image
+                        AsyncImage(url: URL(string: imagePath)) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable().scaledToFill().blur(radius: 3)
+                            case .empty, .failure:
+                                fallbackImage
+                            @unknown default:
+                                fallbackImage
+                            }
+                        }
+                    } else {
+                        // Local Asset Discovery
+                        // Priority: 1. Database value, 2. Store Name, 3. City
+                        let assetName = store.imageUrl ?? store.name
+                        
+                        Image(assetName)
+                            .resizable()
+                            .scaledToFill()
+                            .blur(radius: 3)
+                            .overlay {
+                                // Secondary fallback if Store Name doesn't exist in assets
+                                Image(store.city)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .blur(radius: 3)
+                            }
+                            .overlay {
+                                // Final fallback: The "building" icon if no images are found
+                                if UIImage(named: assetName) == nil && UIImage(named: store.city) == nil {
+                                    fallbackImage
+                                }
+                            }
+                    }
+                }
+                .frame(height: 280)
+                .frame(maxWidth: .infinity)
+                .clipped()
+                
+                // 2. Luxurious Overlays for Maximum Readability
+                ZStack {
+                    // Darken overall to make white text pop
+                    Color.black.opacity(0.35)
+                    
+                    VStack {
+                        Spacer()
+                        // Stronger bottom gradient for text contrast
+                        LinearGradient(
+                            colors: [.black.opacity(0.6), .black.opacity(0.3), .clear],
+                            startPoint: .bottom,
+                            endPoint: .center
+                        )
+                        .frame(height: 160)
+                    }
+                    
+                    // Signature Dot Texture
+                    Canvas { context, size in
+                        let spacing: CGFloat = 12
+                        let dotSize: CGFloat = 1.0
+                        for y in stride(from: spacing/2, through: size.height, by: spacing) {
+                            for x in stride(from: spacing/2, through: size.width, by: spacing) {
+                                let rect = CGRect(x: x, y: y, width: dotSize, height: dotSize)
+                                context.fill(Path(ellipseIn: rect), with: .color(.white.opacity(0.12)))
+                            }
+                        }
+                    }
+                    .blendMode(.plusLighter)
+                }
+                
+                // 3. Typography & Badges
+                VStack(alignment: .leading, spacing: 0) {
+                    // Top Row: Status Badge only
+                    HStack(alignment: .top) {
+                        Spacer()
+                        
+                        // Active Badge (Simple Dot)
+                        Circle()
+                            .fill(store.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
+                            .frame(width: 8, height: 8)
+                            .shadow(color: .black.opacity(0.5), radius: 3)
+                    }
+                    
+                    Spacer()
+                    
+                    // Bottom Row: Store Name & Location (with Pin)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(store.name)
+                            .font(.custom("HelveticaNeue-Bold", size: 28))
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                            .shadow(color: .black.opacity(0.9), radius: 4)
+                        
+                        HStack(spacing: 6) {
+                            Text("📍")
+                                .font(.system(size: 14))
+                            Text("\(store.city), \(store.country)")
+                                .font(.custom("HelveticaNeue-Medium", size: 14))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                                .shadow(color: .black.opacity(0.8), radius: 2)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(24)
+            }
+            .frame(height: 280)
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .overlay(
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.2), .clear, RSMSTheme.Colors.accentGold.opacity(0.3)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: .black.opacity(0.5), radius: 15, x: 0, y: 10)
+        }
+        
+        private var fallbackHeader: some View {
+            RSMSTheme.Colors.backgroundDeep
+                .overlay(
+                    Image(systemName: "storefront.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.2))
+                )
+        }
+
+        private var fallbackImage: some View {
+            RSMSTheme.Colors.backgroundDeep
+                .overlay(
+                    Image(systemName: "storefront.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.2))
+                )
         }
     }
 
@@ -183,55 +351,6 @@ struct StoresTab: View {
                         .stroke(isSelected ? Color.clear : RSMSTheme.Colors.borderLight, lineWidth: 1)
                 )
         }
-    }
-
-    // MARK: - Store Card
-    private func storeCard(store: Store) -> some View {
-        HStack(spacing: RSMSTheme.Spacing.lg) {
-            ZStack {
-                RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                    .fill(store.isActive
-                          ? RSMSTheme.Colors.accentGold.opacity(0.15)
-                          : RSMSTheme.Colors.textTertiary.opacity(0.15))
-                    .frame(width: 50, height: 50)
-                Image(systemName: "storefront.fill")
-                    .font(.title3)
-                    .foregroundStyle(store.isActive
-                                     ? RSMSTheme.Colors.accentGold
-                                     : RSMSTheme.Colors.textTertiary)
-            }
-            VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
-                HStack {
-                    Text(store.name)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                        .lineLimit(1)
-                    Spacer()
-                    Text(store.isActive ? "Active" : "Inactive")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(store.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
-                        .padding(.horizontal, RSMSTheme.Spacing.sm)
-                        .padding(.vertical, 3)
-                        .background(
-                            (store.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
-                                .opacity(0.15)
-                        )
-                        .clipShape(Capsule())
-                }
-                HStack(spacing: RSMSTheme.Spacing.lg) {
-                    Label(store.code, systemImage: "qrcode")
-                    Label(store.city, systemImage: "mappin")
-                }
-                .font(.caption)
-                .foregroundStyle(RSMSTheme.Colors.textTertiary)
-            }
-            Image(systemName: "chevron.right")
-                .font(.caption2)
-                .foregroundStyle(RSMSTheme.Colors.textTertiary)
-        }
-        .cardStyle()
     }
 }
 
