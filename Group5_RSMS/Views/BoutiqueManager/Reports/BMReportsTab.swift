@@ -258,7 +258,9 @@ struct BMReportsTab: View {
                 }
             }
             .sheet(isPresented: $showFullReport) {
-                FullReportView(storeName: storeName, vm: vm)
+                if let boutiqueId = appState.currentStoreID {
+                    FullReportView(storeName: storeName, boutiqueId: boutiqueId, vm: vm)
+                }
             }
         }
     }
