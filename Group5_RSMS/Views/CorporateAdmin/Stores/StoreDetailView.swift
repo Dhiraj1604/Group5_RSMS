@@ -41,6 +41,14 @@ struct StoreDetailView: View {
     @State private var monthlyTarget: String = "0"
     @State private var imageUrl: String = ""
 
+    // MARK: - Image Upload & Validation State
+    @State private var showValidationErrors = false
+    @State private var selectedUIImage: UIImage? = nil
+    @State private var showImageSourceDialog = false
+    @State private var showImagePicker = false
+    @State private var imageSource: UIImagePickerController.SourceType = .photoLibrary
+    @State private var isUploadingImage = false
+
     private let regions = ["Asia", "Europe", "North America", "South America", "Australia", "Africa", "MEIA"]
     private let currencies: [(code: String, label: String)] = [
         ("INR", "₹ INR"), ("USD", "$ USD"), ("EUR", "€ EUR"), ("GBP", "£ GBP"), ("JPY", "¥ JPY"), ("AED", "د.إ AED")
@@ -50,10 +58,113 @@ struct StoreDetailView: View {
         appState.stores.first(where: { $0.id == store.id }) ?? store
     }
 
+    // MARK: - Validation & Autofill Logic
+    private var isZipCodeValid: Bool {
+        let trimmed = zipCode.trimmingCharacters(in: .whitespaces)
+        return trimmed.count >= 4 && trimmed.allSatisfy { $0.isNumber }
+    }
+
+    private var expectedPhoneLengthRange: ClosedRange<Int> {
+        let zipString = zipCode.trimmingCharacters(in: .whitespaces)
+        if zipString.count == 6 || zipString.count == 5 {
+            return 10...10
+        } else if zipString.count == 4 {
+            return 9...10
+        } else {
+            return 8...12
+        }
+    }
+    
+    private var isPhoneValid: Bool {
+        let trimmed = phone.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "+", with: "")
+        return expectedPhoneLengthRange.contains(trimmed.count) && trimmed.allSatisfy { $0.isNumber }
+    }
+    
+    private var phoneErrorMessage: String {
+        let zipString = zipCode.trimmingCharacters(in: .whitespaces)
+        if zipString.count == 6 || zipString.count == 5 {
+            return "10 Digits Req"
+        } else if zipString.count == 4 {
+            return "9-10 Digits Req"
+        } else {
+            return "8-12 Digits Req"
+        }
+    }
+
+    private func isValidEmail(_ email: String) -> Bool {
+        let emailRegEx = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+        let emailPred = NSPredicate(format:"SELF MATCHES %@", emailRegEx)
+        return emailPred.evaluate(with: email) && email.lowercased().hasSuffix("@gmail.com")
+    }
+
+    private var isStoreEmailValid: Bool { isValidEmail(email.trimmingCharacters(in: .whitespaces)) }
+
     private var isFormValid: Bool {
         !storeName.trimmingCharacters(in: .whitespaces).isEmpty &&
         !storeCode.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !city.trimmingCharacters(in: .whitespaces).isEmpty
+        !address.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !city.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !stateField.trimmingCharacters(in: .whitespaces).isEmpty &&
+        isZipCodeValid &&
+        isPhoneValid &&
+        isStoreEmailValid
+    }
+    
+    private func autofillFromZip(_ zip: String) {
+        let zipString = zip.trimmingCharacters(in: .whitespaces)
+        if zipString.hasPrefix("400") || zipString.hasPrefix("411") {
+            stateField = "Maharashtra"
+            selectedRegion = "Asia"
+            if zipString.hasPrefix("400") { city = "Mumbai" }
+            if zipString.hasPrefix("411") { city = "Pune" }
+        } else if zipString.hasPrefix("110") {
+            city = "New Delhi"
+            stateField = "Delhi"
+            selectedRegion = "Asia"
+        } else if zipString.hasPrefix("560") {
+            city = "Bengaluru"
+            stateField = "Karnataka"
+            selectedRegion = "Asia"
+        } else if zipString.hasPrefix("600") {
+            city = "Chennai"
+            stateField = "Tamil Nadu"
+            selectedRegion = "Asia"
+        } else if zipString.hasPrefix("700") {
+            city = "Kolkata"
+            stateField = "West Bengal"
+            selectedRegion = "Asia"
+        } else if zipString.hasPrefix("500") {
+            city = "Hyderabad"
+            stateField = "Telangana"
+            selectedRegion = "Asia"
+        } else if zipString.hasPrefix("902") {
+            city = "Los Angeles"
+            stateField = "California"
+            country = "United States"
+            selectedRegion = "North America"
+            selectedCurrency = "USD"
+        } else if zipString.hasPrefix("100") {
+            city = "New York"
+            stateField = "New York"
+            country = "United States"
+            selectedRegion = "North America"
+            selectedCurrency = "USD"
+        }
+    }
+
+    private func autofillFromCity(_ cityInput: String) {
+        let c = cityInput.trimmingCharacters(in: .whitespaces).lowercased()
+        switch c {
+        case "mumbai", "pune", "nagpur": stateField = "Maharashtra"
+        case "new delhi", "delhi": stateField = "Delhi"
+        case "bengaluru", "bangalore": stateField = "Karnataka"
+        case "chennai": stateField = "Tamil Nadu"
+        case "kolkata": stateField = "West Bengal"
+        case "hyderabad": stateField = "Telangana"
+        case "ahmedabad", "surat": stateField = "Gujarat"
+        case "jaipur": stateField = "Rajasthan"
+        default: break
+        }
     }
     
     private var progress: Double {
@@ -111,6 +222,27 @@ struct StoreDetailView: View {
                 }
             }
         }
+        .confirmationDialog("Store Image", isPresented: $showImageSourceDialog) {
+            Button("Take Photo (Camera)") {
+                imageSource = .camera
+                showImagePicker = true
+            }
+            Button("Choose from Library") {
+                imageSource = .photoLibrary
+                showImagePicker = true
+            }
+            if selectedUIImage != nil || (liveStore.imageUrl != nil) {
+                Button("Remove Image", role: .destructive) {
+                    selectedUIImage = nil
+                    imageUrl = "deleted"
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        }
+        .sheet(isPresented: $showImagePicker) {
+            ImagePicker(image: $selectedUIImage, sourceType: imageSource)
+                .ignoresSafeArea()
+        }
         .onAppear { 
             populateFields()
             fetchLiveRevenue()
@@ -123,9 +255,11 @@ struct StoreDetailView: View {
             VStack(alignment: .leading, spacing: 32) {
                 // 1. Store Image
                 ZStack {
-                    let finalImageName = imageUrl.isEmpty ? liveStore.imageUrl ?? liveStore.name : imageUrl
+                    let finalImageName = imageUrl.isEmpty ? (liveStore.imageUrl ?? liveStore.name) : (imageUrl == "deleted" ? liveStore.name : imageUrl)
                     
-                    if finalImageName.hasPrefix("http") {
+                    if let newImg = selectedUIImage {
+                        Image(uiImage: newImg).resizable().scaledToFill()
+                    } else if finalImageName.hasPrefix("http") {
                         AsyncImage(url: URL(string: finalImageName)) { phase in
                             if let image = phase.image {
                                 image.resizable().scaledToFill()
@@ -148,11 +282,30 @@ struct StoreDetailView: View {
                                 }
                             }
                     }
+                    
+                    if isEditing {
+                        Color.black.opacity(0.4)
+                        VStack(spacing: 8) {
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 32))
+                            Text("Change Photo")
+                                .font(.headline)
+                        }
+                        .foregroundStyle(.white)
+                    }
+                    
+                    if isUploadingImage {
+                        Color.black.opacity(0.7)
+                        ProgressView().tint(.white)
+                    }
                 }
                 .frame(width: width - 80, height: width - 80)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .shadow(color: .black.opacity(0.3), radius: 10)
                 .padding(.horizontal, 40)
+                .onTapGesture {
+                    if isEditing { showImageSourceDialog = true }
+                }
 
                 // 2. Store Identity
                 VStack(alignment: .leading, spacing: 12) {
@@ -316,19 +469,32 @@ struct StoreDetailView: View {
                     editableDetailRow(icon: "mappin.and.ellipse", label: "Address", text: $address)
                     Divider().background(RSMSTheme.Colors.borderLight)
                     editableDetailRow(icon: "building", label: "City", text: $city)
+                        .onChange(of: city) { _, newCity in if isEditing { autofillFromCity(newCity) } }
                     Divider().background(RSMSTheme.Colors.borderLight)
                     editableDetailRow(icon: "map", label: "State", text: $stateField)
                     Divider().background(RSMSTheme.Colors.borderLight)
-                    editableDetailRow(icon: "number", label: "ZIP Code", text: $zipCode, keyboard: .numberPad)
+                    editableDetailRow(icon: "number", label: "ZIP Code", text: $zipCode, keyboard: .numberPad, isValid: isZipCodeValid, errorMessage: "Invalid ZIP")
+                        .onChange(of: zipCode) { _, newZip in if isEditing { autofillFromZip(newZip) } }
                     Divider().background(RSMSTheme.Colors.borderLight)
                     editableDetailRow(icon: "globe", label: "Country", text: $country)
                 }
 
                 // SECTION: Contact & Management
                 detailSection(title: "Contact & Management") {
-                    editableDetailRow(icon: "phone.fill", label: "Phone", text: $phone, keyboard: .phonePad)
+                    editableDetailRow(icon: "phone.fill", label: "Phone", text: $phone, keyboard: .phonePad, isValid: isPhoneValid, errorMessage: phoneErrorMessage)
+                        .onChange(of: phone) { _, newValue in
+                            if isEditing {
+                                let maxLen = expectedPhoneLengthRange.upperBound
+                                let filtered = newValue.filter { $0.isNumber }
+                                if filtered.count > maxLen {
+                                    phone = String(filtered.prefix(maxLen))
+                                } else if phone != filtered {
+                                    phone = filtered
+                                }
+                            }
+                        }
                     Divider().background(RSMSTheme.Colors.borderLight)
-                    editableDetailRow(icon: "envelope.fill", label: "Email", text: $email, keyboard: .emailAddress)
+                    editableDetailRow(icon: "envelope.fill", label: "Email", text: $email, keyboard: .emailAddress, isValid: isStoreEmailValid, errorMessage: "Requires @gmail.com")
                     Divider().background(RSMSTheme.Colors.borderLight)
                     editableDetailRow(icon: "person.fill", label: "Manager", text: $managerName)
                     
@@ -357,11 +523,7 @@ struct StoreDetailView: View {
                 
                 // Advanced Configuration hidden fields
                 if isEditing {
-                     detailSection(title: "Media Asset") {
-                         editableDetailRow(icon: "photo", label: "Asset URL/Name", text: $imageUrl)
-                         Divider().background(RSMSTheme.Colors.borderLight)
-                         editableDetailRow(icon: "percent", label: "Tax Rate", text: $taxRate, keyboard: .decimalPad)
-                         Divider().background(RSMSTheme.Colors.borderLight)
+                     detailSection(title: "Configuration") {
                          pickerDetailRow(icon: "banknote", label: "Currency", selection: $selectedCurrency,
                                          options: currencies.map { $0.code }, displayLabels: Dictionary(uniqueKeysWithValues: currencies.map { ($0.code, $0.label) }))
                      }
@@ -413,25 +575,38 @@ struct StoreDetailView: View {
         .padding(.vertical, 22)
     }
 
-    private func editableDetailRow(icon: String, label: String, text: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(RSMSTheme.Colors.accentGold.opacity(0.7))
-                .frame(width: 20)
-            Text(label)
-                .font(.custom("HelveticaNeue", size: 19))
-                .foregroundStyle(RSMSTheme.Colors.textSecondary)
-            Spacer()
-            TextField("—", text: text)
-                .font(.custom("HelveticaNeue-Medium", size: 19))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.trailing)
-                .keyboardType(keyboard)
-                .autocorrectionDisabled()
-                .disabled(!isEditing)
+    private func editableDetailRow(icon: String, label: String, text: Binding<String>, keyboard: UIKeyboardType = .default, isValid: Bool = true, errorMessage: String? = nil) -> some View {
+        let isEmpty = text.wrappedValue.trimmingCharacters(in: .whitespaces).isEmpty
+        let showError = isEditing && ((showValidationErrors && isEmpty) || (!isEmpty && !isValid))
+
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .font(.caption)
+                    .foregroundStyle(showError ? RSMSTheme.Colors.error : RSMSTheme.Colors.accentGold.opacity(0.7))
+                    .frame(width: 20)
+                Text(label)
+                    .font(.custom("HelveticaNeue", size: 19))
+                    .foregroundStyle(showError ? RSMSTheme.Colors.error : RSMSTheme.Colors.textSecondary)
+                Spacer()
+                TextField("—", text: text)
+                    .font(.custom("HelveticaNeue-Medium", size: 19))
+                    .foregroundStyle(showError ? RSMSTheme.Colors.error : .white)
+                    .multilineTextAlignment(.trailing)
+                    .keyboardType(keyboard)
+                    .autocorrectionDisabled()
+                    .disabled(!isEditing)
+            }
+            .padding(.vertical, 22)
+            
+            if showError, let msg = errorMessage, !isEmpty {
+                Text(msg)
+                    .font(.caption2)
+                    .foregroundStyle(RSMSTheme.Colors.error)
+                    .padding(.leading, 36)
+                    .padding(.bottom, 8)
+            }
         }
-        .padding(.vertical, 22)
     }
 
     private func pickerDetailRow(icon: String, label: String, selection: Binding<String>, options: [String], displayLabels: [String: String]? = nil) -> some View {
@@ -541,11 +716,36 @@ struct StoreDetailView: View {
         imageUrl = liveStore.imageUrl ?? ""
     }
 
-    private func startEditing() { populateFields(); isEditing = true }
-    private func cancelEditing() { populateFields(); isEditing = false }
+    private func startEditing() { 
+        populateFields()
+        showValidationErrors = false
+        selectedUIImage = nil
+        isEditing = true 
+    }
+    private func cancelEditing() { 
+        populateFields()
+        showValidationErrors = false
+        selectedUIImage = nil
+        isEditing = false 
+    }
     private func saveStore() {
+        showValidationErrors = true
         guard isFormValid else { return }
-        var updatedStore = liveStore
+        
+        Task {
+            var finalImageUrl: String? = (imageUrl == "deleted") ? nil : imageUrl
+            
+            if let newImage = selectedUIImage {
+                isUploadingImage = true
+                do {
+                    finalImageUrl = try await uploadImageToSupabase(newImage)
+                } catch {
+                    print("Failed to upload image: \(error)")
+                }
+                isUploadingImage = false
+            }
+
+            var updatedStore = liveStore
         updatedStore.name = storeName.trimmingCharacters(in: .whitespaces)
         updatedStore.code = storeCode.trimmingCharacters(in: .whitespaces).uppercased()
         updatedStore.address = address.trimmingCharacters(in: .whitespaces)
@@ -558,13 +758,31 @@ struct StoreDetailView: View {
         updatedStore.managerName = managerName.trimmingCharacters(in: .whitespaces)
         updatedStore.region = selectedRegion
         updatedStore.currencyCode = selectedCurrency
-        updatedStore.taxRate = Double(taxRate) ?? liveStore.taxRate ?? 18.0
         updatedStore.monthlyRevenueTarget = Double(monthlyTarget) ?? liveStore.monthlyRevenueTarget
-        updatedStore.imageUrl = imageUrl.trimmingCharacters(in: .whitespaces).isEmpty ? nil : imageUrl.trimmingCharacters(in: .whitespaces)
+        updatedStore.imageUrl = finalImageUrl
 
-        Task {
-            await appState.updateStoreDetails(updatedStore)
+        await appState.updateStoreDetails(updatedStore)
+        await MainActor.run {
             isEditing = false
         }
+    }
+    }
+    
+    private func uploadImageToSupabase(_ image: UIImage) async throws -> String {
+        guard let imageData = image.jpegData(compressionQuality: 0.2) else {
+            throw NSError(domain: "ImageError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to compress image"])
+        }
+        let filename = "\(UUID().uuidString).jpg"
+        let path = "stores/\(filename)"
+        
+        try await SupabaseManager.shared.client.storage
+            .from("product-images")
+            .upload(path, data: imageData, options: FileOptions(contentType: "image/jpeg", upsert: true))
+        
+        let publicUrl = try SupabaseManager.shared.client.storage
+            .from("product-images")
+            .getPublicURL(path: path)
+        
+        return publicUrl.absoluteString
     }
 }
