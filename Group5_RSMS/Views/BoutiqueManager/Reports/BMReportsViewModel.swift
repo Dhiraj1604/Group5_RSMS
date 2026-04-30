@@ -43,6 +43,10 @@ final class BMReportsViewModel: ObservableObject {
     @Published var targetMetrics: [TargetMetric] = []
     @Published var dailySalesData: [DailySalesPoint] = []
     
+    // New: Top Products and Completeness Flags
+    @Published var topProducts: [SoldProduct] = []
+    @Published var missingDataFlags: [String: Bool] = [:]
+    
     @Published var isLoading = false
     
     // MARK: - Load All Reports Data
@@ -110,6 +114,17 @@ final class BMReportsViewModel: ObservableObject {
             dailyData.append(DailySalesPoint(date: startOfDay, amount: daySales))
         }
         self.dailySalesData = dailyData
+        
+        // --- Top Products ---
+        self.topProducts = Array(soldItems.prefix(5))
+        
+        // --- Data Completeness Check ---
+        var flags: [String: Bool] = [:]
+        if self.totalSales == 0 { flags["Sales"] = true }
+        if self.footfall == 0 { flags["Footfall"] = true }
+        if self.targetMetrics.isEmpty { flags["Targets"] = true }
+        if self.soldProducts.isEmpty { flags["Products"] = true }
+        self.missingDataFlags = flags
         
         isLoading = false
     }
