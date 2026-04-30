@@ -2,7 +2,6 @@
 //  UserRole.swift
 //  Group5_RSMS
 //
-//  Sprint 1 — Defines the three user roles in the system.
 //
 
 import SwiftUI

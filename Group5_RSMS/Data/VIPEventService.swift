@@ -189,7 +189,7 @@ final class VIPEventService {
     func fetchAppointments(boutiqueId: UUID) async throws -> [VIPAppointment] {
         let result: [VIPAppointment] = try await client
             .from("vip_appointments")
-            .select("*")
+            .select("*, vip_guests(*)")
             .eq("boutique_id", value: boutiqueId)
             .order("appointment_date", ascending: true)
             .execute()
@@ -212,5 +212,26 @@ final class VIPEventService {
             .update(["status": status])
             .eq("id", value: appointmentId)
             .execute()
+    }
+
+    /// Delete an appointment.
+    func deleteAppointment(appointmentId: UUID) async throws {
+        try await client
+            .from("vip_appointments")
+            .delete()
+            .eq("id", value: appointmentId)
+            .execute()
+    }
+
+    /// Fetch purchase history (real orders) for a specific customer.
+    func fetchPurchaseHistory(userId: UUID) async throws -> [CustomerOrder] {
+        let result: [CustomerOrder] = try await client
+            .from("customer_orders")
+            .select("*, customer_order_items(*)")
+            .eq("user_id", value: userId)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+        return result
     }
 }

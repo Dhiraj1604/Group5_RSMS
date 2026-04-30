@@ -48,15 +48,17 @@ struct BMSalesTab: View {
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
             
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        if selectedSeg == 0 { showCreateEvent = true }
-                        else if selectedSeg == 1 { showAddGuest = true }
-                        else { showScheduleAppointment = true }
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                if selectedSeg != 2 {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            if selectedSeg == 0 { showCreateEvent = true }
+                            else if selectedSeg == 1 { showAddGuest = true }
+                            else { showScheduleAppointment = true }
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
                     }
                 }
             }

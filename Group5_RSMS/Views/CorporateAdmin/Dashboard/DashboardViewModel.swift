@@ -67,9 +67,7 @@ class DashboardViewModel {
     private var refreshTimer: Timer?
     private var stores: [Store] = []
 
-    // ─────────────────────────────────────────────
     // MARK: - Time Frame
-    // ─────────────────────────────────────────────
 
     enum DashboardTimeFrame: String, CaseIterable, Identifiable {
         case today = "Today"
@@ -114,9 +112,7 @@ class DashboardViewModel {
         }
     }
 
-    // ─────────────────────────────────────────────
     // MARK: - Models
-    // ─────────────────────────────────────────────
 
     struct StoreKPI: Identifiable {
         let id: UUID
@@ -160,9 +156,7 @@ class DashboardViewModel {
         let createdAt: Date
     }
 
-    // ─────────────────────────────────────────────
     // MARK: - Decodable Row Types
-    // ─────────────────────────────────────────────
 
     /// `customer_orders` — store_id links to stores, user_id is the customer (NOT NULL)
     private struct OrderRow: Decodable {
@@ -263,9 +257,7 @@ class DashboardViewModel {
         let created_at: String?
     }
 
-    // ─────────────────────────────────────────────
     // MARK: - Main Fetch
-    // ─────────────────────────────────────────────
 
     func fetchDashboardData(stores: [Store]) async {
         guard !isLoading else { return }
@@ -286,7 +278,7 @@ class DashboardViewModel {
             let (orders, inventory, orderItems, auditLogs, totalProfiles, employees, expenses, storeTraffic) =
                 try await (o, i, items, logs, pCount, emps, exps, traffic)
 
-            // ── Filter valid orders (exclude cancelled / refunded) ──
+            // Filter valid orders (exclude cancelled / refunded)
             var valid = orders.filter { order in
                 guard let s = order.status?.lowercased() else { return true }
                 return !Self.excludedStatuses.contains(s)
@@ -295,7 +287,7 @@ class DashboardViewModel {
             var validAuditLogs = auditLogs
             var validExpenses = expenses
 
-            // ── Apply Time Frame Filter ──
+            // Apply Time Frame Filter
             if let startDate = self.selectedTimeFrame.startDate {
                 valid = valid.filter { order in
                     guard let orderDate = Self.parseDate(order.created_at) else { return false }
@@ -322,17 +314,16 @@ class DashboardViewModel {
             let validOrderIDs = Set(valid.map { $0.id })
             let filteredOrderItems = orderItems.filter { validOrderIDs.contains($0.order_id) }
 
-            // ── Global KPIs ──
+            // Global KPIs
             self.totalRevenue        = valid.reduce(0) { $0 + $1.total_amount }
             self.totalOrders         = valid.count
             // totalInventoryUnits: total stock quantity across all stores (unique SKU count for display)
             self.totalInventoryUnits = Set(inventory.map(\.product_id)).count
             self.activeStoreCount    = stores.filter { $0.isActive == true }.count
             self.avgOrderValue       = totalOrders > 0 ? totalRevenue / Double(totalOrders) : 0
-            // ✅ FIX: Use TIME-FILTERED expenses, not all-time expenses
             self.totalExpenses        = validExpenses.reduce(0) { $0 + $1.amount }
 
-            // ── Per-store breakdown ──
+            // Per-store breakdown
             var revByStore:   [UUID: Double] = [:]
             var ordByStore:   [UUID: Int]    = [:]
             var invByStore:   [UUID: Int]    = [:]   // keyed on store_id (inventory column)
@@ -406,7 +397,7 @@ class DashboardViewModel {
                 self.conversionRate = (Double(uniqueOrderingCustomers) / Double(totalProfiles)) * 100
             }
 
-            // ── Revenue Trend ──────────────────────────────────────────────────────
+            // Revenue Trend
             // dailyRevenue:        time-filtered — drives the visible chart in the AI card
             // allTimeDailyRevenue: ALWAYS all historical data — drives the forecast regression
             let allTimeOrders = orders.filter { order in
@@ -416,16 +407,16 @@ class DashboardViewModel {
             computeDailyRevenue(from: valid)         // filtered view for the chart
             computeAllTimeDailyRevenue(from: allTimeOrders)  // full history for forecast
 
-            // ── Basket Size ──
+            // Basket Size
             computeBasketSize(from: filteredOrderItems)
 
-            // ── Category Breakdown ──
+            // Category Breakdown
             computeCategorySales(from: filteredOrderItems)
 
-            // ── Customer Insights ──
+            // Customer Insights
             computeCustomerInsights(from: valid)
 
-            // ── Audit Logs ──
+            // Audit Logs
             self.recentAuditLogs = validAuditLogs.prefix(15).map { row in
                 AuditLogEntry(
                     id: row.id,
@@ -437,27 +428,24 @@ class DashboardViewModel {
                 )
             }
 
-            // ── Financials (compute BEFORE AI forecast so context is correct) ──
+            // Financials
             computeFinancials(from: filteredOrderItems, totalStockQuantity: totalStockQuantity)
 
-            // ── AI Forecast (always uses all-time data — independent of time filter) ──
+            // AI Forecast
             await computeForecast()
 
             self.lastRefreshed = Date()
         } catch is CancellationError {
             // Task was cancelled by the system (e.g. user navigated away) - ignore silently
         } catch {
-            print("❌ Dashboard fetch error: \(error)")
+        } catch {
+            print("Dashboard fetch error: \(error)")
             self.errorMessage = "Database connection issue. Please try again."
         }
         #endif
 
         isLoading = false
     }
-
-    // ─────────────────────────────────────────────
-    // MARK: - Supabase Queries
-    // ─────────────────────────────────────────────
 
     #if canImport(Supabase)
     private func fetchOrders() async throws -> [OrderRow] {
@@ -469,7 +457,6 @@ class DashboardViewModel {
     }
 
     private func fetchInventory() async throws -> [InventoryRow] {
-        // inventory table uses store_id (not boutique_id)
         try await SupabaseManager.shared.client
             .from("inventory")
             .select("store_id, product_id, stock_quantity, min_stock_level, max_stock_level")
@@ -507,12 +494,10 @@ class DashboardViewModel {
         } catch is CancellationError {
             return 0
         } catch {
-            print("Customer profile count fetch skipped: \(error.localizedDescription)")
             return 0
         }
     }
 
-    /// Returns one row per active employee (we COUNT them to get staff per boutique)
     private func fetchEmployeeCounts() async throws -> [EmployeeCountRow] {
         do {
             return try await SupabaseManager.shared.client
@@ -522,10 +507,9 @@ class DashboardViewModel {
                 .execute()
                 .value
         } catch is CancellationError { return [] }
-        catch { print("Employee fetch skipped: \(error.localizedDescription)"); return [] }
+        catch { return [] }
     }
 
-    /// Fetches all expense rows so we can sum actual OPEX
     private func fetchExpenses() async throws -> [ExpenseRow] {
         do {
             return try await SupabaseManager.shared.client
@@ -534,10 +518,9 @@ class DashboardViewModel {
                 .execute()
                 .value
         } catch is CancellationError { return [] }
-        catch { print("Expenses fetch skipped: \(error.localizedDescription)"); return [] }
+        catch { return [] }
     }
 
-    /// Fetches store traffic rows for actual conversion rate calculation
     private func fetchStoreTraffic() async throws -> [StoreTrafficRow] {
         do {
             return try await SupabaseManager.shared.client
@@ -546,13 +529,9 @@ class DashboardViewModel {
                 .execute()
                 .value
         } catch is CancellationError { return [] }
-        catch { print("Traffic fetch skipped: \(error.localizedDescription)"); return [] }
+        catch { return [] }
     }
     #endif
-
-    // ─────────────────────────────────────────────
-    // MARK: - Computation
-    // ─────────────────────────────────────────────
 
     private func computeDailyRevenue(from orders: [OrderRow]) {
         let cal = Calendar.current
@@ -654,7 +633,7 @@ class DashboardViewModel {
             return
         }
 
-        // ── COGS ──────────────────────────────────────────────────────────────
+        // COGS
         // Use real cost_price from DB (confirmed present for all products).
         // Fallback to price_at_purchase × 0.45 per item if cost_price is null.
         let realCOGS = items.reduce(0.0) { sum, item in
@@ -672,7 +651,7 @@ class DashboardViewModel {
         }
         self.grossProfit = max(0, totalRevenue - estimatedCOGS)   // ~55% of revenue
 
-        // ── OPEX ──────────────────────────────────────────────────────────────
+        // OPEX
         // Cap at 85% of Gross Profit so OPEX can never exceed gross (preventing negative net).
         if totalExpenses > 0 {
             self.estimatedOpex = min(totalExpenses, grossProfit * 0.85)
@@ -680,20 +659,20 @@ class DashboardViewModel {
             self.estimatedOpex = totalRevenue * 0.20
         }
 
-        // ── Tax ────────────────────────────────────────────────────────────────
+        // Tax
         let preTaxProfit = max(0, grossProfit - estimatedOpex)
         self.estimatedTax = preTaxProfit * 0.25
 
-        // ── Net Margin ─────────────────────────────────────────────────────────
+        // Net Margin
         let netProfit = preTaxProfit - estimatedTax
         self.netProfitMargin = (netProfit / totalRevenue) * 100
 
-        // ── Operating Efficiency ───────────────────────────────────────────────
+        // Operating Efficiency
         self.operatingEfficiency = grossProfit > 0
             ? max(0, ((grossProfit - estimatedOpex) / grossProfit)) * 100
             : 0
 
-        // ── Inventory Turnover ─────────────────────────────────────────────────
+        // Inventory Turnover
         let stockQty = totalStockQuantity > 0 ? totalStockQuantity : totalInventoryUnits
         let avgInvValue = Double(stockQty) * 8_000
         self.inventoryTurnover = avgInvValue > 0 ? (estimatedCOGS / avgInvValue) * 12 : 0
@@ -754,7 +733,7 @@ class DashboardViewModel {
         let next7Ord = forecastOrders.prefix(7).reduce(0) { $0 + $1.orderCount }
         self.predictedAOV = next7Ord > 0 ? next7Rev / Double(next7Ord) : 0
         
-        // ── Real AI Insights Request ──
+        // AI Insights Request
         let catSummary = categorySales.map { "\($0.category): \(shortRevenue($0.revenue))" }.joined(separator: ", ")
         let context = """
         Total 30-Day Revenue: \(formattedTotalRevenue)
@@ -793,9 +772,7 @@ class DashboardViewModel {
         }
     }
 
-    // ─────────────────────────────────────────────
-    // MARK: - Auto-Refresh (30s Polling)
-    // ─────────────────────────────────────────────
+    // MARK: - Auto-Refresh
 
     func startAutoRefresh(stores: [Store]) {
         self.stores = stores
@@ -814,9 +791,7 @@ class DashboardViewModel {
         refreshTimer = nil
     }
 
-    // ─────────────────────────────────────────────
     // MARK: - Helpers
-    // ─────────────────────────────────────────────
 
     var lastRefreshedText: String {
         guard let date = lastRefreshed else { return "Never" }

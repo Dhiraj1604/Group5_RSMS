@@ -1,0 +1,3781 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    "—" : {
+
+    },
+    "..." : {
+
+    },
+    "·" : {
+
+    },
+    "· %@" : {
+
+    },
+    "(₹ %@)" : {
+
+    },
+    "*" : {
+
+    },
+    "#%lld" : {
+
+    },
+    "%" : {
+
+    },
+    "% TO TARGET" : {
+
+    },
+    "%.1f%%" : {
+
+    },
+    "%@" : {
+
+    },
+    "%@ - %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ - %2$@"
+          }
+        }
+      }
+    },
+    "%@ – %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ – %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %lld%% rate" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld%% rate"
+          }
+        }
+      }
+    },
+    "%@ · Needs %lld units" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · Needs %2$lld units"
+          }
+        }
+      }
+    },
+    "%@ (%@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ (%2$@)"
+          }
+        }
+      }
+    },
+    "%@ (%@%%)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ (%2$@%%)"
+          }
+        }
+      }
+    },
+    "%@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "%@ • %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ • %2$@"
+          }
+        }
+      }
+    },
+    "%@ category" : {
+
+    },
+    "%@ has been successfully %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ has been successfully %2$@."
+          }
+        }
+      }
+    },
+    "%@ has been successfully registered. You can now assign staff and inventory to this location." : {
+
+    },
+    "%@ has only %lld unit(s) at %@. Request a transfer from a store with higher stock via the Boutique Manager." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ has only %2$lld unit(s) at %3$@. Request a transfer from a store with higher stock via the Boutique Manager."
+          }
+        }
+      }
+    },
+    "%@ removed" : {
+
+    },
+    "%@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "%@:" : {
+
+    },
+    "%@." : {
+
+    },
+    "%@. ₹%@ %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@. ₹%2$@ %3$@."
+          }
+        }
+      }
+    },
+    "%@. ₹%@ %@.%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@. ₹%2$@ %3$@.%4$@"
+          }
+        }
+      }
+    },
+    "%@. Location: %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@. Location: %2$@."
+          }
+        }
+      }
+    },
+    "%@. SKU %@. %lld units left. Status %@. Store %@, %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@. SKU %2$@. %3$lld units left. Status %4$@. Store %5$@, %6$@."
+          }
+        }
+      }
+    },
+    "%@%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@%2$lld"
+          }
+        }
+      }
+    },
+    "%lld" : {
+
+    },
+    "%lld / %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld / %2$lld"
+          }
+        }
+      }
+    },
+    "%lld %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@"
+          }
+        }
+      }
+    },
+    "%lld %@ Offer%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ Offer%3$@"
+          }
+        }
+      }
+    },
+    "%lld available" : {
+
+    },
+    "%lld days" : {
+
+    },
+    "%lld Days Left" : {
+
+    },
+    "%lld discrepancies pending review" : {
+
+    },
+    "%lld items • %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld items • %2$@"
+          }
+        }
+      }
+    },
+    "%lld max" : {
+
+    },
+    "%lld Orders" : {
+
+    },
+    "%lld percent of daily target achieved. Actual sales are %@. The daily target is %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld percent of daily target achieved. Actual sales are %2$@. The daily target is %3$@."
+          }
+        }
+      }
+    },
+    "%lld RISING" : {
+
+    },
+    "%lld shift%@ scheduled" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld shift%2$@ scheduled"
+          }
+        }
+      }
+    },
+    "%lld sold" : {
+
+    },
+    "%lld staff members tracked" : {
+
+    },
+    "%lld store%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld store%2$@"
+          }
+        }
+      }
+    },
+    "%lld unit(s) of %@ requested." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld unit(s) of %2$@ requested."
+          }
+        }
+      }
+    },
+    "%lld unit(s) transferred successfully." : {
+
+    },
+    "%lld units" : {
+
+    },
+    "%lld Units" : {
+
+    },
+    "%lld UNITS AVAILABLE" : {
+
+    },
+    "%lld working" : {
+
+    },
+    "%lld-Day Revenue Prediction" : {
+
+    },
+    "%lld%%" : {
+
+    },
+    "%lld%% of monthly target achieved" : {
+
+    },
+    "%lld%% rate" : {
+
+    },
+    "%lld%% remaining" : {
+
+    },
+    "%lld%% Stock Risk" : {
+
+    },
+    "%lld%% to target" : {
+
+    },
+    "%lldD" : {
+
+    },
+    "•" : {
+
+    },
+    "• %lld days" : {
+
+    },
+    "• Inactive" : {
+
+    },
+    "+5%" : {
+
+    },
+    "📍" : {
+
+    },
+    "₹" : {
+
+    },
+    "₹%.2f" : {
+
+    },
+    "₹%@" : {
+
+    },
+    "₹%lld" : {
+
+    },
+    "0" : {
+
+    },
+    "0.00" : {
+
+    },
+    "10 scans completed. To prevent fraud, please capture a photo of the current shelf status." : {
+
+    },
+    "Accept" : {
+
+    },
+    "ACCESSIBILITY & APPEARANCE" : {
+
+    },
+    "accessibility.dynamicType.adminReason" : {
+
+    },
+    "accessibility.dynamicType.boutiqueManagerReason" : {
+
+    },
+    "accessibility.dynamicType.commonRequirement" : {
+
+    },
+    "accessibility.dynamicType.confirmationDialogsPriority" : {
+
+    },
+    "accessibility.dynamicType.description" : {
+
+    },
+    "accessibility.dynamicType.errorsPriority" : {
+
+    },
+    "accessibility.dynamicType.formsPriority" : {
+
+    },
+    "accessibility.dynamicType.inventoryControllerReason" : {
+
+    },
+    "accessibility.dynamicType.loginPriority" : {
+
+    },
+    "accessibility.dynamicType.navigationPriority" : {
+
+    },
+    "accessibility.dynamicType.primaryButtonsPriority" : {
+
+    },
+    "accessibility.dynamicType.productDetailsPriority" : {
+
+    },
+    "accessibility.dynamicType.stockAlertsPriority" : {
+
+    },
+    "accessibility.dynamicType.title" : {
+
+    },
+    "Accessories" : {
+
+    },
+    "Account menu" : {
+
+    },
+    "achieved" : {
+
+    },
+    "Act" : {
+
+    },
+    "Actions" : {
+
+    },
+    "Activate Product" : {
+
+    },
+    "Activate Store" : {
+
+    },
+    "Activation Method" : {
+
+    },
+    "Active" : {
+
+    },
+    "ACTIVE" : {
+
+    },
+    "Actual" : {
+
+    },
+    "Actual Sales" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "المبيعات الفعلية"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tatsächlicher Umsatz"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventas Reales"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ventes Réelles"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "वास्तविक बिक्री"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "実売上"
+          }
+        },
+        "mr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "प्रत्यक्ष विक्री"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vendas Reais"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "实际销售额"
+          }
+        }
+      }
+    },
+    "Actual: %@" : {
+
+    },
+    "Add" : {
+
+    },
+    "Add a new product to the catalogue" : {
+
+    },
+    "Add Additional Tax" : {
+
+    },
+    "Add Employee" : {
+
+    },
+    "Add Image" : {
+
+    },
+    "Add Photo of Store" : {
+      "comment" : "A description of the action to add a photo of a store.",
+      "isCommentAutoGenerated" : true
+    },
+    "Add Staff Member" : {
+
+    },
+    "Add task" : {
+
+    },
+    "Add to Catalogue" : {
+
+    },
+    "Add to Collection" : {
+
+    },
+    "Add VIP Guest" : {
+
+    },
+    "Adding…" : {
+
+    },
+    "ADDITIONAL RATE" : {
+
+    },
+    "Additional Taxes" : {
+
+    },
+    "Adds one unit to the scanned product stock." : {
+
+    },
+    "Adjust Quantity" : {
+
+    },
+    "Adjustment applied & logged" : {
+
+    },
+    "Admin Tax (%@)" : {
+
+    },
+    "Admin Tax for %@" : {
+
+    },
+    "Admin Utilities" : {
+
+    },
+    "Aggregated across Sales, Revenue & Orders for %@." : {
+
+    },
+    "AI Analyst Insights" : {
+
+    },
+    "AI Deep Audit Diagnosis" : {
+
+    },
+    "AI FORECASTING" : {
+
+    },
+    "AI revenue forecast chart" : {
+
+    },
+    "Alerts" : {
+
+    },
+    "Align barcode within the frame" : {
+
+    },
+    "All Categories" : {
+
+    },
+    "All Clear" : {
+
+    },
+    "All Counted" : {
+
+    },
+    "All customer orders have been shipped." : {
+
+    },
+    "All directory guests are already invited." : {
+
+    },
+    "All discrepancies resolved!" : {
+
+    },
+    "All Products" : {
+
+    },
+    "All products in your boutique\nare above the low-stock threshold." : {
+
+    },
+    "All staff are active" : {
+
+    },
+    "All Stock Healthy" : {
+
+    },
+    "All Stores" : {
+
+    },
+    "All Stores Performance" : {
+
+    },
+    "All tasks completed!" : {
+
+    },
+    "Already have an account? Sign In" : {
+
+    },
+    "Amount" : {
+
+    },
+    "Amount (₹)" : {
+
+    },
+    "Analyzing Inventory..." : {
+
+    },
+    "Analyzing transactions..." : {
+
+    },
+    "Analyzing..." : {
+
+    },
+    "AOV" : {
+
+    },
+    "Appearance" : {
+
+    },
+    "Applicable To" : {
+
+    },
+    "Applies to all products in this category" : {
+
+    },
+    "Apply" : {
+
+    },
+    "Appointment Time" : {
+
+    },
+    "Appointments" : {
+
+    },
+    "Approve" : {
+
+    },
+    "Approve Fix" : {
+
+    },
+    "Are you sure you want to delete %@? This action cannot be undone." : {
+
+    },
+    "Are you sure you want to mark %@ as repaired and return it to general stock?" : {
+
+    },
+    "Artisan notes" : {
+
+    },
+    "Artisan Notes" : {
+
+    },
+    "As fresh orders come in, this section will recommend which products deserve premium floor space." : {
+
+    },
+    "Ask a Corporate Admin to register\nyour boutique location first." : {
+
+    },
+    "Ask AI Deep Audit" : {
+
+    },
+    "Assign To" : {
+
+    },
+    "Assign to Stores" : {
+
+    },
+    "Assigned Stores" : {
+
+    },
+    "Assignment" : {
+
+    },
+    "Attendance Report" : {
+
+    },
+    "Attended" : {
+
+    },
+    "Audit" : {
+
+    },
+    "Audit Completed" : {
+
+    },
+    "Audit in Progress" : {
+
+    },
+    "Audit Logs" : {
+
+    },
+    "auth.emailPlaceholder" : {
+
+    },
+    "auth.login" : {
+
+    },
+    "auth.logout" : {
+
+    },
+    "auth.passwordPlaceholder" : {
+
+    },
+    "AUTHORIZE TRANSFER" : {
+
+    },
+    "Authorizing Role..." : {
+
+    },
+    "AUTHORIZING..." : {
+
+    },
+    "Auto Apply" : {
+
+    },
+    "available" : {
+
+    },
+    "Available Sources" : {
+
+    },
+    "Available Stock:" : {
+
+    },
+    "Available stock: %lld units." : {
+
+    },
+    "Avg ₹" : {
+
+    },
+    "Avg Basket" : {
+
+    },
+    "Avg Items" : {
+
+    },
+    "Avg Items per Transaction" : {
+
+    },
+    "Backstock" : {
+
+    },
+    "Barcode scanner" : {
+
+    },
+    "Base Price" : {
+
+    },
+    "Basket Trends" : {
+
+    },
+    "Boutique Manager" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مدير البوتيك"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boutique-Manager"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerente de Boutique"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Directeur de Boutique"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बुटीक मैनेजर"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ブティックマネージャー"
+          }
+        },
+        "mr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बुटीक व्यवस्थापक"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerente de Boutique"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "精品店经理"
+          }
+        }
+      }
+    },
+    "BOUTIQUE NOTES" : {
+
+    },
+    "Boutique Registered! 🎉" : {
+
+    },
+    "Building Consolidated Report…" : {
+
+    },
+    "Camera Access Required" : {
+
+    },
+    "Camera is not supported on Simulator.\nPlease use a physical device." : {
+
+    },
+    "Camera Not Available" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Cancel Event" : {
+
+    },
+    "Cancel manual SKU entry" : {
+
+    },
+    "Category" : {
+
+    },
+    "Category Performance" : {
+
+    },
+    "Category Performance Index" : {
+
+    },
+    "Category Sales Details" : {
+
+    },
+    "Change Event Status" : {
+
+    },
+    "Change Image" : {
+
+    },
+    "Change task status" : {
+
+    },
+    "Checking for requests…" : {
+
+    },
+    "Checking your stock…" : {
+
+    },
+    "Choose from Library" : {
+
+    },
+    "Clear" : {
+
+    },
+    "Clear Search" : {
+
+    },
+    "Clears scanned items and starts a new scan session." : {
+
+    },
+    "Clears the current result and returns to the scanner." : {
+
+    },
+    "Client" : {
+
+    },
+    "Close" : {
+
+    },
+    "Collection" : {
+
+    },
+    "Commission" : {
+
+    },
+    "Commission Amount" : {
+
+    },
+    "Commission Rate" : {
+
+    },
+    "Commission Rate (%)" : {
+
+    },
+    "COMMISSION SETTINGS" : {
+
+    },
+    "Commits pending stock adjustments for the scanned product." : {
+
+    },
+    "Compare" : {
+
+    },
+    "Complete" : {
+
+    },
+    "Completed & Cancelled" : {
+
+    },
+    "Conditions (Optional)" : {
+
+    },
+    "CONFIDENTIAL • FOR CORPORATE REVIEW ONLY" : {
+
+    },
+    "Configuration" : {
+
+    },
+    "Confirm & Resume Audit" : {
+
+    },
+    "Confirm Movement" : {
+
+    },
+    "Confirm new password" : {
+
+    },
+    "Confirm Password" : {
+
+    },
+    "Confirm Repaired" : {
+
+    },
+    "Confirm your password" : {
+
+    },
+    "confirmed" : {
+
+    },
+    "CONSOLIDATED PERFORMANCE AUDIT" : {
+
+    },
+    "CONSOLIDATED PERFORMANCE REPORT" : {
+
+    },
+    "Consolidated Report" : {
+
+    },
+    "Corporate Admin" : {
+
+    },
+    "Corporate Performance Index" : {
+
+    },
+    "Coupon Code" : {
+
+    },
+    "Craftsmanship" : {
+
+    },
+    "Craftsmanship: %@" : {
+
+    },
+    "Create" : {
+
+    },
+    "Create category-specific tax rules that will be applied on top of regional taxes." : {
+
+    },
+    "Create Payout" : {
+
+    },
+    "Create Promotion" : {
+
+    },
+    "Create Shift" : {
+
+    },
+    "Creation Failed" : {
+
+    },
+    "Currency" : {
+
+    },
+    "CURRENT" : {
+
+    },
+    "Current Count: %lld" : {
+
+    },
+    "Current Rate" : {
+
+    },
+    "Current Session" : {
+
+    },
+    "Current stock in boutique" : {
+
+    },
+    "Current Stock in Boutique:" : {
+
+    },
+    "Current stock is %lld units." : {
+
+    },
+    "Current stock is %lld units. Product SKU is %@. Price is %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Current stock is %1$lld units. Product SKU is %2$@. Price is %3$@."
+          }
+        }
+      }
+    },
+    "Currently In Repair" : {
+
+    },
+    "Customer Lifecycle" : {
+
+    },
+    "Cycles this task to the next status." : {
+
+    },
+    "DAILY PACING" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الوتيرة اليومية"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TÄGLICHES TEMPO"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RITMO DIARIO"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RYTHME QUOTIDIEN"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "दैनिक गति"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日次ペース"
+          }
+        },
+        "mr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "दैनिक वेग"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RITMO DIÁRIO"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每日进度"
+          }
+        }
+      }
+    },
+    "Daily sales pacing." : {
+
+    },
+    "Daily Target" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الهدف اليومي"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tagesziel"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Objetivo Diario"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Objectif Quotidien"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "दैनिक लक्ष्य"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1日の目標"
+          }
+        },
+        "mr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "दैनिक लक्ष्य"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meta Diária"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每日目标"
+          }
+        }
+      }
+    },
+    "Dashboard" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لوحة القيادة"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dashboard"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Panel"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tableau de bord"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "डैशबोर्ड"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダッシュボード"
+          }
+        },
+        "mr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "डॅशबोर्ड"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Painel"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仪表板"
+          }
+        }
+      }
+    },
+    "dashboard.pendingTasks" : {
+
+    },
+    "dashboard.targetPacing" : {
+
+    },
+    "dashboard.title" : {
+
+    },
+    "dashboard.todaySales" : {
+
+    },
+    "Data Gaps" : {
+
+    },
+    "Data gaps in: %@. Results may be skewed." : {
+
+    },
+    "Database Error" : {
+
+    },
+    "Date" : {
+
+    },
+    "Date / Store" : {
+
+    },
+    "Date & Time" : {
+
+    },
+    "DATE OF APPROVAL" : {
+
+    },
+    "Date Range" : {
+
+    },
+    "Day" : {
+
+    },
+    "Deactivate Product" : {
+
+    },
+    "Deactivate Store" : {
+
+    },
+    "Decrease stock by one unit." : {
+
+    },
+    "Decrease transfer quantity." : {
+
+    },
+    "Deep-Dive Intelligence" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Delete %@?" : {
+
+    },
+    "Delete Event" : {
+
+    },
+    "Delete Product" : {
+
+    },
+    "Delete Shift" : {
+
+    },
+    "Delete Staff" : {
+
+    },
+    "Delete Store" : {
+
+    },
+    "Delete this promotion?" : {
+
+    },
+    "Deleting…" : {
+
+    },
+    "Describe the damage/issue" : {
+
+    },
+    "Description" : {
+
+    },
+    "Description (Optional)" : {
+
+    },
+    "Deselect All" : {
+
+    },
+    "Detail" : {
+
+    },
+    "DETAILS" : {
+
+    },
+    "Deutsch" : {
+
+    },
+    "Directory" : {
+
+    },
+    "DISCOUNT" : {
+
+    },
+    "Discount (%)" : {
+
+    },
+    "Discount Type" : {
+
+    },
+    "Discrepancy Report" : {
+
+    },
+    "Discrepancy View" : {
+      "comment" : "A picker segment header.",
+      "isCommentAutoGenerated" : true
+    },
+    "Dismiss" : {
+
+    },
+    "Don't have an account? Sign Up" : {
+
+    },
+    "Done" : {
+
+    },
+    "Dormant Staff" : {
+
+    },
+    "Double tap to %@ floor." : {
+
+    },
+    "Double tap to request a stock transfer from another boutique." : {
+
+    },
+    "Double tap to select this store as the transfer source." : {
+
+    },
+    "Double tap to view alert details." : {
+
+    },
+    "Double tap to view employee sales details." : {
+
+    },
+    "Due Date" : {
+
+    },
+    "Duration: %lld day%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Duration: %1$lld day%2$@"
+          }
+        }
+      }
+    },
+    "e.g. 1" : {
+
+    },
+    "e.g. 10.5" : {
+
+    },
+    "e.g. 15" : {
+
+    },
+    "e.g. 5000" : {
+
+    },
+    "e.g. 50000" : {
+
+    },
+    "e.g. Diwali Collection Launch" : {
+
+    },
+    "e.g. DIWALI25" : {
+
+    },
+    "e.g. Global launch pricing, seasonal adjustment…" : {
+
+    },
+    "e.g. JWL-RNG-001" : {
+
+    },
+    "e.g. Luxury Goods Tax" : {
+
+    },
+    "e.g. Void if basket < ₹5,000" : {
+
+    },
+    "Edit" : {
+
+    },
+    "Edit Employee" : {
+
+    },
+    "Edit Product" : {
+
+    },
+    "Edit product details" : {
+
+    },
+    "Edit Promotion" : {
+
+    },
+    "Edit Shift" : {
+
+    },
+    "Edit Tax Rule" : {
+
+    },
+    "Effective From" : {
+
+    },
+    "EFFICIENCY" : {
+
+    },
+    "Email" : {
+
+    },
+    "EMPLOYMENT INFO" : {
+
+    },
+    "End" : {
+
+    },
+    "End Date" : {
+
+    },
+    "End Early" : {
+
+    },
+    "End Time" : {
+
+    },
+    "English" : {
+
+    },
+    "Enter as a percentage. 20% VAT → enter 20. Stored internally as 0.20." : {
+
+    },
+    "Enter new password" : {
+
+    },
+    "Enter OTP" : {
+
+    },
+    "Enter physical counts below, then tap Run Audit" : {
+
+    },
+    "Enter SKU" : {
+
+    },
+    "Enter SKU manually" : {
+
+    },
+    "Enter the 8-digit OTP sent to %@.\nThe manager must provide this verbally." : {
+
+    },
+    "Enter the product SKU manually." : {
+
+    },
+    "Enter your email" : {
+
+    },
+    "Enter your password" : {
+
+    },
+    "Error" : {
+
+    },
+    "Error loading shipments" : {
+
+    },
+    "Español" : {
+
+    },
+    "est. commission" : {
+
+    },
+    "Estimated commission is %@. Commission rate is %lld percent." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Estimated commission is %1$@. Commission rate is %2$lld percent."
+          }
+        }
+      }
+    },
+    "Estimated Repair Cost (₹)" : {
+
+    },
+    "Event Date" : {
+
+    },
+    "Event: ₹%@" : {
+
+    },
+    "Events" : {
+
+    },
+    "Everyone has recorded sales this month." : {
+
+    },
+    "Exp" : {
+
+    },
+    "Exp: %lld • Act: %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Exp: %1$lld • Act: %2$lld"
+          }
+        }
+      }
+    },
+    "Expected" : {
+
+    },
+    "Export as CSV" : {
+
+    },
+    "Export as Excel" : {
+
+    },
+    "Export PDF Report" : {
+
+    },
+    "Fallback Items" : {
+
+    },
+    "Fastest moving items in this boutique" : {
+
+    },
+    "Filter by Category" : {
+
+    },
+    "Filter Shipments" : {
+
+    },
+    "Filters the product catalogue." : {
+
+    },
+    "FINANCIAL EXECUTIVE SUMMARY" : {
+
+    },
+    "Finding stores with stock…" : {
+
+    },
+    "Finish Audit" : {
+
+    },
+    "First Time User" : {
+
+    },
+    "Floor Movement" : {
+
+    },
+    "Footwear" : {
+
+    },
+    "Forecast" : {
+
+    },
+    "Fragrances" : {
+
+    },
+    "Français" : {
+
+    },
+    "Fresh inventory! No fallback items." : {
+
+    },
+    "From" : {
+
+    },
+    "FROM" : {
+
+    },
+    "From Date" : {
+
+    },
+    "From: %@" : {
+
+    },
+    "Fulfill Partially" : {
+
+    },
+    "Fulfill Quantity" : {
+
+    },
+    "Fulfill Request" : {
+
+    },
+    "Fulfilling…" : {
+
+    },
+    "Full System Access" : {
+
+    },
+    "general.add" : {
+
+    },
+    "general.cancel" : {
+
+    },
+    "general.confirm" : {
+
+    },
+    "general.delete" : {
+
+    },
+    "general.dismiss" : {
+
+    },
+    "general.edit" : {
+
+    },
+    "general.error" : {
+
+    },
+    "general.remove" : {
+
+    },
+    "general.save" : {
+
+    },
+    "general.success" : {
+
+    },
+    "GENERATED %@" : {
+
+    },
+    "Global Listing" : {
+
+    },
+    "Goal Achieved" : {
+
+    },
+    "Good afternoon" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مساء الخير"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guten Tag"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buenas tardes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bon après-midi"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "शुभ दोपहर"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "こんにちは"
+          }
+        },
+        "mr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "शुभ दुपार"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boa tarde"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下午好"
+          }
+        }
+      }
+    },
+    "Good evening" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مساء الخير"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guten Abend"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buenas noches"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bonsoir"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "शुभ संध्या"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "こんばんは"
+          }
+        },
+        "mr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "शुभ संध्याकाळ"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boa noite"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "晚上好"
+          }
+        }
+      }
+    },
+    "Good morning" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "صباح الخير"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guten Morgen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buenos días"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bonjour"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सुप्रभात"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "おはようございます"
+          }
+        },
+        "mr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "शुभ प्रभात"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bom dia"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "早上好"
+          }
+        }
+      }
+    },
+    "Guest" : {
+
+    },
+    "Guest Directory" : {
+
+    },
+    "Guest not found" : {
+
+    },
+    "Guests" : {
+
+    },
+    "Handbags" : {
+
+    },
+    "Ideal Range: 4x - 6x" : {
+
+    },
+    "Image added" : {
+
+    },
+    "Image removed" : {
+
+    },
+    "Image updated" : {
+
+    },
+    "in repair" : {
+
+    },
+    "In Repair" : {
+
+    },
+    "in sales" : {
+
+    },
+    "in stock" : {
+
+    },
+    "In stock" : {
+
+    },
+    "Inactive" : {
+
+    },
+    "INACTIVE" : {
+
+    },
+    "Incoming Requests" : {
+
+    },
+    "Incomplete Reporting Segments" : {
+
+    },
+    "Increase stock by one unit." : {
+
+    },
+    "Increase transfer quantity." : {
+
+    },
+    "INITIATE TRANSFER" : {
+
+    },
+    "Insights Unavailable" : {
+
+    },
+    "Insufficient Stock" : {
+
+    },
+    "Inventory" : {
+
+    },
+    "Inventory Controller" : {
+
+    },
+    "Inventory Dynamics" : {
+
+    },
+    "Inventory Health" : {
+
+    },
+    "Inventory Heat Map" : {
+
+    },
+    "Inventory levels are 100% accurate. No discrepancies were detected in this session." : {
+
+    },
+    "Inventory Variance Report" : {
+
+    },
+    "Inventory View" : {
+
+    },
+    "Invite Guests" : {
+
+    },
+    "Issue Description" : {
+
+    },
+    "Issues" : {
+
+    },
+    "Items" : {
+
+    },
+    "Joined %@" : {
+
+    },
+    "Joining Date" : {
+
+    },
+    "Language" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اللغة"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprache"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idioma"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Langue"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भाषा"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "言語"
+          }
+        },
+        "mr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भाषा"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idioma"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "语言"
+          }
+        }
+      }
+    },
+    "Last run %@" : {
+
+    },
+    "Latest inventory discrepancies from routine stock checks." : {
+
+    },
+    "left" : {
+
+    },
+    "Limited" : {
+
+    },
+    "Listed on all boutiques" : {
+
+    },
+    "Live Data" : {
+
+    },
+    "Loading inventory…" : {
+
+    },
+    "Loading offers…" : {
+
+    },
+    "Loading report..." : {
+
+    },
+    "Loading Reports..." : {
+
+    },
+    "Loading requests…" : {
+
+    },
+    "Loading revenue data…" : {
+
+    },
+    "Loading shipments data..." : {
+
+    },
+    "Loading Stores..." : {
+
+    },
+    "Loading transactions…" : {
+
+    },
+    "Log Details" : {
+
+    },
+    "Log Repair" : {
+
+    },
+    "Login Method" : {
+
+    },
+    "Looks up the entered SKU and opens stock update details." : {
+
+    },
+    "Low stock alert" : {
+
+    },
+    "Low stock alert for %@." : {
+
+    },
+    "Loyalty Performance" : {
+
+    },
+    "MANAGED SKUS" : {
+
+    },
+    "Management" : {
+
+    },
+    "Manager Notified" : {
+
+    },
+    "MANAGER SIGNATURE" : {
+
+    },
+    "Manager Verification" : {
+
+    },
+    "Manual SKU Entry" : {
+
+    },
+    "Mark as Completed" : {
+
+    },
+    "Mark as Shipped" : {
+
+    },
+    "Match Uncounted" : {
+
+    },
+    "Merchandising" : {
+
+    },
+    "Merchandising Insights" : {
+
+    },
+    "Met" : {
+
+    },
+    "Missed" : {
+
+    },
+    "MONTHLY REVENUE TARGET" : {
+
+    },
+    "Move to Pending" : {
+
+    },
+    "My profile" : {
+
+    },
+    "My Profile" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ملفي الشخصي"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mein Profil"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mi Perfil"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mon Profil"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "मेरी प्रोफ़ाइल"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マイプロフィール"
+          }
+        },
+        "mr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "माझी प्रोफाईल"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meu Perfil"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的个人资料"
+          }
+        }
+      }
+    },
+    "My Requests" : {
+
+    },
+    "NET MARGIN" : {
+
+    },
+    "New Boutique" : {
+
+    },
+    "New Password" : {
+
+    },
+    "New Product" : {
+
+    },
+    "New Retail Price (INR)" : {
+
+    },
+    "New Task" : {
+
+    },
+    "New Tax Rule" : {
+
+    },
+    "New VIP Event" : {
+
+    },
+    "New VIP Guest" : {
+
+    },
+    "No %@ offers" : {
+
+    },
+    "No Additional Taxes" : {
+
+    },
+    "No Appointments" : {
+
+    },
+    "No appointments scheduled." : {
+
+    },
+    "No Basket Data" : {
+
+    },
+    "No Boutiques Available" : {
+
+    },
+    "No boutiques currently require replenishment for this item." : {
+
+    },
+    "No data" : {
+
+    },
+    "No data for selected category" : {
+
+    },
+    "No discrepancies found." : {
+
+    },
+    "No fast-moving products yet" : {
+
+    },
+    "No guests invited yet" : {
+
+    },
+    "No Image Available" : {
+
+    },
+    "No Incoming Requests" : {
+
+    },
+    "No inventory items are below the\nlow-stock threshold right now." : {
+
+    },
+    "No inventory records found" : {
+
+    },
+    "No items found for this order." : {
+
+    },
+    "No items scanned yet" : {
+
+    },
+    "No Logs Found" : {
+
+    },
+    "No Matches" : {
+
+    },
+    "No Outbound Requests" : {
+
+    },
+    "No payout records found" : {
+
+    },
+    "No Pending Shipments" : {
+
+    },
+    "No products currently in repair" : {
+
+    },
+    "No products found" : {
+
+    },
+    "No Products Found" : {
+
+    },
+    "No products in collection" : {
+
+    },
+    "No Products Listed" : {
+
+    },
+    "No records found" : {
+
+    },
+    "No resolved items yet" : {
+
+    },
+    "No Results" : {
+
+    },
+    "No Revenue Data" : {
+
+    },
+    "No sales data for this period" : {
+
+    },
+    "No sales data yet" : {
+
+    },
+    "No sales recorded this month" : {
+
+    },
+    "No shifts on this day" : {
+
+    },
+    "No shifts scheduled" : {
+
+    },
+    "No Shipped Orders" : {
+
+    },
+    "No staff data yet" : {
+
+    },
+    "No staff found in directory" : {
+
+    },
+    "No staff match \"%@\"" : {
+      "comment" : "A label indicating that no staff members match the search query. The argument is the search query.",
+      "isCommentAutoGenerated" : true
+    },
+    "No stores assigned." : {
+
+    },
+    "No stores found" : {
+
+    },
+    "No Stores Found" : {
+
+    },
+    "No stores have enough stock\nfor a transfer right now." : {
+
+    },
+    "No Stores Yet" : {
+
+    },
+    "No Transaction Data" : {
+
+    },
+    "No Transactions Found" : {
+
+    },
+    "No transactions found for the selected store and date range.\nTry selecting a different store or adjusting the date range." : {
+
+    },
+    "No transactions found for the selected store or category.\nTry switching the store or selecting a different category." : {
+
+    },
+    "No transactions match the selected store and date range.\nTry adjusting the filters." : {
+
+    },
+    "No VIP Events Yet" : {
+
+    },
+    "No VIP Guests Yet" : {
+
+    },
+    "Not selected" : {
+
+    },
+    "Note (Optional)" : {
+
+    },
+    "Notes" : {
+
+    },
+    "Notification Sent" : {
+
+    },
+    "Notify Manager" : {
+
+    },
+    "OFF" : {
+
+    },
+    "Offer Period" : {
+
+    },
+    "Offers" : {
+
+    },
+    "OK" : {
+
+    },
+    "on floor" : {
+
+    },
+    "On Floor" : {
+
+    },
+    "Open Settings" : {
+
+    },
+    "Opens account actions including sign out." : {
+
+    },
+    "Opens employee sales details." : {
+
+    },
+    "Opens iOS Settings so you can enable camera access." : {
+
+    },
+    "Opens manual SKU entry if scanning is not possible." : {
+
+    },
+    "Opens product details." : {
+
+    },
+    "Opens profile, appearance, and account settings." : {
+
+    },
+    "Opens sales details for the top performer." : {
+
+    },
+    "Opens the form to create a new store task." : {
+
+    },
+    "Operating Efficiency" : {
+
+    },
+    "Operational Insights" : {
+
+    },
+    "Optimize your floor space based on real-time sales velocity." : {
+
+    },
+    "Order #%@" : {
+
+    },
+    "Order Analytics" : {
+
+    },
+    "Orders" : {
+
+    },
+    "Overall Target Achievement" : {
+
+    },
+    "Overdue" : {
+
+    },
+    "Partial Fulfillment" : {
+
+    },
+    "Password" : {
+
+    },
+    "Password Login" : {
+
+    },
+    "Pause" : {
+
+    },
+    "Payout" : {
+
+    },
+    "PAYOUT HISTORY" : {
+
+    },
+    "Payout Period" : {
+
+    },
+    "Penalty / Condition" : {
+
+    },
+    "Pending (%lld)" : {
+      "comment" : "Labels for the two segments in the discrepancy report view, showing the number of discrepancies in each category. The first label is for \"Pending\" discrepancies, and the second is for \"Resolved\" discrepancies.",
+      "isCommentAutoGenerated" : true
+    },
+    "Perfect Audit!" : {
+
+    },
+    "Performance" : {
+
+    },
+    "Performance Overview" : {
+
+    },
+    "Period" : {
+
+    },
+    "Period: %@ — %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Period: %1$@ — %2$@"
+          }
+        }
+      }
+    },
+    "Phone number must be exactly 10 digits" : {
+
+    },
+    "Place on Floor" : {
+
+    },
+    "Please enable camera access in\nSettings to scan barcodes." : {
+
+    },
+    "Please fill in all required fields." : {
+
+    },
+    "Please secure your manager account." : {
+
+    },
+    "Point the camera at a barcode, or use manual SKU entry from the Scan toolbar." : {
+
+    },
+    "Português" : {
+
+    },
+    "Predictions" : {
+
+    },
+    "Preparing scanner" : {
+
+    },
+    "Preparing Scanner…" : {
+
+    },
+    "Preview Status" : {
+
+    },
+    "Processing..." : {
+
+    },
+    "Product" : {
+
+    },
+    "PRODUCT" : {
+
+    },
+    "Product Added! ✓" : {
+
+    },
+    "PRODUCT CATEGORY" : {
+
+    },
+    "Product distribution by Category vs. Stock Health." : {
+
+    },
+    "Product Image" : {
+
+    },
+    "Product Inventory" : {
+
+    },
+    "Product SKU" : {
+
+    },
+    "Product Update" : {
+
+    },
+    "Product Updated ✓" : {
+
+    },
+    "Product: %@" : {
+
+    },
+    "Products" : {
+
+    },
+    "Products from your Supabase `products` table\nwill appear here." : {
+
+    },
+    "Profitability Analytics" : {
+
+    },
+    "Profitability Breakdown" : {
+
+    },
+    "Promotion Details" : {
+
+    },
+    "Promotion Name" : {
+
+    },
+    "Qty" : {
+
+    },
+    "QTY" : {
+
+    },
+    "Qty: %lld" : {
+
+    },
+    "QUANTITY" : {
+
+    },
+    "Quantity exceeds available stock (%lld)" : {
+
+    },
+    "Range" : {
+
+    },
+    "Rank %lld, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rank %1$lld, %2$@"
+          }
+        }
+      }
+    },
+    "Rank %lld. %@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Rank %1$lld. %2$@."
+          }
+        }
+      }
+    },
+    "Re-Run Audit" : {
+
+    },
+    "Ready-to-wear" : {
+
+    },
+    "Recent Sales" : {
+
+    },
+    "Recommended adjustment:" : {
+
+    },
+    "Refreshing Collection..." : {
+
+    },
+    "Region" : {
+
+    },
+    "REGIONAL PERFORMANCE" : {
+
+    },
+    "Register First Boutique" : {
+
+    },
+    "Register your first boutique location to\nstart managing inventory, staff, and sales." : {
+
+    },
+    "Reject" : {
+
+    },
+    "Reject Request" : {
+
+    },
+    "Reject this request?" : {
+
+    },
+    "Remove" : {
+
+    },
+    "Remove from Floor" : {
+
+    },
+    "Remove Image" : {
+
+    },
+    "Removes one unit from the scanned product stock." : {
+
+    },
+    "Repair" : {
+
+    },
+    "Replenishment Needed" : {
+
+    },
+    "Reports" : {
+
+    },
+    "Request Fulfilled" : {
+
+    },
+    "REQUEST REPLENISHMENT" : {
+
+    },
+    "Request Sent" : {
+
+    },
+    "Request Stock" : {
+
+    },
+    "Requested" : {
+
+    },
+    "Requested By: %@ (%@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Requested By: %1$@ (%2$@)"
+          }
+        }
+      }
+    },
+    "Requesting…" : {
+
+    },
+    "Reserved" : {
+
+    },
+    "Reset Count" : {
+
+    },
+    "Reset Filters" : {
+
+    },
+    "Reset scan session" : {
+
+    },
+    "Resolved (%lld)" : {
+      "comment" : "A picker option that filters the list of discrepancies to only show those that have been approved.",
+      "isCommentAutoGenerated" : true
+    },
+    "Restart" : {
+
+    },
+    "Restart Promotion" : {
+
+    },
+    "Resume" : {
+
+    },
+    "RETAIL PRICE" : {
+
+    },
+    "Retail Store Management System" : {
+
+    },
+    "Retake Photo" : {
+
+    },
+    "Retention Analytics" : {
+
+    },
+    "Retention Intelligence" : {
+
+    },
+    "Retry" : {
+
+    },
+    "Return" : {
+
+    },
+    "Return to Inventory" : {
+
+    },
+    "RETURNING" : {
+
+    },
+    "Revenue" : {
+
+    },
+    "REVENUE" : {
+
+    },
+    "Revenue Breakdown" : {
+
+    },
+    "Revenue data will appear here once sales transactions are recorded." : {
+
+    },
+    "Revenue Details" : {
+
+    },
+    "Revenue Forecast" : {
+
+    },
+    "REVENUE OF THIS MONTH" : {
+
+    },
+    "Revenue Over Time" : {
+
+    },
+    "Revenue Overview" : {
+
+    },
+    "Revenue Trend" : {
+
+    },
+    "Revenue Trends" : {
+
+    },
+    "Review Session" : {
+
+    },
+    "RSMS" : {
+
+    },
+    "RSMS Catalogue" : {
+
+    },
+    "RSMS LUXE" : {
+
+    },
+    "Run Audit" : {
+
+    },
+    "sales" : {
+
+    },
+    "Sales" : {
+
+    },
+    "Sales by Category" : {
+
+    },
+    "Sales data will appear here once linked to customer orders." : {
+
+    },
+    "SALES PERFORMANCE" : {
+
+    },
+    "Sales Transactions" : {
+
+    },
+    "Sales Trend" : {
+
+    },
+    "Save" : {
+
+    },
+    "SAVE" : {
+
+    },
+    "Save Anyway" : {
+
+    },
+    "Save Changes" : {
+
+    },
+    "Save Rate" : {
+
+    },
+    "Save stock changes" : {
+
+    },
+    "Scan" : {
+
+    },
+    "Scan again" : {
+
+    },
+    "Scan Again" : {
+
+    },
+    "Scanning error" : {
+
+    },
+    "Scanning inventory…" : {
+
+    },
+    "Schedule" : {
+
+    },
+    "Schedule Appointment" : {
+
+    },
+    "Search by guest or type" : {
+
+    },
+    "Search by name or email" : {
+
+    },
+    "Search by name or SKU" : {
+
+    },
+    "Search by product or SKU..." : {
+
+    },
+    "Search by product, store or status" : {
+
+    },
+    "Search by store or category…" : {
+
+    },
+    "Search category..." : {
+
+    },
+    "Search guests" : {
+
+    },
+    "Search logs, users, entities…" : {
+
+    },
+    "Search offers..." : {
+
+    },
+    "Search products, SKUs, stores…" : {
+
+    },
+    "Search products..." : {
+
+    },
+    "Search SKU or product" : {
+
+    },
+    "Search staff members..." : {
+      "comment" : "A placeholder text for a search bar in the navigation bar of the Boutique Managers' premium staff module.",
+      "isCommentAutoGenerated" : true
+    },
+    "Search stores by name or city..." : {
+
+    },
+    "Search stores..." : {
+
+    },
+    "Searching Master Catalog..." : {
+
+    },
+    "Section" : {
+
+    },
+    "Secure Your Account" : {
+
+    },
+    "Security Verification" : {
+
+    },
+    "See All" : {
+
+    },
+    "See More (%lld more)" : {
+
+    },
+    "See More (%lld)" : {
+
+    },
+    "Select a Client" : {
+
+    },
+    "Select All" : {
+
+    },
+    "SELECT DESTINATION" : {
+
+    },
+    "Select Employee" : {
+
+    },
+    "Select Guest" : {
+
+    },
+    "SELECT QUANTITY" : {
+
+    },
+    "SELECT REPORT PERIOD" : {
+
+    },
+    "Selected" : {
+
+    },
+    "Selected. Double tap to deselect." : {
+
+    },
+    "Send Verification Code" : {
+
+    },
+    "Sent: %@" : {
+
+    },
+    "Set" : {
+
+    },
+    "Set Commission Rate" : {
+
+    },
+    "Set Password" : {
+
+    },
+    "Set Password & Proceed" : {
+
+    },
+    "Set Price" : {
+
+    },
+    "Set Retail Price" : {
+
+    },
+    "Set to %lld units" : {
+
+    },
+    "Shift Conflict Detected" : {
+
+    },
+    "Shift End" : {
+
+    },
+    "Shift Start" : {
+
+    },
+    "Shipment View" : {
+
+    },
+    "Shipments" : {
+
+    },
+    "Show Less" : {
+
+    },
+    "Sign In" : {
+
+    },
+    "Sign Out" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تسجيل الخروج"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abmelden"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cerrar Sesión"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se Déconnecter"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "साइन आउट"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サインアウト"
+          }
+        },
+        "mr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "साइन आउट"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sair"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登出"
+          }
+        }
+      }
+    },
+    "Sign Up" : {
+
+    },
+    "SKU" : {
+
+    },
+    "SKU %@. Category %@. Price ₹%@." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "SKU %1$@. Category %2$@. Price ₹%3$@."
+          }
+        }
+      }
+    },
+    "SKU: %@" : {
+
+    },
+    "Slow Moving" : {
+
+    },
+    "Sort" : {
+
+    },
+    "Sort By" : {
+
+    },
+    "Stackable" : {
+
+    },
+    "Stackable with other offers" : {
+
+    },
+    "Staff" : {
+
+    },
+    "Staff Management" : {
+      "comment" : "The title of the view.",
+      "isCommentAutoGenerated" : true
+    },
+    "Staff Performance" : {
+
+    },
+    "Staff Section" : {
+
+    },
+    "Start" : {
+
+    },
+    "Start Date" : {
+
+    },
+    "Start Time" : {
+
+    },
+    "Status" : {
+
+    },
+    "Status: %@. Recent units sold: %lld. Current stock: %lld." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Status: %1$@. Recent units sold: %2$lld. Current stock: %3$lld."
+          }
+        }
+      }
+    },
+    "Stock" : {
+
+    },
+    "Stock > %lld" : {
+
+    },
+    "Stock Alerts" : {
+
+    },
+    "Stock Analysis" : {
+
+    },
+    "Stock Levels" : {
+
+    },
+    "Stock Levels Healthy" : {
+
+    },
+    "Stock Management" : {
+
+    },
+    "Stock movement has been logged and initiated successfully." : {
+
+    },
+    "Stock updated" : {
+
+    },
+    "Stock Updated" : {
+
+    },
+    "Store" : {
+
+    },
+    "STORE" : {
+
+    },
+    "Store Image" : {
+      "comment" : "The title of a confirmation dialog that appears when the user selects to add an image for a new boutique.",
+      "isCommentAutoGenerated" : true
+    },
+    "Store Name" : {
+
+    },
+    "Store Operations" : {
+
+    },
+    "Store Tasks" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مهام المتجر"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filialaufgaben"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tareas de Tienda"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tâches du Magasin"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्टोर के कार्य"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "店舗タスク"
+          }
+        },
+        "mr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "स्टोरची कामे"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarefas da Loja"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "店铺任务"
+          }
+        }
+      }
+    },
+    "Store: %@" : {
+
+    },
+    "Stores" : {
+
+    },
+    "STRATEGIC GOAL TRACKING" : {
+
+    },
+    "Strategic Predictions" : {
+
+    },
+    "Submit & Update Stock" : {
+
+    },
+    "Submit and update stock" : {
+
+    },
+    "Submit Failed" : {
+
+    },
+    "Submit to Repair" : {
+
+    },
+    "Suggested Fix" : {
+
+    },
+    "Swipe left on a product to send for repairment" : {
+
+    },
+    "Swipe left to accept or reject" : {
+
+    },
+    "Synced: %@" : {
+
+    },
+    "System" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "النظام"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सिस्टम"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "システム"
+          }
+        },
+        "mr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सिस्टम"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sistema"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统"
+          }
+        }
+      }
+    },
+    "Take Photo (Camera)" : {
+
+    },
+    "Take Shelf Photo" : {
+
+    },
+    "Tap + to add a shift" : {
+
+    },
+    "Tap + to add your first VIP customer." : {
+
+    },
+    "Tap + to create your first exclusive event." : {
+
+    },
+    "Tap + to schedule an appointment." : {
+
+    },
+    "Target" : {
+
+    },
+    "Target: %@" : {
+
+    },
+    "Targets vs Actual" : {
+
+    },
+    "Task Details" : {
+
+    },
+    "Task Title" : {
+
+    },
+    "TAX NAME" : {
+
+    },
+    "TAX RATE (%)" : {
+
+    },
+    "Test" : {
+
+    },
+    "The discount activates automatically when the start date is reached and stops when the end date passes." : {
+
+    },
+    "The discount only applies at checkout in the selected stores." : {
+
+    },
+    "The following staff members have not recorded any sales during the current performance period." : {
+
+    },
+    "The requesting boutique will be notified of the rejection. No inventory changes will be made." : {
+
+    },
+    "Theme: %@" : {
+
+    },
+    "There are no pending stock requests\nfrom other boutiques at this time." : {
+
+    },
+    "This action cannot be undone. The offer will be permanently removed." : {
+
+    },
+    "This cannot be undone. The product will be permanently removed." : {
+
+    },
+    "This change will be recorded in the audit trail" : {
+
+    },
+    "This employee already has a shift scheduled during this time. Do you still want to save this shift?" : {
+
+    },
+    "This flagship boutique represents the pinnacle of Dior's presence in the region, featuring bespoke architectural details and housing our most exclusive collections." : {
+
+    },
+    "THRESHOLD" : {
+
+    },
+    "Time Frame" : {
+
+    },
+    "Time Period" : {
+
+    },
+    "To" : {
+
+    },
+    "TO (max 30 days)" : {
+
+    },
+    "To Date" : {
+
+    },
+    "To: %@" : {
+
+    },
+    "Today" : {
+
+    },
+    "TODAY" : {
+
+    },
+    "Top Category" : {
+
+    },
+    "TOP PERFORMER" : {
+
+    },
+    "Top performer, %@" : {
+
+    },
+    "Top Performer: %@." : {
+
+    },
+    "Top Performers" : {
+
+    },
+    "TOP PERFORMING INVENTORY" : {
+
+    },
+    "Top Performing Stores" : {
+
+    },
+    "Total" : {
+
+    },
+    "TOTAL AMOUNT" : {
+
+    },
+    "Total Invited" : {
+
+    },
+    "Total Price" : {
+
+    },
+    "TOTAL REVENUE" : {
+
+    },
+    "Total Sales" : {
+
+    },
+    "Total Sales Amount (₹)" : {
+
+    },
+    "Transaction data will appear here once sales are recorded." : {
+
+    },
+    "Transaction Detail" : {
+
+    },
+    "Transfer" : {
+
+    },
+    "Transfer Authorized" : {
+
+    },
+    "TRANSFER INITIATION" : {
+
+    },
+    "Transfer Quantity" : {
+
+    },
+    "Try adjusting your filters or search\nterm to find what you're looking for." : {
+
+    },
+    "Try adjusting your search or filters." : {
+
+    },
+    "Try adjusting your search term\nto find what you're looking for." : {
+
+    },
+    "Turnover Ratio" : {
+
+    },
+    "Txns" : {
+
+    },
+    "Type" : {
+
+    },
+    "Unassigned" : {
+
+    },
+    "units" : {
+
+    },
+    "UNITS" : {
+
+    },
+    "UNITS LEFT" : {
+
+    },
+    "Unlimited" : {
+
+    },
+    "Unlisted" : {
+
+    },
+    "Upcoming" : {
+
+    },
+    "Update Failed" : {
+
+    },
+    "Update Password & Enter" : {
+
+    },
+    "Update Price" : {
+
+    },
+    "Usage Limit" : {
+
+    },
+    "Usage Limit per Customer" : {
+
+    },
+    "VALID UNTIL" : {
+
+    },
+    "VALIDITY" : {
+
+    },
+    "Value" : {
+
+    },
+    "Value (%)" : {
+
+    },
+    "VALUED AT" : {
+
+    },
+    "Var" : {
+
+    },
+    "Var: %@" : {
+
+    },
+    "Variance Report" : {
+
+    },
+    "Variant: %@" : {
+
+    },
+    "Verification Code" : {
+
+    },
+    "Verified" : {
+
+    },
+    "Verified by Gemini 1.5 Flash" : {
+
+    },
+    "Verify & Continue" : {
+
+    },
+    "Verify Manager" : {
+
+    },
+    "Verify OTP" : {
+
+    },
+    "View All" : {
+
+    },
+    "View Consolidated Report" : {
+
+    },
+    "VIP & Events" : {
+
+    },
+    "VIP Events" : {
+
+    },
+    "VIP Guests" : {
+
+    },
+    "vipevents.attendanceReport" : {
+
+    },
+    "vipevents.attended" : {
+
+    },
+    "vipevents.cancelEvent" : {
+
+    },
+    "vipevents.deleteEvent" : {
+
+    },
+    "vipevents.eventsSegment" : {
+
+    },
+    "vipevents.guestsSegment" : {
+
+    },
+    "vipevents.markAsCompleted" : {
+
+    },
+    "vipevents.markAsOngoing" : {
+
+    },
+    "vipevents.noEventsYet" : {
+
+    },
+    "vipevents.past" : {
+
+    },
+    "vipevents.tabTitle" : {
+
+    },
+    "vipevents.totalInvited" : {
+
+    },
+    "vipevents.upcoming" : {
+
+    },
+    "Warehouse Overview" : {
+
+    },
+    "We've sent an 8-digit code to %@." : {
+
+    },
+    "Weekly Performance" : {
+
+    },
+    "x%lld" : {
+
+    },
+    "XXXXXXXX" : {
+
+    },
+    "You are fulfilling %lld out of the requested %lld units. This will mark the request as fulfilled." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "You are fulfilling %1$lld out of the requested %2$lld units. This will mark the request as fulfilled."
+          }
+        }
+      }
+    },
+    "You cannot fulfill more than you have in stock (%lld)." : {
+
+    },
+    "You cannot move %lld units because only %lld units are available in stock." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "You cannot move %1$lld units because only %2$lld units are available in stock."
+          }
+        }
+      }
+    },
+    "You haven't requested stock\nfrom any boutiques. " : {
+
+    },
+    "You haven't shipped any orders yet." : {
+
+    },
+    "Your administrator has provided a temporary password. Please set a new secure password before proceeding." : {
+
+    },
+    "Your boutique is retaining %@ of customers. This calculation is derived from real customer order history." : {
+
+    },
+    "Your Boutique: %@" : {
+
+    },
+    "العربية" : {
+
+    },
+    "मराठी" : {
+
+    },
+    "हिंदी" : {
+
+    },
+    "中文" : {
+
+    },
+    "日本語" : {
+
+    }
+  },
+  "version" : "1.1"
+}

@@ -2,9 +2,6 @@
 //  Product.swift
 //  Group5_RSMS
 //
-//  Sprint 1 — Task #2 (Centralised Product & Pricing Engine)  — Dhiraj / Zeeshan
-//             Task #4 (Set Official Retail Price)             — Dhiraj
-//             Task #5 (Material, Origin & Craftsmanship)      — Zeeshan
 //
 //  Supabase table: `products`
 //

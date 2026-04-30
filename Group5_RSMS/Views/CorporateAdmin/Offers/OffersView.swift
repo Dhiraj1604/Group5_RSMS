@@ -97,14 +97,14 @@ struct OffersView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: RSMSTheme.Spacing.lg) {
-                // ── Stats / Tabs ───────────────────────────────────────
+                // Stats / Tabs
                 statsRow
                     .padding(.top, RSMSTheme.Spacing.sm)
 
-                // ── Sort & Filter ──────────────────────────────────────
+                // Sort & Filter
                 sortAndFilterRow
 
-                // ── Loading indicator ──────────────────────────────────
+                // Loading indicator
                 if service.isLoading && service.offers.isEmpty {
                     VStack(spacing: RSMSTheme.Spacing.sm) {
                         ProgressView()
@@ -118,7 +118,7 @@ struct OffersView: View {
                     .padding(.vertical, 60)
                 }
                 
-                // ── Offers List ────────────────────────────────────────
+                // Offers List
                 else {
                     VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
                         Text("\(listedOffers.count) \(selectedTab.rawValue) Offer\(listedOffers.count == 1 ? "" : "s")")
@@ -129,7 +129,7 @@ struct OffersView: View {
                         if listedOffers.isEmpty {
                             emptyRow
                         } else {
-                            // ── Cinematic Multi-Row Offers Grid ──────────────────────────
+                            // Multi-Row Offers Grid
                             LazyVGrid(columns: [
                                 GridItem(.flexible(), spacing: 20),
                                 GridItem(.flexible(), spacing: 20),
@@ -358,7 +358,6 @@ struct BoutiqueCouponCard: View {
             RSMSTheme.Colors.backgroundElevated
                 .clipShape(CouponShape())
             
-            // 2. Luxurious Texture & Glow
             Canvas { context, size in
                 let dotSize: CGFloat = 1.0
                 let spacing: CGFloat = 8.0

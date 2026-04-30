@@ -28,12 +28,12 @@ struct SalesLeaderboardView: View {
     @Binding var showRangePicker: Bool
     let boutiqueId: UUID
 
-    // ✅ Add BMDashboardViewModel to get real Supabase data
+    // Add BMDashboardViewModel to get real Supabase data
     @StateObject private var dashVM = BMDashboardViewModel()
 
     @State private var selectedRange: SalesDateRange = .thisMonth
 
-    // ✅ Removed dummySales entirely
+    // Removed dummySales entirely
 
     /// Returns real commission from dashVM if range is This Month, else returns sales.
     private func displayValue(for employee: Employee) -> Double {
@@ -108,7 +108,7 @@ struct SalesLeaderboardView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
 
-                // ✅ Always reserve space for banner, fade it in
+                // Always reserve space for banner, fade it in
                 if sortedEmployees.count >= 1 {
                     NavigationLink(destination:
                         EmployeeSalesDetailView(employee: sortedEmployees[0], boutiqueId: boutiqueId)
@@ -118,7 +118,7 @@ struct SalesLeaderboardView: View {
                     .buttonStyle(.plain)
                     .accessibilityHint("Opens sales details for the top performer.")
                     .padding(.horizontal, 16)
-                    .transition(.opacity)  // ✅ fade instead of layout jump
+                    .transition(.opacity)  // fade instead of layout jump
                 }
 
                 LazyVStack(spacing: 10) {
@@ -136,13 +136,13 @@ struct SalesLeaderboardView: View {
                             commissionRate: entry?.commissionRate ?? 0
                         )
                         }
-                        .transition(.opacity)  // ✅ rows fade in, no jump
+                        .transition(.opacity)  // rows fade in, no jump
                         .accessibilityHint("Opens employee sales details.")
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 24)
-                .animation(.easeInOut(duration: 0.25), value: sortedEmployees.map { $0.id })  // ✅ smooth reorder
+                .animation(.easeInOut(duration: 0.25), value: sortedEmployees.map { $0.id })  // smooth reorder
             }
         }
     }

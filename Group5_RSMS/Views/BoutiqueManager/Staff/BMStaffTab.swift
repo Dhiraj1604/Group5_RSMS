@@ -26,7 +26,6 @@ struct BMStaffTab: View {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // ── SEGMENT PICKER ──
                     Picker("Staff Section", selection: $selectedTab) {
                         Text("Directory").tag(0)
                         Text("Schedule").tag(1)
@@ -35,6 +34,14 @@ struct BMStaffTab: View {
                     .padding(.horizontal)
                     .padding(.vertical, 8)
 
+//                     // CONTENT
+//                     switch selectedTab {
+//                     case 0:
+//                         StaffListView(boutiqueId: boutiqueId, staffVM: staffVM, showAddEmployee: $showAddEmployee)
+//                     case 1:
+//                         SalesLeaderboardView(staffVM: staffVM, showRangePicker: $showRangePicker, boutiqueId: boutiqueId)
+//                     default:
+//                         ShiftScheduleView(shiftVM: shiftVM, staffVM: staffVM, showingAddShift: $showingAddShift, boutiqueId: boutiqueId)
                     // ── CONTENT ──
                     if selectedTab == 0 {
                         StaffListView(

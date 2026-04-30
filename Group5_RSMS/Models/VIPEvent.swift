@@ -221,6 +221,9 @@ struct VIPAppointment: Codable, Identifiable {
     var notes: String?
     let createdAt: Date?
 
+    // Joined guest info
+    var guest: VIPGuest?
+
     enum CodingKeys: String, CodingKey {
         case id
         case guestId         = "guest_id"
@@ -231,6 +234,7 @@ struct VIPAppointment: Codable, Identifiable {
         case status
         case notes
         case createdAt       = "created_at"
+        case guest           = "vip_guests"
     }
 
     struct InsertPayload: Encodable {

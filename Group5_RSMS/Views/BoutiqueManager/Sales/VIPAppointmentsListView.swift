@@ -20,7 +20,7 @@ struct VIPAppointmentsListView: View {
             return list.sorted { $0.appointmentDate < $1.appointmentDate }
         } else {
             return list.filter { appt in
-                let guest = vm.allGuests.first { $0.id == appt.guestId }
+                let guest = appt.guest
                 let guestName = guest?.fullName ?? ""
                 return guestName.localizedCaseInsensitiveContains(searchText) ||
                        appt.type.localizedCaseInsensitiveContains(searchText) ||
@@ -90,7 +90,7 @@ struct VIPAppointmentsListView: View {
 
     @ViewBuilder
     private func appointmentRow(_ appt: VIPAppointment) -> some View {
-        let guest = vm.allGuests.first { $0.id == appt.guestId }
+        let guest = appt.guest
         
         NavigationLink(destination: guest != nil ? AnyView(VIPGuestDetailView(vm: vm, guest: guest!)) : AnyView(Text("Guest not found"))) {
             HStack(alignment: .center, spacing: RSMSTheme.Spacing.md) {
@@ -155,6 +155,7 @@ struct VIPAppointmentsListView: View {
                 } label: {
                     Label("Cancel", systemImage: "xmark.circle")
                 }
+                .tint(RSMSTheme.Colors.error)
                 
                 Button {
                     Task { await vm.updateAppointmentStatus(appointmentId: appt.id, newStatus: "completed") }
@@ -163,6 +164,13 @@ struct VIPAppointmentsListView: View {
                 }
                 .tint(RSMSTheme.Colors.success)
             }
+            
+            Button(role: .destructive) {
+                Task { await vm.deleteAppointment(appointmentId: appt.id) }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+            .tint(RSMSTheme.Colors.error)
         }
     }
 }
