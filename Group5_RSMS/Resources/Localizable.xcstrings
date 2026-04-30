@@ -1344,6 +1344,9 @@
     "Delete %@?" : {
 
     },
+    "Delete Employee" : {
+
+    },
     "Delete Event" : {
 
     },
@@ -3088,6 +3091,9 @@
 
     },
     "Set to %lld units" : {
+
+    },
+    "SHIFT" : {
 
     },
     "Shift Conflict Detected" : {

@@ -168,24 +168,6 @@ struct EmployeeSalesDetailView: View {
                     .cornerRadius(14)
                     .padding(.horizontal, 40)
 
-                    // MARK: - Quick Actions
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            QuickActionChip(icon: "pencil", label: "Edit", color: RSMSTheme.Colors.accentGold) {
-                                showEditEmployee = true
-                            }
-                            QuickActionChip(icon: "percent", label: "Commission", color: .cyan) {
-                                showSetCommission = true
-                            }
-                            QuickActionChip(icon: "banknote", label: "Payout", color: RSMSTheme.Colors.success) {
-                                showCreatePayout = true
-                            }
-                            QuickActionChip(icon: "trash", label: "Delete", color: RSMSTheme.Colors.error) {
-                                showDeleteConfirmation = true
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
 
                     // MARK: - Info Cards
                     HStack(spacing: 12) {
@@ -379,8 +361,22 @@ struct EmployeeSalesDetailView: View {
                             .cornerRadius(14)
                         }
                     }
-                    .padding(.horizontal)
                 }
+                .padding(.bottom, 40)
+                
+                // MARK: - Delete Employee
+                Button {
+                    showDeleteConfirmation = true
+                } label: {
+                    Text("Delete Employee")
+                        .font(.headline)
+                        .foregroundColor(RSMSTheme.Colors.error)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(RSMSTheme.Colors.backgroundDeep)
+                        .cornerRadius(14)
+                }
+                .padding(.horizontal)
                 .padding(.bottom, 40)
             }
         }
@@ -428,39 +424,20 @@ struct EmployeeSalesDetailView: View {
         .sheet(isPresented: $showCreatePayout) {
             CommissionPayoutView(employee: employee, boutiqueId: boutiqueId, commissionVM: commissionVM)
         }
-    }
-}
-
-// MARK: - Quick Action Chip
-struct QuickActionChip: View {
-    let icon: String
-    let label: String
-    let color: Color
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 6) {
-                ZStack {
-                    Circle()
-                        .fill(color.opacity(0.13))
-                        .frame(width: 44, height: 44)
-                    Image(systemName: icon)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(color)
+        .alert("Delete Employee", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                Task {
+                    await staffVM.deleteEmployee(currentEmployee, boutiqueId: boutiqueId)
+                    dismiss()
                 }
-                Text(label)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(RSMSTheme.Colors.textSecondary)
             }
-            .frame(width: 72)
-            .padding(.vertical, 12)
-            .background(RSMSTheme.Colors.backgroundElevated)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(color.opacity(0.2), lineWidth: 1))
+        } message: {
+            Text("Are you sure you want to permanently delete \(currentEmployee.name)? This cannot be undone.")
         }
     }
 }
+
 
 // MARK: - Info Card
 struct InfoCard: View {
