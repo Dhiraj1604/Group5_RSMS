@@ -4,7 +4,7 @@ import Foundation
 class AIForecastService {
     
     // MARK: - Configuration
-    private let groqKey = "api"
+    private let groqKey = "api"  //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
     private let modelName = "llama-3.1-8b-instant" // Latest high-speed model
     
     struct GroqResponse: Decodable {

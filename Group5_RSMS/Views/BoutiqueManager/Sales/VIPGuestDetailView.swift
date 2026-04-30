@@ -13,13 +13,8 @@ struct VIPGuestDetailView: View {
     @ObservedObject var vm: VIPEventViewModel
     let guest: VIPGuest
     
-    // Mock purchase history for now
-    private let mockPurchases = [
-        ("Constella Bracelet", "₹69,000", "12 Oct 2025"),
-        ("Maharaja Diamond Ring", "₹5,000,000", "05 Jan 2026")
-    ]
-    
     @State private var showScheduleAppointment = false
+    @State private var showAllPurchases = false
     
     var guestAppointments: [VIPAppointment] {
         vm.appointments.filter { $0.guestId == guest.id }
@@ -63,6 +58,9 @@ struct VIPGuestDetailView: View {
         }
         .sheet(isPresented: $showScheduleAppointment) {
             ScheduleAppointmentSheet(vm: vm, boutiqueId: appState.currentStoreID ?? UUID(), preselectedGuest: guest)
+        }
+        .task {
+            await vm.loadPurchaseHistory(userId: guest.id)
         }
     }
     
@@ -130,33 +128,61 @@ struct VIPGuestDetailView: View {
         VStack(alignment: .leading, spacing: RSMSTheme.Spacing.md) {
             sectionHeader(title: "Purchase History", icon: "bag.fill")
             
-            VStack(spacing: 0) {
-                ForEach(mockPurchases.indices, id: \.self) { idx in
-                    let purchase = mockPurchases[idx]
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(purchase.0)
-                                .font(.subheadline).fontWeight(.semibold)
-                                .foregroundStyle(RSMSTheme.Colors.textPrimary)
-                            Text(purchase.2)
-                                .font(.caption)
-                                .foregroundStyle(RSMSTheme.Colors.textTertiary)
-                        }
-                        Spacer()
-                        Text(purchase.1)
-                            .font(.subheadline).fontWeight(.bold)
-                            .foregroundStyle(RSMSTheme.Colors.accentGold)
-                    }
-                    .padding(RSMSTheme.Spacing.md)
+            let purchases = vm.guestPurchases
+            
+            if purchases.isEmpty {
+                Text("No purchase history found.")
+                    .font(.subheadline)
+                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                    .padding(RSMSTheme.Spacing.lg)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .background(RSMSTheme.Colors.backgroundDeep)
+                    .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
+                    .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
+            } else {
+                VStack(spacing: 0) {
+                    let displayedPurchases = showAllPurchases ? purchases : Array(purchases.prefix(3))
                     
-                    if idx < mockPurchases.count - 1 {
-                        Divider().background(RSMSTheme.Colors.borderLight)
+                    ForEach(displayedPurchases.indices, id: \.self) { idx in
+                        let order = displayedPurchases[idx]
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(order.category ?? "App Purchase")
+                                    .font(.subheadline).fontWeight(.semibold)
+                                    .foregroundStyle(RSMSTheme.Colors.textPrimary)
+                                Text(order.createdAt.formatted(date: .abbreviated, time: .omitted))
+                                    .font(.caption)
+                                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                            }
+                            Spacer()
+                            Text(RSMSTheme.formatCurrency(order.totalAmount))
+                                .font(.subheadline).fontWeight(.bold)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                        .padding(RSMSTheme.Spacing.md)
+                        
+                        if idx < displayedPurchases.count - 1 {
+                            Divider().background(RSMSTheme.Colors.borderLight)
+                        }
+                    }
+                    
+                    if purchases.count > 3 {
+                        Button {
+                            withAnimation { showAllPurchases.toggle() }
+                        } label: {
+                            Text(showAllPurchases ? "Show Less" : "Show More (\(purchases.count - 3) more)")
+                                .font(.caption).fontWeight(.bold)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                                .padding(.vertical, 12)
+                                .frame(maxWidth: .infinity)
+                                .background(RSMSTheme.Colors.backgroundElevated.opacity(0.5))
+                        }
                     }
                 }
+                .background(RSMSTheme.Colors.backgroundDeep)
+                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
+                .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
             }
-            .background(RSMSTheme.Colors.backgroundDeep)
-            .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg))
-            .overlay(RoundedRectangle(cornerRadius: RSMSTheme.Radius.lg).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
         }
     }
     
@@ -235,6 +261,7 @@ struct VIPGuestDetailView: View {
                                 } label: {
                                     Label("Cancel", systemImage: "xmark.circle")
                                 }
+                                .tint(RSMSTheme.Colors.error)
                                 
                                 Button {
                                     Task { await vm.updateAppointmentStatus(appointmentId: appt.id, newStatus: "completed") }
@@ -243,6 +270,13 @@ struct VIPGuestDetailView: View {
                                 }
                                 .tint(RSMSTheme.Colors.success)
                             }
+                            
+                            Button(role: .destructive) {
+                                Task { await vm.deleteAppointment(appointmentId: appt.id) }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            .tint(RSMSTheme.Colors.error)
                         }
                     }
                 }
