@@ -187,14 +187,7 @@ struct PremiumStoreCard: View {
                 HStack {
                     Spacer()
                     // Ultra-Minimal Status Dot (Only)
-                    Circle()
-                        .fill(storeKPI.isActive ? RSMSTheme.Colors.success : .red)
-                        .frame(width: 8, height: 8)
-                        .shadow(color: storeKPI.isActive ? RSMSTheme.Colors.success : .red, radius: 4)
-                        .padding(12)
-                        .background(Color.black.opacity(0.4))
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                    StatusDot(isActive: storeKPI.isActive)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)

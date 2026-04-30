@@ -22,6 +22,7 @@ struct DashboardTab: View {
     @State private var selectedPieSlice: String? = nil
     @State private var selectedAngle: Double? = nil
     @Namespace private var animation
+    @State private var showingProfile = false
 
     @Environment(\.horizontalSizeClass) private var sizeClass
     private var isWide: Bool { sizeClass == .regular }
@@ -37,15 +38,15 @@ struct DashboardTab: View {
                 .background(RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea())
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Menu {
-                            Button(role: .destructive) { appState.signOut() } label: { Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right") }
+                        Button {
+                            showingProfile = true
                         } label: {
-                            Image(systemName: "person.circle.fill")
-                                .font(.title3)
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.system(size: 22))
                                 .foregroundStyle(RSMSTheme.Colors.accentGold)
                         }
-                        .accessibilityLabel("Account menu")
-                        .accessibilityHint("Opens account actions including sign out.")
+                        .accessibilityLabel("My Profile")
+                        .accessibilityHint("Opens profile, appearance, and account settings.")
                     }
                 }
                 .overlay {
@@ -142,6 +143,10 @@ struct DashboardTab: View {
         .sheet(isPresented: $showAIModal) { AIForecastDetailModal(viewModel: viewModel) }
         .sheet(isPresented: $showProfitModal) { ProfitabilityDetailModal(viewModel: viewModel) }
         .sheet(isPresented: $showRetentionModal) { RetentionDetailModal(viewModel: viewModel) }
+        .sheet(isPresented: $showingProfile) {
+            AdminProfileView()
+                .presentationDetents([.large])
+        }
     }
 
     // MARK: - Components
@@ -748,9 +753,16 @@ struct DashboardTab: View {
                 // Detailed Breakdown (Proportional Split)
                 GeometryReader { proxy in
                     let total = viewModel.grossProfit + viewModel.estimatedOpex + viewModel.estimatedTax
-                    let gpRatio = total > 0 ? (viewModel.grossProfit / total) : 0.33
-                    let opRatio = total > 0 ? (viewModel.estimatedOpex / total) : 0.33
-                    let taxRatio = total > 0 ? (viewModel.estimatedTax / total) : 0.34
+                    let rawGPRatio = total > 0 ? (viewModel.grossProfit / total) : 0.33
+                    let rawOPRatio = total > 0 ? (viewModel.estimatedOpex / total) : 0.33
+                    let rawTaxRatio = total > 0 ? (viewModel.estimatedTax / total) : 0.34
+                    
+                    // Apply minimum threshold (22%) to ensure text labels and values are visible
+                    let minR: CGFloat = 0.22
+                    let sumR = max(rawGPRatio, minR) + max(rawOPRatio, minR) + max(rawTaxRatio, minR)
+                    let gpRatio = max(rawGPRatio, minR) / sumR
+                    let opRatio = max(rawOPRatio, minR) / sumR
+                    let taxRatio = max(rawTaxRatio, minR) / sumR
                     
                     HStack(spacing: 0) {
                         breakdownItem(label: "GROSS", value: viewModel.shortRevenue(viewModel.grossProfit), color: RSMSTheme.Colors.accentGold.opacity(0.8))
@@ -784,10 +796,11 @@ struct DashboardTab: View {
     }
     
     private func breakdownItem(label: String, value: String, color: Color) -> some View {
-        VStack(spacing: 6) {
-            Text(label).font(.custom("Helvetica-Bold", size: 11)).foregroundStyle(.white.opacity(0.8)).lineLimit(1).minimumScaleFactor(0.8)
-            Text(value).font(.custom("Helvetica-Bold", size: 14)).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.8)
+        VStack(spacing: 4) {
+            Text(label).font(.custom("Helvetica-Bold", size: 10)).foregroundStyle(.white.opacity(0.8)).lineLimit(1).minimumScaleFactor(0.5)
+            Text(value).font(.custom("Helvetica-Bold", size: 13)).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.5)
         }
+        .padding(.horizontal, 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(color)
     }
@@ -1372,9 +1385,7 @@ struct StoreProfitRow: View {
             }
             
             // Efficiency indicator
-            Circle()
-                .fill(store.isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.error)
-                .frame(width: 8, height: 8)
+            StatusDot(isActive: store.isActive)
         }
         .padding(20)
         .background(RSMSTheme.Colors.backgroundDeep)
@@ -1390,6 +1401,18 @@ struct AIForecastDetailModal: View {
     @State private var glowPhase = false
     @State private var predictionPeriod: Int = 7
     let periods = [7, 14, 30]
+    
+    private var currentPredictedAOV: Double {
+        let rev = viewModel.forecastRevenue.prefix(predictionPeriod).reduce(0) { $0 + $1.amount }
+        let ord = viewModel.forecastOrders.prefix(predictionPeriod).reduce(0) { $0 + Double($1.orderCount) }
+        return ord > 0 ? rev / ord : 0
+    }
+    
+    private var currentGrowthTrend: Double {
+        let forecast = viewModel.forecastRevenue.prefix(predictionPeriod)
+        guard let first = forecast.first?.amount, let last = forecast.last?.amount, first > 0 else { return 0 }
+        return ((last - first) / first) * 100
+    }
     
     var body: some View {
         NavigationStack {
@@ -1454,9 +1477,15 @@ struct AIForecastDetailModal: View {
                         .padding(.horizontal, 24)
                         
                         // 3. AI Insights Grid
+                        let aov = currentPredictedAOV
+                        let trend = currentGrowthTrend
+                        
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                            InsightGridItem(title: "Predicted AOV", value: viewModel.shortRevenue(viewModel.predictedAOV), icon: "bag.fill", color: .blue)
-                            InsightGridItem(title: "Growth Trend", value: "+14.2%", icon: "chart.line.uptrend.xyaxis", color: .green)
+                            InsightGridItem(title: "Predicted AOV", value: viewModel.shortRevenue(aov), icon: "bag.fill", color: .blue)
+                            InsightGridItem(title: "Growth Trend", 
+                                          value: String(format: "%@%.1f%%", trend >= 0 ? "+" : "", trend), 
+                                          icon: trend >= 0 ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis", 
+                                          color: trend >= 0 ? .green : .red)
                         }
                         .padding(.horizontal, 24)
                         

@@ -216,6 +216,26 @@ enum RSMSTheme {
     }
 }
 
+// MARK: - Reusable Design Components
+
+struct StatusDot: View {
+    let isActive: Bool
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.black.opacity(0.4))
+                .frame(width: 24, height: 24)
+                .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+            
+            Circle()
+                .fill(isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary)
+                .frame(width: 8, height: 8)
+                .shadow(color: isActive ? RSMSTheme.Colors.success : RSMSTheme.Colors.textTertiary, radius: 4)
+        }
+    }
+}
+
 // MARK: - Reusable View Modifiers
 
 struct CardStyle: ViewModifier {

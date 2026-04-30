@@ -23,6 +23,7 @@ struct ICStockTab: View {
     @State private var isLoadingLocalProducts: Bool = false
     @State private var localInventory: [LocalInventoryRecord] = []
     @State private var showAllInventory: Bool = false
+    @State private var showingProfile = false
     
     @State private var allCategories: [Category] = []
     
@@ -64,18 +65,19 @@ struct ICStockTab: View {
             
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button(role: .destructive) {
-                            appState.signOut()
-                        } label: {
-                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                        }
+                    Button {
+                        showingProfile = true
                     } label: {
-                        Image(systemName: "person.circle.fill")
-                            .font(.title3)
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.system(size: 22))
                             .foregroundStyle(RSMSTheme.Colors.accentGold)
                     }
+                    .accessibilityLabel("My Profile")
                 }
+            }
+            .sheet(isPresented: $showingProfile) {
+                AdminProfileView() // Reusing the same Admin Profile for IC or I could create ICProfileView
+                    .presentationDetents([.large])
             }
         }
     }

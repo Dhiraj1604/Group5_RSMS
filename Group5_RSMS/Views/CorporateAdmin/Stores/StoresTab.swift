@@ -13,7 +13,9 @@ struct StoresTab: View {
     @State private var showAddStore = false
     @State private var searchText = ""
     @State private var filterActive: Bool? = nil
-    @State private var isLoading = false
+    @State private var isLoading = false              // ← NEW
+    @State private var showingProfile = false
+//     @State private var isLoading = false
 
     private var filteredStores: [Store] {
         var result = appState.stores
@@ -51,18 +53,34 @@ struct StoresTab: View {
             
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showAddStore = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    HStack(spacing: 14) {
+                        Button {
+                            showAddStore = true
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                        .accessibilityLabel("Add Store")
+                        
+                        Button {
+                            showingProfile = true
+                        } label: {
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                        .accessibilityLabel("My Profile")
                     }
                 }
             }
             .searchable(text: $searchText, prompt: "Search stores...")
             .sheet(isPresented: $showAddStore) {
                 AddStoreView()
+            }
+            .sheet(isPresented: $showingProfile) {
+                AdminProfileView()
+                    .presentationDetents([.large])
             }
             .alert("Error", isPresented: .constant(appState.storeError != nil)) {
                 Button("OK") { appState.storeError = nil }
