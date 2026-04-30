@@ -186,6 +186,40 @@ struct AdminProfileView: View {
     }
 }
 
+// MARK: - Subcomponents
+
+struct ProfileInfoRow: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(iconColor.opacity(0.12))
+                    .frame(width: 34, height: 34)
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(iconColor)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                Text(value)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(RSMSTheme.Colors.textPrimary)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+}
+
 #Preview {
     AdminProfileView().environment(AppState())
 }
