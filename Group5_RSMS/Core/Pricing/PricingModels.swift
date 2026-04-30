@@ -108,23 +108,50 @@ struct Product: Identifiable, Codable, Equatable, Hashable {
         self.isActive = try container.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
         self.isGloballyListed = try container.decodeIfPresent(Bool.self, forKey: .isGloballyListed) ?? true
 
-        // Dates (Handling potential format issues)
-        if let createdAtString = try container.decodeIfPresent(String.self, forKey: .createdAt),
-           let date = ISO8601DateFormatter().date(from: createdAtString) {
-            self.createdAt = date
-        } else {
-            self.createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        // Helper to parse dates dynamically
+        let parseDate: (String) -> Date? = { str in
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = formatter.date(from: str) { return date }
+            
+            let formatter2 = ISO8601DateFormatter()
+            if let date = formatter2.date(from: str) { return date }
+            
+            let df = DateFormatter()
+            df.locale = Locale(identifier: "en_US_POSIX")
+            df.timeZone = TimeZone(secondsFromGMT: 0)
+            df.dateFormat = "yyyy-MM-dd HH:mm:ss.SSSZ"
+            if let date = df.date(from: str) { return date }
+            
+            df.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+            if let date = df.date(from: str) { return date }
+            
+            return nil
         }
 
-        if let updatedAtString = try container.decodeIfPresent(String.self, forKey: .updatedAt),
-           let date = ISO8601DateFormatter().date(from: updatedAtString) {
+        // Dates (Handling potential format issues)
+        if let createdAtString = try? container.decodeIfPresent(String.self, forKey: .createdAt),
+           let date = parseDate(createdAtString) {
+            self.createdAt = date
+        } else {
+            self.createdAt = (try? container.decodeIfPresent(Date.self, forKey: .createdAt)) ?? Date()
+        }
+
+        if let updatedAtString = try? container.decodeIfPresent(String.self, forKey: .updatedAt),
+           let date = parseDate(updatedAtString) {
             self.updatedAt = date
         } else {
-            self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
+            self.updatedAt = (try? container.decodeIfPresent(Date.self, forKey: .updatedAt)) ?? Date()
         }
 
         // Pricing
-        self.basePrice = try container.decodeIfPresent(Double.self, forKey: .basePrice) ?? 0
+        if let price = try? container.decodeIfPresent(Double.self, forKey: .basePrice) {
+            self.basePrice = price
+        } else if let priceStr = try? container.decodeIfPresent(String.self, forKey: .basePrice), let price = Double(priceStr) {
+            self.basePrice = price
+        } else {
+            self.basePrice = 0
+        }
 
         // Craftsmanship & Heritage (Providing defaults if missing from legacy records)
         self.material = try container.decodeIfPresent(String.self, forKey: .material) ?? "Not Specified"

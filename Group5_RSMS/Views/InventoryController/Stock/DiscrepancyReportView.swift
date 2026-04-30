@@ -88,34 +88,11 @@ struct DiscrepancyReportView: View {
     // MARK: - Segment Picker
 
     private var segmentPicker: some View {
-        HStack(spacing: 0) {
-            segmentButton(label: "Pending (\(pending.count))",  tag: 0)
-            segmentButton(label: "Resolved (\(resolved.count))", tag: 1)
+        Picker("Discrepancy View", selection: $segment) {
+            Text("Pending (\(pending.count))").tag(0)
+            Text("Resolved (\(resolved.count))").tag(1)
         }
-        .background(RSMSTheme.Colors.backgroundDeep)
-        .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
-        .overlay(
-            RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                .stroke(RSMSTheme.Colors.borderLight, lineWidth: 1)
-        )
-    }
-
-    private func segmentButton(label: String, tag: Int) -> some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.2)) { segment = tag }
-        } label: {
-            Text(label)
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(segment == tag ? .black : RSMSTheme.Colors.textSecondary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 40)
-                .background(
-                    segment == tag
-                        ? RSMSTheme.Colors.goldGradient
-                        : LinearGradient(colors: [.clear], startPoint: .leading, endPoint: .trailing)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md - 1))
-        }
+        .pickerStyle(.segmented)
     }
 
     // MARK: - Summary Bar

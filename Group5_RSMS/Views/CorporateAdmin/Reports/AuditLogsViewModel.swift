@@ -2,7 +2,6 @@
 //  AuditLogsViewModel.swift
 //  Group5_RSMS
 //
-//  Task #8 (Zeeshan): added .stores case so store mutations are filterable.
 //
 
 import Foundation
@@ -26,7 +25,7 @@ class AuditLogsViewModel: ObservableObject {
         switch selectedCategory {
         case .all:        break
         case .products:   result = result.filter { $0.eventType == .product }
-        case .stores:     result = result.filter { $0.eventType == .store }      // ← Task #8
+        case .stores:     result = result.filter { $0.eventType == .store }
         case .promotions: result = result.filter { $0.eventType == .promotion }
         case .users:      result = result.filter { $0.eventType == .user }
         case .tax:        result = result.filter { $0.eventType == .tax }

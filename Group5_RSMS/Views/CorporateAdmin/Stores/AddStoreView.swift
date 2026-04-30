@@ -28,7 +28,7 @@ struct AddStoreView: View {
     @State private var inventoryName = ""
     @State private var inventoryEmail = ""
     @State private var selectedRegion = "West"
-    @State private var selectedCurrency = "INR"          // ← NEW
+    @State private var selectedCurrency = "INR"
     @State private var taxRate = "18.0"
     @State private var monthlyRevenueTarget = "1500000"
     @State private var imageUrl = ""
@@ -39,7 +39,7 @@ struct AddStoreView: View {
 
     private let regions = ["Asia", "Europe", "North America", "South America", "Australia", "Africa"]
 
-    // ← NEW: 5 major world currencies
+    // 5 major world currencies
     private let currencies: [(code: String, label: String)] = [
         ("INR", "₹  INR — Indian Rupee"),
         ("USD", "$  USD — US Dollar"),
@@ -232,7 +232,7 @@ struct AddStoreView: View {
                 )
             }
 
-            // ← NEW: Currency picker
+            // Currency picker
             VStack(alignment: .leading, spacing: RSMSTheme.Spacing.sm) {
                 Text("Currency")
                     .font(.caption)

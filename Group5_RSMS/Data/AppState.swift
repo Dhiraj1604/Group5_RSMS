@@ -2,10 +2,6 @@
 //  AppState.swift
 //  Group5_RSMS
 //
-//  Merged AppState — Sprint 1 auth/store/product management.
-//  Task #8 (Zeeshan): sets ActivityLogService.shared.currentUserEmail on login
-//  so every service (TaxSettingsViewModel, OfferService, etc.) can log without
-//  needing the email passed through every call site.
 //
 
 import SwiftUI
@@ -61,7 +57,6 @@ class AppState {
         userEmail = email
         self.requiresPasswordChange = false
 
-        // ── Task #8: make email available to all services immediately ──
         ActivityLogService.shared.currentUserEmail = email
 
         #if canImport(Supabase)
@@ -113,7 +108,6 @@ class AppState {
 
         isLoggedIn = true
 
-        // ── Task #8: log the login event ──────────────────────────────
         let roleLabel = selectedRole?.rawValue ?? "Unknown"
         auditLog.log(
             action: .loggedIn,
@@ -183,7 +177,6 @@ class AppState {
             } else if self.currentStoreID == nil && selectedRole == .boutiqueManager {
                  // 2. Fallback to manager field (legacy mapping)
                 self.currentStoreID = fetchedStores.first(where: { $0.assignedManagerId == managerAuthId })?.id
-                    // ✅ Fallback to Dior New York Fifth Avenue ID from your screenshot
                     ?? UUID(uuidString: "8232958a-d93e-44d5-bfc4-68b7604f7736")
             } else if self.currentStoreID == nil, let first = fetchedStores.first {
                 // 3. Fallback to first available store (for Admins or unassigned users)
@@ -385,7 +378,7 @@ class AppState {
             return true
         } catch {
             if !(error is CancellationError) {
-                print("❌ Failed to submit repair: \(error)")
+                print("Failed to submit repair: \(error)")
             }
             return false
         }
@@ -404,7 +397,7 @@ class AppState {
             await fetchProducts()
         } catch {
             if !(error is CancellationError) {
-                print("❌ Failed to resolve repair: \(error)")
+                print("Failed to resolve repair: \(error)")
             }
         }
     }
@@ -435,7 +428,7 @@ class AppState {
             self.totalInventoryCount = total
         } catch {
             if !(error is CancellationError) {
-                print("❌ Failed to fetch total inventory count: \(error)")
+                print("Failed to fetch total inventory count: \(error)")
             }
         }
     }

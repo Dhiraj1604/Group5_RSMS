@@ -174,9 +174,9 @@ final class StockCheckViewModel: ObservableObject {
                 )
             }
 
-            print("✅ [StockCheck] Loaded \(rows.count) inventory rows for store: \(storeId?.uuidString ?? "all")")
+            print("[StockCheck] Loaded \(rows.count) inventory rows")
         } catch {
-            print("❌ [StockCheck] Load failed: \(error)")
+            print("[StockCheck] Load failed: \(error)")
             errorMessage = "Failed to load inventory: \(error.localizedDescription)"
         }
 
@@ -251,7 +251,7 @@ final class StockCheckViewModel: ObservableObject {
                 return
             }
 
-            print("✅ [StockCheck] Resuming session — \(rows.count) pending adjustment(s) found")
+            print("[StockCheck] Resuming session — \(rows.count) pending adjustment(s) found")
 
             var restoredDiscrepancies: [StockDiscrepancy] = []
             var restoredFixes: [UUID: SuggestedFix] = [:]
@@ -376,7 +376,7 @@ final class StockCheckViewModel: ObservableObject {
                 for sku in skus {
                     auditCountBySKU[sku] = auditRows.filter { $0.action.contains(sku) }.count
                 }
-                print("✅ [StockCheck] Fetched \(auditRows.count) recent audit events for context")
+                print("[StockCheck] Fetched \(auditRows.count) recent audit events for context")
             }
         } catch {
             // Non-fatal — suggestions will fall back to rule-of-thumb only
@@ -402,7 +402,7 @@ final class StockCheckViewModel: ObservableObject {
                 return
             }
 
-            // ── 4a. Insert discrepancy rows ──────────────────────────────
+            // 4a. Insert discrepancy rows
             struct DiscrepancyInsert: Encodable {
                 let product_id: UUID
                 let store_id: UUID
@@ -439,10 +439,10 @@ final class StockCheckViewModel: ObservableObject {
                 for i in updatedDiscrepancies.indices {
                     updatedDiscrepancies[i].dbDiscrepancyId = dbIdByProduct[updatedDiscrepancies[i].productId]
                 }
-                print("✅ [StockCheck] Inserted \(discRows.count) rows into inventory_discrepancies")
+                print("[StockCheck] Inserted \(discRows.count) rows into inventory_discrepancies")
             }
 
-            // ── 4b. Insert pending adjustment rows ───────────────────────
+            // 4b. Insert pending adjustment rows
             struct AdjustmentInsert: Encodable {
                 let product_id: UUID
                 let store_id: UUID
@@ -493,7 +493,7 @@ final class StockCheckViewModel: ObservableObject {
                         newFixes[d.id]?.dbAdjustmentId = adjDbId
                     }
                 }
-                print("✅ [StockCheck] Inserted \(adjRows.count) rows into inventory_adjustments (status: pending)")
+                print("[StockCheck] Inserted \(adjRows.count) rows into inventory_adjustments (status: pending)")
             }
 
             self.discrepancies = updatedDiscrepancies
@@ -506,7 +506,7 @@ final class StockCheckViewModel: ObservableObject {
         }
 
         isRunningCheck = false
-        print("✅ [StockCheck] Check complete — \(newDiscrepancies.count) discrepancies found")
+        print("[StockCheck] Check complete — \(newDiscrepancies.count) discrepancies found")
     }
 
     // MARK: - Fix Generation (AI-Driven, Multi-Signal)
@@ -530,7 +530,7 @@ final class StockCheckViewModel: ObservableObject {
         let expected    = d.expectedQty
         let scanned     = d.scannedQty
 
-        // ── Signal 1 & 2: Direction + Severity tier ──────────────────────
+        // Signal 1 & 2: Direction + Severity tier
         enum Severity { case minor, moderate, significant }
         let severity: Severity
         switch absDiff {
@@ -539,15 +539,15 @@ final class StockCheckViewModel: ObservableObject {
         default:      severity = .significant
         }
 
-        // ── Signal 3: Relative discrepancy magnitude ──────────────────────
+        // Signal 3: Relative discrepancy magnitude
         let relPct = expected > 0 ? Double(absDiff) / Double(expected) * 100 : 100.0
         let isHighRelative = relPct >= 30   // ≥30% of expected stock missing/surplus
 
-        // ── Signal 4 & 5: Audit history pattern ──────────────────────────
+        // Signal 4 & 5: Audit history pattern
         let isChronic   = recentAuditCount >= 5
         let isRecurrent = recentAuditCount >= 2
 
-        // ── Build diagnosis sentence ──────────────────────────────────────
+        // Build diagnosis sentence
         let diagnosis: String
 
         if isShortage {
@@ -605,7 +605,7 @@ final class StockCheckViewModel: ObservableObject {
             }
         }
 
-        // ── Determine final confidence ────────────────────────────────────
+        // Determine final confidence
         let baseConfidence: SuggestedFix.FixConfidence
         switch severity {
         case .minor:        baseConfidence = .high
@@ -685,7 +685,7 @@ final class StockCheckViewModel: ObservableObject {
             fixes[discrepancyId]?.aiError = nil
             
         } catch {
-            print("❌ [StockCheck] AI Diagnosis failed: \(error)")
+            print("[StockCheck] AI Diagnosis failed: \(error)")
             
             let errorMsg: String
             if let urlError = error as? URLError, urlError.code == .userAuthenticationRequired {
@@ -720,7 +720,7 @@ final class StockCheckViewModel: ObservableObject {
         let d = discrepancies[idx]
 
         do {
-            // ── 1. Mark inventory_adjustments row as approved ────────────
+            // 1. Mark inventory_adjustments row as approved
             if let adjDbId = fix.dbAdjustmentId {
                 struct AdjApproval: Encodable {
                     let status: String
@@ -736,12 +736,12 @@ final class StockCheckViewModel: ObservableObject {
                     ))
                     .eq("id", value: adjDbId)
                     .execute()
-                print("✅ [StockCheck] inventory_adjustments → approved (id: \(adjDbId))")
+                print("[StockCheck] inventory_adjustments → approved")
             } else {
                 print("⚠️ [StockCheck] No dbAdjustmentId — skipping inventory_adjustments update")
             }
 
-            // ── 2. Update inventory stock_quantity ───────────────────────
+            // 2. Update inventory stock_quantity
             struct InventoryUpdate: Encodable {
                 let stock_quantity: Int
                 let last_updated: String
@@ -759,9 +759,9 @@ final class StockCheckViewModel: ObservableObject {
                 invQuery = invQuery.eq("store_id", value: sid)
             }
             try await invQuery.execute()
-            print("✅ [StockCheck] inventory updated — \(d.sku): \(d.expectedQty) → \(fix.recommendedAdjustment)")
+            print("[StockCheck] inventory updated — \(d.sku)")
 
-            // ── 2.5. Insert Audit Log (Forensic Trail) ──────────────────
+            // 2.5. Insert Audit Log (Forensic Trail)
             struct AuditPayload: Encodable {
                 let action: String
                 let event_type: String
@@ -794,9 +794,9 @@ final class StockCheckViewModel: ObservableObject {
                 .insert(audit)
                 .execute()
             
-            print("✅ [StockCheck] Audit log inserted for \(d.sku)")
+            print("[StockCheck] Audit log inserted for \(d.sku)")
 
-            // ── 3. Update local state ────────────────────────────────────
+            // 3. Update local state
             discrepancies[idx].isApplying = false
             discrepancies[idx].isApproved = true
 
@@ -808,7 +808,7 @@ final class StockCheckViewModel: ObservableObject {
 
         } catch {
             discrepancies[idx].isApplying = false
-            print("❌ [StockCheck] approveFix failed: \(error)")
+            print("[StockCheck] approveFix failed: \(error)")
             errorMessage = "Failed to apply fix: \(error.localizedDescription)"
         }
     }
@@ -825,7 +825,7 @@ final class StockCheckViewModel: ObservableObject {
                         .update(["status": "rejected"])
                         .eq("id", value: adjDbId)
                         .execute()
-                    print("✅ [StockCheck] inventory_adjustments → rejected (id: \(adjDbId))")
+                    print("[StockCheck] inventory_adjustments → rejected")
                 } catch {
                     print("⚠️ [StockCheck] Could not reject adjustment in DB: \(error)")
                 }
@@ -847,7 +847,7 @@ final class StockCheckViewModel: ObservableObject {
                         .eq("id", value: adjId)
                         .execute()
                 }
-                print("✅ [StockCheck] Reset — \(pendingAdjIds.count) pending adjustment(s) rejected in DB")
+                print("[StockCheck] Reset — \(pendingAdjIds.count) pending adjustment(s) rejected")
             }
         }
         for idx in items.indices { items[idx].scannedQty = nil }

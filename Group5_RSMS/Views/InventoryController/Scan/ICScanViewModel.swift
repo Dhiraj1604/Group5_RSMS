@@ -248,7 +248,7 @@ final class ICScanViewModel: ObservableObject {
 
             // Update local state for success feedback
             self.currentStock = newStock
-            self.originalStock = newStock // Reset original to the newly saved value
+            self.originalStock = record.stock_quantity // Store previous stock to prevent decrementing below it
             self.lastScannedName = foundProduct.name
             self.successMessage = "Inventory updated successfully"
             
@@ -279,10 +279,11 @@ final class ICScanViewModel: ObservableObject {
     /// Updates the stock counter locally without hitting Supabase.
     func adjustStockLocal(actionType: String) {
         guard let current = currentStock else { return }
+        let baseStock = originalStock ?? 0
         
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             if actionType == "sale" {
-                currentStock = max(0, current - 1)
+                currentStock = max(baseStock, current - 1)
             } else {
                 currentStock = current + 1
             }

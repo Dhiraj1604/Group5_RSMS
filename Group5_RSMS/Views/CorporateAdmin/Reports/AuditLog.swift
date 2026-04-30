@@ -2,13 +2,6 @@
 //  AuditLog.swift
 //  Group5_RSMS
 //
-//  Modified by: Zeeshan (Sprint 1 — Task #8)
-//  Changes:
-//   • AuditEntityType: added `.store` case ("Stores") so store mutations decode correctly
-//   • AuditCategoryFilter: added `.stores` case for the filter UI
-//   • Custom init(from:) so an unknown event_type falls back to .product instead of crashing
-//   • AnyJSON helper used for before_data / after_data JSONB columns via Supabase SDK
-//   All original code preserved exactly otherwise.
 //
 
 import Foundation
@@ -161,7 +154,7 @@ struct AuditLog: Identifiable, Codable {
 
 enum AuditEntityType: String, CaseIterable, Codable {
     case product   = "Products"
-    case store     = "Stores"       // ← added Task #8 (Zeeshan)
+    case store     = "Stores"
     case promotion = "Promotions"
     case user      = "Users"
     case tax       = "Tax"
@@ -201,7 +194,7 @@ enum AuditActionType: String, CaseIterable {
 enum AuditCategoryFilter: String, CaseIterable {
     case all        = "All"
     case products   = "Products"
-    case stores     = "Stores"      // ← added Task #8 (Zeeshan)
+    case stores     = "Stores"
     case promotions = "Promotions"
     case users      = "Users"
     case tax        = "Tax"

@@ -75,18 +75,21 @@ struct ProductsListView: View {
 
     private var productList: some View {
         VStack(spacing: 0) {
-            if !showOnlyInRepair {
-                HStack(spacing: 6) {
-                    Text("Swipe left on a product to send for repairment")
-                        .font(.footnote)
-                        .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                    Spacer()
-                }
-                .padding(.horizontal, RSMSTheme.Spacing.lg)
-                .padding(.vertical, RSMSTheme.Spacing.sm)
-            }
-
             List {
+                if !showOnlyInRepair {
+                    HStack(spacing: 6) {
+                        Text("Swipe left on a product to send for repairment")
+                            .font(.footnote)
+                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, RSMSTheme.Spacing.lg)
+                    .padding(.vertical, RSMSTheme.Spacing.sm)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+                }
+
                 ForEach(filteredProducts) { product in
                     productRow(product)
                         .listRowBackground(Color.clear)
@@ -120,20 +123,36 @@ struct ProductsListView: View {
         }
     }
 
+    private func publicImageUrl(for path: String?) -> URL? {
+        guard let path = path, !path.isEmpty else { return nil }
+        if path.hasPrefix("http") { return URL(string: path) }
+        let supabaseProjectID = "https://bdgwzkpteyxhlgprlmye.supabase.co"
+        let bucketName = "product-images"
+        return URL(string: "\(supabaseProjectID)/storage/v1/object/public/\(bucketName)/\(path)")
+    }
+
     private func productRow(_ product: Product) -> some View {
         HStack(spacing: RSMSTheme.Spacing.lg) {
-            ZStack {
-                RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
-                    .fill(product.inRepair
-                          ? RSMSTheme.Colors.warning.opacity(0.15)
-                          : RSMSTheme.Colors.backgroundElevated)
-                    .frame(width: 56, height: 56)
-                Image(systemName: product.inRepair ? "wrench.fill" : "shippingbox.fill")
-                    .font(.title3)
-                    .foregroundStyle(product.inRepair
-                                     ? RSMSTheme.Colors.warning
-                                     : RSMSTheme.Colors.accentGold)
+            Group {
+                if let url = publicImageUrl(for: product.imageUrl) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        case .failure, .empty:
+                            fallbackImage(for: product)
+                        @unknown default:
+                            fallbackImage(for: product)
+                        }
+                    }
+                } else {
+                    fallbackImage(for: product)
+                }
             }
+            .frame(width: 56, height: 56)
+            .clipShape(RoundedRectangle(cornerRadius: RSMSTheme.Radius.md))
 
             VStack(alignment: .leading, spacing: RSMSTheme.Spacing.xs) {
                 Text(product.name)
@@ -179,6 +198,21 @@ struct ProductsListView: View {
                         : RSMSTheme.Colors.borderLight,
                         lineWidth: 1)
         )
+    }
+
+    @ViewBuilder
+    private func fallbackImage(for product: Product) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: RSMSTheme.Radius.md)
+                .fill(product.inRepair
+                      ? RSMSTheme.Colors.warning.opacity(0.15)
+                      : RSMSTheme.Colors.backgroundElevated)
+            Image(systemName: product.inRepair ? "wrench.fill" : "shippingbox.fill")
+                .font(.title3)
+                .foregroundStyle(product.inRepair
+                                 ? RSMSTheme.Colors.warning
+                                 : RSMSTheme.Colors.accentGold)
+        }
     }
 
     // MARK: - States
