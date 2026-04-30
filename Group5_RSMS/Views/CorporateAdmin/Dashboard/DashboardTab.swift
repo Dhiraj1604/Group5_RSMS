@@ -21,6 +21,7 @@ struct DashboardTab: View {
     @State private var showRetentionModal = false
     @State private var selectedPieSlice: String? = nil
     @State private var selectedAngle: Double? = nil
+    @Namespace private var animation
 
     @Environment(\.horizontalSizeClass) private var sizeClass
     private var isWide: Bool { sizeClass == .regular }
@@ -66,6 +67,7 @@ struct DashboardTab: View {
         ScrollView {
             VStack(spacing: RSMSTheme.Spacing.xl) {
                 refreshHeader
+                timeFrameSelector
                 kpiHeroSection
                 
                 if let error = viewModel.errorMessage { errorBanner(error) }
@@ -140,36 +142,60 @@ struct DashboardTab: View {
     // MARK: - Components
 
     private var refreshHeader: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(alignment: .bottom) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text("Performance Overview")
                     .font(.custom("Helvetica-Bold", size: 24))
                     .foregroundStyle(.white)
-                Text("Updated \(viewModel.lastRefreshedText)").font(.system(size: 13)).foregroundStyle(RSMSTheme.Colors.textTertiary)
+                Text("Real-time data from all boutique locations")
+                    .font(.system(size: 13))
+                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
             }
             Spacer()
             
-            Menu {
-                Picker("Time Frame", selection: $viewModel.selectedTimeFrame) {
-                    ForEach(DashboardViewModel.DashboardTimeFrame.allCases) { timeFrame in
-                        Text(timeFrame.rawValue).tag(timeFrame)
-                    }
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "calendar")
-                    Text(viewModel.selectedTimeFrame.rawValue)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 10))
-                }
-                .font(.custom("Helvetica-Bold", size: 13))
-                .foregroundStyle(RSMSTheme.Colors.accentGold)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(RSMSTheme.Colors.accentGold.opacity(0.1))
-                .clipShape(Capsule())
-                .overlay(Capsule().stroke(RSMSTheme.Colors.accentGold.opacity(0.3), lineWidth: 1))
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("LAST UPDATED")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(RSMSTheme.Colors.textTertiary)
+                    .tracking(1.0)
+                Text(viewModel.lastRefreshedText)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white)
             }
+        }
+    }
+
+    private var timeFrameSelector: some View {
+        HStack(spacing: 0) {
+            let options: [DashboardViewModel.DashboardTimeFrame] = [.last7Days, .last30Days, .thisYear]
+            ForEach(options) { frame in
+                Button {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        viewModel.selectedTimeFrame = frame
+                    }
+                } label: {
+                    Text(frame.rawValue)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(viewModel.selectedTimeFrame == frame ? .white : RSMSTheme.Colors.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background {
+                            if viewModel.selectedTimeFrame == frame {
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(Color.white.opacity(0.12))
+                                    .matchedGeometryEffect(id: "time_pill", in: animation)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(Color.black.opacity(0.2))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.white.opacity(0.05), lineWidth: 1)
         }
     }
 
@@ -716,7 +742,11 @@ struct DashboardTab: View {
                 HStack {
                     Text("Operating Efficiency").font(.custom("Helvetica", size: 12)).foregroundStyle(RSMSTheme.Colors.textSecondary)
                     Spacer()
-                    Text("High (82%)").font(.custom("Helvetica-Bold", size: 12)).foregroundStyle(RSMSTheme.Colors.success)
+                    let eff = viewModel.operatingEfficiency
+                    let effLabel = eff >= 70 ? "High" : eff >= 40 ? "Moderate" : "Low"
+                    Text("\(effLabel) (\(String(format: "%.0f", eff))%)")
+                        .font(.custom("Helvetica-Bold", size: 12))
+                        .foregroundStyle(eff >= 70 ? RSMSTheme.Colors.success : eff >= 40 ? RSMSTheme.Colors.warning : .red)
                 }
             }
             .padding(24)

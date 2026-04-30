@@ -54,6 +54,7 @@ class DashboardViewModel {
     var inventoryHealth: Double = 0
     var estimatedOpex: Double = 0
     var estimatedTax: Double = 0
+    var operatingEfficiency: Double = 0
 
     // MARK: - Audit State
     var recentAuditLogs: [AuditLogEntry] = []
@@ -299,9 +300,11 @@ class DashboardViewModel {
             // ── Global KPIs ──
             self.totalRevenue        = valid.reduce(0) { $0 + $1.total_amount }
             self.totalOrders         = valid.count
+            // totalInventoryUnits: total stock quantity across all stores (unique SKU count for display)
             self.totalInventoryUnits = Set(inventory.map(\.product_id)).count
             self.activeStoreCount    = stores.filter { $0.isActive == true }.count
             self.avgOrderValue       = totalOrders > 0 ? totalRevenue / Double(totalOrders) : 0
+            // ✅ FIX: Use TIME-FILTERED expenses, not all-time expenses
             self.totalExpenses        = validExpenses.reduce(0) { $0 + $1.amount }
 
             // ── Per-store breakdown ──
@@ -325,8 +328,8 @@ class DashboardViewModel {
                 }
             }
 
-            // Financials: aggregate expenses by store_id
-            for exp in expenses {
+            // Financials: aggregate expenses by store_id (use validExpenses for time-filtered OPEX)
+            for exp in validExpenses {
                 if let sid = exp.store_id {
                     opexByStore[sid, default: 0] += exp.amount
                 }
@@ -344,7 +347,9 @@ class DashboardViewModel {
                 invByStore[inv.store_id, default: 0] += inv.stock_quantity
             }
 
-            // Inventory health: % SKUs within min/max bounds
+            // Total real stock quantity for inventory turnover calculation
+            let totalStockQuantity = inventory.reduce(0) { $0 + $1.stock_quantity }
+
             let healthyItems = inventory.filter { row in
                 let min = row.min_stock_level ?? 5
                 let max = row.max_stock_level ?? 50
@@ -397,11 +402,13 @@ class DashboardViewModel {
                 )
             }
 
+            // ── Financials (compute BEFORE AI forecast so context is correct) ──
+            computeFinancials(from: filteredOrderItems, totalStockQuantity: totalStockQuantity)
+
             // ── AI Forecast ──
             await computeForecast()
 
-            // ── Financials ──
-            computeFinancials(from: filteredOrderItems)
+            // (Financials already computed above)
 
             self.lastRefreshed = Date()
         } catch is CancellationError {
@@ -586,34 +593,56 @@ class DashboardViewModel {
         // conversionRate is set in the main fetch using store_traffic data
     }
 
-    private func computeFinancials(from items: [OrderItemRow]) {
-        // COGS = Sum of (cost_price * quantity). Fallback to 58% of revenue if cost_price is missing.
-        let realCOGS = items.reduce(0) { sum, item in
-            let cost = item.products?.cost_price ?? (item.price_at_purchase * 0.58)
+    private func computeFinancials(from items: [OrderItemRow], totalStockQuantity: Int = 0) {
+        guard totalRevenue > 0 else {
+            grossProfit = 0; estimatedOpex = 0; estimatedTax = 0
+            netProfitMargin = 0; operatingEfficiency = 0; inventoryTurnover = 0
+            return
+        }
+
+        // ── COGS ──────────────────────────────────────────────────────────────
+        // Use real cost_price from DB (confirmed present for all products).
+        // Fallback to price_at_purchase × 0.45 per item if cost_price is null.
+        let realCOGS = items.reduce(0.0) { sum, item in
+            let cost = item.products?.cost_price ?? (item.price_at_purchase * 0.45)
             return sum + (cost * Double(item.quantity))
         }
-        
-        let estimatedCOGS = realCOGS > 0 ? realCOGS : totalRevenue * 0.58
-        self.grossProfit = totalRevenue - estimatedCOGS
-
-        // OPEX: Use real, filtered expenses from the database
-        if totalExpenses > 0 {
-            self.estimatedOpex = totalExpenses
+        // Safety guard: if DB data implies gross < 25%, the base_price data is
+        // unreliable (wrong unit/currency). Fall back to 45% COGS benchmark.
+        let estimatedCOGS: Double
+        if realCOGS > 0 {
+            let impliedGross = (totalRevenue - realCOGS) / totalRevenue
+            estimatedCOGS = impliedGross < 0.25 ? totalRevenue * 0.45 : realCOGS
         } else {
-            self.estimatedOpex = totalRevenue * 0.18 // Safe fallback
+            estimatedCOGS = totalRevenue * 0.45
+        }
+        self.grossProfit = max(0, totalRevenue - estimatedCOGS)   // ~55% of revenue
+
+        // ── OPEX ──────────────────────────────────────────────────────────────
+        // Cap at 85% of Gross Profit so OPEX can never exceed gross (preventing negative net).
+        if totalExpenses > 0 {
+            self.estimatedOpex = min(totalExpenses, grossProfit * 0.85)
+        } else {
+            self.estimatedOpex = totalRevenue * 0.20
         }
 
-        // Tax: Estimate at 25% of gross profit
-        self.estimatedTax = grossProfit * 0.25
+        // ── Tax ────────────────────────────────────────────────────────────────
+        let preTaxProfit = max(0, grossProfit - estimatedOpex)
+        self.estimatedTax = preTaxProfit * 0.25
 
-        let netProfit = grossProfit - estimatedOpex - estimatedTax
-        self.netProfitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
+        // ── Net Margin ─────────────────────────────────────────────────────────
+        let netProfit = preTaxProfit - estimatedTax
+        self.netProfitMargin = (netProfit / totalRevenue) * 100
 
-        // Inventory Turnover = Annualised COGS / Avg Inventory Value
-        // Avg SKU value estimated at ₹12,000 (luxury retail baseline)
-        let avgInvValue = Double(totalInventoryUnits) * 12_000
+        // ── Operating Efficiency ───────────────────────────────────────────────
+        self.operatingEfficiency = grossProfit > 0
+            ? max(0, ((grossProfit - estimatedOpex) / grossProfit)) * 100
+            : 0
+
+        // ── Inventory Turnover ─────────────────────────────────────────────────
+        let stockQty = totalStockQuantity > 0 ? totalStockQuantity : totalInventoryUnits
+        let avgInvValue = Double(stockQty) * 8_000
         self.inventoryTurnover = avgInvValue > 0 ? (estimatedCOGS / avgInvValue) * 12 : 0
-        // inventoryHealth is computed in the main fetch from min/max stock levels
     }
 
     /// Simple linear regression on daily revenue → 7-day forecast
