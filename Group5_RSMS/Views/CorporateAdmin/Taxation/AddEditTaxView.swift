@@ -362,7 +362,7 @@ struct AddEditTaxView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 18))
-                            .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            .foregroundColor(RSMSTheme.Colors.error)
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -374,12 +374,8 @@ struct AddEditTaxView: View {
                                 .tint(RSMSTheme.Colors.accentGold)
                                 .scaleEffect(0.8)
                         } else {
-                            HStack(spacing: 4) {
-                                Image(systemName: existingRule == nil ? "plus.circle.fill" : "checkmark.circle.fill")
-                                    .font(.system(size: 14, weight: .semibold))
-                                Text(existingRule == nil ? "Add" : "Update")
-                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                            }
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 20, weight: .semibold))
                             .foregroundColor(isSaveDisabled ? RSMSTheme.Colors.accentGold.opacity(0.4) : RSMSTheme.Colors.accentGold)
                         }
                     }

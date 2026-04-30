@@ -49,40 +49,41 @@ struct AllStorePerformanceView: View {
     }
 
     var body: some View {
-        ZStack {
-            RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                // Header Filters
-                VStack(spacing: RSMSTheme.Spacing.md) {
-                    HStack {
-                        filterChips
-                        Spacer()
-                        sortMenu
-                    }
-                    .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
-                    .padding(.vertical, RSMSTheme.Spacing.sm)
-                    
-                    Divider().background(RSMSTheme.Colors.borderLight)
+        ScrollView {
+            VStack(spacing: RSMSTheme.Spacing.lg) {
+                // Custom Large Title
+                HStack {
+                    Text("All Stores Performance")
+                        .font(.custom("Helvetica-Bold", size: 34))
+                        .foregroundStyle(.white)
+                    Spacer()
                 }
-
+                .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+                .padding(.top, 20)
+                
+                // Filter Chips at top of scroll
+                HStack {
+                    filterChips
+                    Spacer()
+                }
+                .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+                .padding(.top, RSMSTheme.Spacing.md)
+                
                 if filteredAndSortedStores.isEmpty {
                     emptyState
                 } else {
-                    ScrollView {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 20)], spacing: 24) {
-                            ForEach(Array(filteredAndSortedStores.enumerated()), id: \.element.id) { index, storeKPI in
-                                PremiumStoreCard(storeKPI: storeKPI, viewModel: viewModel, rank: (sortOption == .revenue && filterActive == nil && searchText.isEmpty) ? index + 1 : nil)
-                            }
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 20)], spacing: 24) {
+                        ForEach(Array(filteredAndSortedStores.enumerated()), id: \.element.id) { index, storeKPI in
+                            PremiumStoreCard(storeKPI: storeKPI, viewModel: viewModel, rank: (filterActive == nil && searchText.isEmpty) ? index + 1 : nil)
                         }
-                        .padding(RSMSTheme.Spacing.horizontalMargin)
-                        .padding(.top, RSMSTheme.Spacing.md)
-                        .padding(.bottom, 120)
                     }
+                    .padding(.horizontal, RSMSTheme.Spacing.horizontalMargin)
+                    .padding(.bottom, 120)
                 }
             }
         }
-        .navigationTitle("All Stores Performance")
+        .background(RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea())
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: "Search stores...")
     }
@@ -241,7 +242,7 @@ struct PremiumStoreCard: View {
                 
             }
         }
-        .frame(height: 200)
+        .frame(height: 240)
         .clipShape(RoundedRectangle(cornerRadius: 24))
         .overlay(
             RoundedRectangle(cornerRadius: 24)
