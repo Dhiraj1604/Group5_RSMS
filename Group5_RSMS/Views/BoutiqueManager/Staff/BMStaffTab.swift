@@ -26,7 +26,7 @@ struct BMStaffTab: View {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // ── PREMIUM TAB PICKER ──
+                    // PREMIUM TAB PICKER
                     Picker("Staff Section", selection: $selectedTab) {
                         Text("Directory").tag(0)
                         Text("Leaderboard").tag(1)
@@ -37,7 +37,7 @@ struct BMStaffTab: View {
                     .padding(.vertical, 8)
                     .background(RSMSTheme.Colors.backgroundPrimary)
 
-                    // ── CONTENT ──
+                    // CONTENT
                     switch selectedTab {
                     case 0:
                         StaffListView(boutiqueId: boutiqueId, staffVM: staffVM, showAddEmployee: $showAddEmployee)

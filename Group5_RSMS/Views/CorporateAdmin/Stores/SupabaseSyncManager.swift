@@ -192,7 +192,6 @@ final class SupabaseSyncManager {
             .execute()
         
         if let jsonString = String(data: response.data, encoding: .utf8) {
-            print("RAW EMPLOYEES JSON: \(jsonString)")  // ← add this
         }
         
         return try supabaseDecoder.decode([Employee].self, from: response.data)

@@ -2,9 +2,6 @@
 //  AddProductView.swift
 //  Group5_RSMS
 //
-//  Sprint 1 — Task #2 (Product & Pricing Engine)
-//            Task #5 (Material, Origin & Craftsmanship Details)
-//            Task #Image (Camera/Gallery Uploads)
 //
 //  Saves to Supabase `products` table via AppState.addProduct() / updateProduct()
 //  Uploads images to Supabase Storage bucket 'product-images'
@@ -35,7 +32,7 @@ struct AddProductView: View {
     @State private var imageSource: UIImagePickerController.SourceType = .photoLibrary
     @State private var isUploadingImage = false
 
-    // Task #5 — Craftsmanship
+    // Craftsmanship
     @State private var material: String = ""
     @State private var originCountry: String = ""
     @State private var selectedCraftsmanship: CraftsmanshipLevel = .handcrafted

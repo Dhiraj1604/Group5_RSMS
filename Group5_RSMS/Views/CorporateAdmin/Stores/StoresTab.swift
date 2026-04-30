@@ -13,7 +13,7 @@ struct StoresTab: View {
     @State private var showAddStore = false
     @State private var searchText = ""
     @State private var filterActive: Bool? = nil
-    @State private var isLoading = false              // ← NEW
+    @State private var isLoading = false
 
     private var filteredStores: [Store] {
         var result = appState.stores
@@ -37,7 +37,7 @@ struct StoresTab: View {
                 RSMSTheme.Colors.backgroundPrimary
                     .ignoresSafeArea()
 
-                if isLoading {                         // ← NEW
+                if isLoading {
                     loadingState
                 } else if appState.stores.isEmpty {
                     emptyState
@@ -70,7 +70,7 @@ struct StoresTab: View {
                 Text(appState.storeError ?? "")
             }
             .task {
-                guard appState.stores.isEmpty else { return }  // ← skip if already loaded
+                guard appState.stores.isEmpty else { return }
                 isLoading = true
                 await appState.loadStores()
                 isLoading = false
@@ -78,7 +78,7 @@ struct StoresTab: View {
         }
     }
 
-    // MARK: - Loading State                           // ← NEW
+    // MARK: - Loading State
     private var loadingState: some View {
         VStack(spacing: RSMSTheme.Spacing.lg) {
             ProgressView()
@@ -236,7 +236,7 @@ struct StoresTab: View {
                 }
                 
                 // 3. Typography & Badges
-                VStack(alignment: .leading, spacing: 0) { // ← Added alignment: .leading
+                VStack(alignment: .leading, spacing: 0) {
                     // Top Row: Status Badge only
                     HStack(alignment: .top) {
                         Spacer()
@@ -268,7 +268,7 @@ struct StoresTab: View {
                                 .shadow(color: .black.opacity(0.8), radius: 2)
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading) // ← Force leading alignment
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(24)
             }

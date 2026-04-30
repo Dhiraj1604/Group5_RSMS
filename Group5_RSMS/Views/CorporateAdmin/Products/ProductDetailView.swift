@@ -39,12 +39,12 @@ struct ProductDetailView: View {
 
             ScrollView {
                 HStack(alignment: .top, spacing: RSMSTheme.Spacing.xl) {
-                    // ── LEFT COLUMN: Image + Name + SKU + Price ──
+                    // LEFT COLUMN: Image + Name + SKU + Price
                     leftColumn
                         .frame(width: 320)
                         .frame(maxHeight: .infinity, alignment: .top)
 
-                    // ── RIGHT COLUMN: All detail sections ──
+                    // RIGHT COLUMN: All detail sections
                     rightColumn
                 }
                 .padding(.horizontal, RSMSTheme.Spacing.lg)

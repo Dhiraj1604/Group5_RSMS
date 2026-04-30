@@ -2,9 +2,6 @@
 //  TaxSettingsViewModel.swift
 //  Group5_RSMS
 //
-//  Sprint 1 — Tax Rules ViewModel
-//  Task #8 (Zeeshan): saveRule / deleteRule now call ActivityLogService.shared.log()
-//  No userEmail parameter needed — the service reads currentUserEmail set at login.
 //
 
 import SwiftUI
@@ -83,7 +80,7 @@ final class TaxSettingsViewModel: ObservableObject {
             if activeRuleId == nil, let first = fetched.first { activeRuleId = first.id }
             notifyScannerOfChange()
         } catch {
-            print("❌ fetchTaxRules: \(error)")
+            print("fetchTaxRules: \(error)")
             self.errorMessage = "Failed to load additional tax rules: \(error.localizedDescription)"
         }
         isLoading = false
@@ -124,7 +121,7 @@ final class TaxSettingsViewModel: ObservableObject {
             isLoading = false
             return true
         } catch {
-            print("❌ saveRule: \(error)")
+            print("saveRule: \(error)")
             self.errorMessage = "Failed to save additional tax rule: \(error.localizedDescription)"
             isLoading = false
             return false
@@ -152,7 +149,7 @@ final class TaxSettingsViewModel: ObservableObject {
                 after: nil as String?
             )
         } catch {
-            print("❌ deleteRule: \(error)")
+            print("deleteRule: \(error)")
             self.errorMessage = "Failed to delete tax rule: \(error.localizedDescription)"
         }
         isLoading = false

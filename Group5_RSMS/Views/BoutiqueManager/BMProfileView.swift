@@ -35,7 +35,7 @@ struct BMProfileView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 20) {
 
-                        // ── Avatar + Name + Email ───────────────────────
+                        // Avatar + Name + Email
                         VStack(spacing: 14) {
                             ZStack {
                                 Circle()
@@ -70,7 +70,7 @@ struct BMProfileView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 18))
                         .overlay(RoundedRectangle(cornerRadius: 18).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
 
-                        // ── Store Details ───────────────────────────────
+                        // Store Details
                         if let store = currentStore {
                             VStack(alignment: .leading, spacing: 0) {
                                 sectionLabel("MY STORE")
@@ -93,7 +93,7 @@ struct BMProfileView: View {
                             .overlay(RoundedRectangle(cornerRadius: 18).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
                         }
 
-                        // ── Appearance & Contrast ──────────────────────
+                        // Appearance & Contrast
                         VStack(alignment: .leading, spacing: 0) {
                             sectionLabel("ACCESSIBILITY & APPEARANCE")
                             VStack(alignment: .leading, spacing: 10) {
@@ -139,7 +139,7 @@ struct BMProfileView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 18))
                         .overlay(RoundedRectangle(cornerRadius: 18).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
 
-                        // ── Role ────────────────────────────────────────
+                        // Role
                         VStack(alignment: .leading, spacing: 0) {
                             sectionLabel("ROLE & ACCESS")
                             ProfileInfoRow(icon: "person.badge.key.fill", iconColor: RSMSTheme.Colors.accentGold,
@@ -152,7 +152,7 @@ struct BMProfileView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 18))
                         .overlay(RoundedRectangle(cornerRadius: 18).stroke(RSMSTheme.Colors.borderLight, lineWidth: 1))
 
-                        // ── Sign Out ────────────────────────────────────
+                        // Sign Out
                         Button {
                             dismiss()
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
