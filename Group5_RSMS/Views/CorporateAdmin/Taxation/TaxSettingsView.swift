@@ -44,11 +44,7 @@ struct TaxSettingsView: View {
                     summaryHeader
                     
                     // Rules List
-                    let columns = horizontalSizeClass == .regular
-                        ? [GridItem(.adaptive(minimum: 220), spacing: RSMSTheme.Spacing.lg)]
-                        : [GridItem(.flexible())]
-                    
-                    LazyVGrid(columns: columns, spacing: RSMSTheme.Spacing.lg) {
+                    LazyVGrid(columns: gridColumns, spacing: RSMSTheme.Spacing.lg) {
                         ForEach(viewModel.filteredRules) { rule in
                             taxRuleCard(for: rule)
                         }
@@ -97,6 +93,14 @@ struct TaxSettingsView: View {
                 await viewModel.fetchTaxRules()
             }
         }
+    }
+
+    // MARK: - Computed Properties
+    
+    private var gridColumns: [GridItem] {
+        horizontalSizeClass == .regular
+            ? [GridItem(.adaptive(minimum: 220), spacing: RSMSTheme.Spacing.lg)]
+            : [GridItem(.flexible())]
     }
 
     // MARK: - Summary Header
