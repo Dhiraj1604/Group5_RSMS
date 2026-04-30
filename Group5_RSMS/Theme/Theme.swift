@@ -205,6 +205,15 @@ enum RSMSTheme {
         static let xl: CGFloat = 20
         static let pill: CGFloat = 50
     }
+
+    // MARK: - Formatters
+    static func formatCurrency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "INR"
+        formatter.locale = Locale(identifier: "en_IN")
+        return formatter.string(from: NSNumber(value: value)) ?? "₹\(Int(value))"
+    }
 }
 
 // MARK: - Reusable View Modifiers

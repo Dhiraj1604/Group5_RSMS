@@ -21,6 +21,7 @@ class VIPEventViewModel: ObservableObject {
     @Published var allGuests: [VIPGuest] = []
     @Published var appointments: [VIPAppointment] = []
     @Published var isLoadingGuests = false
+    @Published var guestPurchases: [CustomerOrder] = []
 
     // MARK: - Per-event detail (loaded on demand)
     @Published var selectedEventGuests: [VIPEventGuest] = []
@@ -245,6 +246,23 @@ class VIPEventViewModel: ObservableObject {
             }
         } catch {
             eventError = error.localizedDescription
+        }
+    }
+    
+    func deleteAppointment(appointmentId: UUID) async {
+        do {
+            try await service.deleteAppointment(appointmentId: appointmentId)
+            appointments.removeAll { $0.id == appointmentId }
+        } catch {
+            eventError = error.localizedDescription
+        }
+    }
+
+    func loadPurchaseHistory(userId: UUID) async {
+        do {
+            guestPurchases = try await service.fetchPurchaseHistory(userId: userId)
+        } catch {
+            print("Failed to fetch purchase history: \(error)")
         }
     }
 
