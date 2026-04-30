@@ -58,6 +58,19 @@ struct EmployeeSalesDetailView: View {
         return "Not Assigned"
     }
 
+    // "In 3h 20m" countdown to next shift
+    private var nextShiftCountdown: String? {
+        let now = Date()
+        let upcoming = shiftVM.shifts
+            .filter { $0.employeeId == employee.id && $0.startTime > now }
+            .sorted { $0.startTime < $1.startTime }
+        guard let next = upcoming.first else { return nil }
+        let mins = Int(next.startTime.timeIntervalSince(now) / 60)
+        let h = mins / 60; let m = mins % 60
+        if h > 0 { return "in \(h)h \(m)m" }
+        return "in \(m)m"
+    }
+
     // Derives weekly off from addEmpVM (set during editing) or falls back to employee field
     private var weeklyOffDisplay: String {
         currentEmployee.weeklyOff ?? addEmpVM.weeklyOff
@@ -70,64 +83,109 @@ struct EmployeeSalesDetailView: View {
             ScrollView {
                 VStack(spacing: 24) {
 
-                    // MARK: - Employee Header
-                    VStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(RSMSTheme.Colors.accentGold.opacity(0.1))
-                                .frame(width: 90, height: 90)
-                            Text(currentEmployee.name.prefix(1).uppercased())
-                                .font(.system(size: 40, weight: .bold))
-                                .foregroundColor(RSMSTheme.Colors.accentGold)
-                        }
+                    // MARK: - Hero Banner
+                    ZStack(alignment: .bottom) {
+                        // Gradient banner
+                        LinearGradient(
+                            colors: [
+                                RSMSTheme.Colors.accentGold.opacity(0.25),
+                                RSMSTheme.Colors.backgroundDeep
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height: 160)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .padding(.horizontal)
 
-                        VStack(spacing: 4) {
-                            Text(currentEmployee.name)
-                                .font(.title3.weight(.bold))
-                                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                        VStack(spacing: 10) {
+                            // Glowing avatar
+                            ZStack {
+                                Circle()
+                                    .fill(RSMSTheme.Colors.accentGold.opacity(0.2))
+                                    .frame(width: 104, height: 104)
+                                    .blur(radius: 8)
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [RSMSTheme.Colors.accentGold.opacity(0.4), RSMSTheme.Colors.backgroundDeep],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 90, height: 90)
+                                    .overlay(Circle().stroke(RSMSTheme.Colors.accentGold.opacity(0.5), lineWidth: 1.5))
+                                Text(currentEmployee.name.prefix(1).uppercased())
+                                    .font(.system(size: 40, weight: .bold))
+                                    .foregroundColor(RSMSTheme.Colors.accentGold)
+                            }
 
-                            Text(currentEmployee.role)
-                                .font(.subheadline)
-                                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            VStack(spacing: 4) {
+                                Text(currentEmployee.name)
+                                    .font(.title3.weight(.bold))
+                                    .foregroundColor(RSMSTheme.Colors.textPrimary)
 
-                            if let joining = employee.joiningDate {
-                                Text("Joined \(joining.formatted(date: .abbreviated, time: .omitted))")
-                                    .font(.caption)
-                                    .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.6))
+                                Text(currentEmployee.role)
+                                    .font(.subheadline)
+                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+
+                                if let joining = employee.joiningDate {
+                                    Text("Joined \(joining.formatted(date: .abbreviated, time: .omitted))")
+                                        .font(.caption)
+                                        .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.6))
+                                }
                             }
                         }
-
-                        // Active / Inactive toggle
-                        HStack {
-                            Text(displayIsActive ? "Active" : "Inactive")
-                                .font(.caption.weight(.bold))
-                                .foregroundColor(displayIsActive ? RSMSTheme.Colors.success : .red)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background((displayIsActive ? RSMSTheme.Colors.success : Color.red).opacity(0.1))
-                                .cornerRadius(20)
-                            
-                            Spacer()
-                            
-                            Toggle("", isOn: Binding<Bool>(
-                                get: { displayIsActive },
-                                set: { _ in
-                                    optimisticIsActive = !displayIsActive
-                                    Task {
-                                        await staffVM.toggleEmployeeStatus(currentEmployee, boutiqueId: boutiqueId)
-                                    }
-                                }
-                            ))
-                            .labelsHidden()
-                            .tint(RSMSTheme.Colors.success)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
-                        .background(RSMSTheme.Colors.backgroundDeep)
-                        .cornerRadius(14)
-                        .padding(.horizontal, 40)
+                        .padding(.bottom, 12)
                     }
-                    .padding(.top)
+                    .padding(.top, 8)
+
+                    // Active / Inactive toggle
+                    HStack {
+                        Text(displayIsActive ? "Active" : "Inactive")
+                            .font(.caption.weight(.bold))
+                            .foregroundColor(displayIsActive ? RSMSTheme.Colors.success : .red)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background((displayIsActive ? RSMSTheme.Colors.success : Color.red).opacity(0.1))
+                            .cornerRadius(20)
+
+                        Spacer()
+
+                        Toggle("", isOn: Binding<Bool>(
+                            get: { displayIsActive },
+                            set: { _ in
+                                optimisticIsActive = !displayIsActive
+                                Task { await staffVM.toggleEmployeeStatus(currentEmployee, boutiqueId: boutiqueId) }
+                            }
+                        ))
+                        .labelsHidden()
+                        .tint(RSMSTheme.Colors.success)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(RSMSTheme.Colors.backgroundDeep)
+                    .cornerRadius(14)
+                    .padding(.horizontal, 40)
+
+                    // MARK: - Quick Actions
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            QuickActionChip(icon: "pencil", label: "Edit", color: RSMSTheme.Colors.accentGold) {
+                                showEditEmployee = true
+                            }
+                            QuickActionChip(icon: "percent", label: "Commission", color: .cyan) {
+                                showSetCommission = true
+                            }
+                            QuickActionChip(icon: "banknote", label: "Payout", color: RSMSTheme.Colors.success) {
+                                showCreatePayout = true
+                            }
+                            QuickActionChip(icon: "trash", label: "Delete", color: RSMSTheme.Colors.error) {
+                                showDeleteConfirmation = true
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
 
                     // MARK: - Info Cards
                     HStack(spacing: 12) {
@@ -158,15 +216,34 @@ struct EmployeeSalesDetailView: View {
                                 )
                             }
                             .padding(.vertical, 16)
-                            
+
                             Divider().background(RSMSTheme.Colors.textSecondary.opacity(0.1)).padding(.horizontal)
-                            
+
                             HStack(spacing: 0) {
-                                EmployeeStatCell(
-                                    title: "Shift",
-                                    value: nextShiftDisplay,
-                                    icon: "clock"
-                                )
+                                // Shift with countdown badge
+                                VStack(spacing: 6) {
+                                    Image(systemName: "clock")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(RSMSTheme.Colors.accentGold.opacity(0.8))
+                                    VStack(spacing: 2) {
+                                        Text(nextShiftDisplay)
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(RSMSTheme.Colors.textPrimary)
+                                        if let countdown = nextShiftCountdown {
+                                            Text(countdown)
+                                                .font(.system(size: 10, weight: .semibold))
+                                                .foregroundColor(RSMSTheme.Colors.success)
+                                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                                .background(RSMSTheme.Colors.success.opacity(0.12))
+                                                .clipShape(Capsule())
+                                        }
+                                        Text("SHIFT")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.5))
+                                    }
+                                }
+                                .frame(maxWidth: .infinity)
+
                                 Divider().frame(height: 30).background(RSMSTheme.Colors.textSecondary.opacity(0.1))
                                 EmployeeStatCell(
                                     title: "Off Day",
@@ -350,6 +427,37 @@ struct EmployeeSalesDetailView: View {
         }
         .sheet(isPresented: $showCreatePayout) {
             CommissionPayoutView(employee: employee, boutiqueId: boutiqueId, commissionVM: commissionVM)
+        }
+    }
+}
+
+// MARK: - Quick Action Chip
+struct QuickActionChip: View {
+    let icon: String
+    let label: String
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.13))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: icon)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(color)
+                }
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+            }
+            .frame(width: 72)
+            .padding(.vertical, 12)
+            .background(RSMSTheme.Colors.backgroundElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(color.opacity(0.2), lineWidth: 1))
         }
     }
 }

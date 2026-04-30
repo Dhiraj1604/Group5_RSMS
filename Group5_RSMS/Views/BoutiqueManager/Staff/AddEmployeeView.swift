@@ -59,17 +59,9 @@ extension View {
     }
 }
 
-struct StaffFormSectionHeader: View {
-    let title: String
-    var body: some View {
-        Text(title)
-            .font(.caption2.weight(.bold))
-            .foregroundColor(RSMSTheme.Colors.textSecondary.opacity(0.7))
-            .padding(.leading, 8)
-    }
-}
+// MARK: - AddEmployeeView Helpers
 
-struct StaffFormFieldRow<Content: View>: View {
+struct StaffFormRow<Content: View>: View {
     let label: String
     let content: () -> Content
     
@@ -77,44 +69,11 @@ struct StaffFormFieldRow<Content: View>: View {
         HStack {
             Text(label)
                 .foregroundColor(RSMSTheme.Colors.textPrimary)
-                .frame(width: 100, alignment: .leading)
+                .font(.system(size: 16))
+            Spacer()
             content()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-    }
-}
-
-struct StaffFormDividerRow: View {
-    var body: some View {
-        Divider()
-            .background(RSMSTheme.Colors.textSecondary.opacity(0.1))
-            .padding(.horizontal, 16)
-    }
-}
-
-struct StaffFormPickerRow: View {
-    let label: String
-    let value: String
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Text(label)
-                    .foregroundColor(RSMSTheme.Colors.textPrimary)
-                Spacer()
-                HStack(spacing: 4) {
-                    Text(value)
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                    Image(systemName: "chevron.up.down")
-                        .font(.caption2)
-                        .foregroundColor(RSMSTheme.Colors.textSecondary)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-        }
+        .padding(.vertical, 4)
     }
 }
 
@@ -145,151 +104,159 @@ struct AddEmployeeView: View {
             ZStack {
                 RSMSTheme.Colors.backgroundPrimary.ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 28) {
-
-                        // Avatar
-                        ZStack {
-                            Circle()
-                                .fill(RSMSTheme.Colors.accentGold.opacity(0.1))
-                                .frame(width: 90, height: 90)
-                            Text(vm.name.prefix(1).uppercased().isEmpty ? "?" : String(vm.name.prefix(1).uppercased()))
-                                .font(.system(size: 40, weight: .bold))
-                                .foregroundColor(RSMSTheme.Colors.accentGold)
+                List {
+                    // Header Avatar Section
+                    Section {
+                        HStack {
+                            Spacer()
+                            ZStack {
+                                Circle()
+                                    .fill(RSMSTheme.Colors.accentGold.opacity(0.1))
+                                    .frame(width: 90, height: 90)
+                                Text(vm.name.prefix(1).uppercased().isEmpty ? "?" : String(vm.name.prefix(1).uppercased()))
+                                    .font(.system(size: 40, weight: .bold))
+                                    .foregroundColor(RSMSTheme.Colors.accentGold)
+                            }
+                            Spacer()
                         }
-                        .padding(.top, 16)
+                        .padding(.vertical, 20)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
 
-                        // Personal Details
-                        VStack(alignment: .leading, spacing: 10) {
-                            StaffFormSectionHeader(title: "PERSONAL DETAILS")
-
-                            VStack(spacing: 0) {
-                                StaffFormFieldRow(label: "Full Name") {
-                                    TextField("", text: $vm.name)
-                                }
-                                
-                                StaffFormDividerRow()
-
-                                HStack(spacing: 0) {
-                                    Button {
-                                        showCountryCodePicker = true
-                                    } label: {
-                                        HStack(spacing: 4) {
-                                            Text(vm.countryCode)
-                                                .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                            Image(systemName: "chevron.down")
-                                                .font(.caption2)
-                                                .foregroundColor(RSMSTheme.Colors.textSecondary)
-                                        }
-                                        .padding(.leading, 16)
-                                        .padding(.trailing, 8)
-                                    }
-                                    
-                                    Divider().frame(height: 24).background(RSMSTheme.Colors.textSecondary.opacity(0.1))
-                                    
-                                    TextField("", text: $vm.phone)
-                                        .keyboardType(.phonePad)
-                                        .padding(.leading, 12)
-                                        .padding(.vertical, 14)
-                                }
-
-                                StaffFormDividerRow()
-
-                                StaffFormFieldRow(label: "Email") {
-                                    TextField("", text: $vm.email)
-                                        .keyboardType(.emailAddress)
-                                        .textInputAutocapitalization(.never)
+                    // Personal Details
+                    Section("PERSONAL DETAILS") {
+                        StaffFormRow(label: "Full Name") {
+                            TextField("", text: $vm.name)
+                                .multilineTextAlignment(.trailing)
+                                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                        }
+                        
+                        HStack(spacing: 0) {
+                            Text("Phone")
+                                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                                .font(.system(size: 16))
+                            Spacer()
+                            Button {
+                                showCountryCodePicker = true
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text(vm.countryCode)
+                                        .foregroundColor(RSMSTheme.Colors.accentGold)
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(RSMSTheme.Colors.accentGold)
                                 }
                             }
-                            .background(RSMSTheme.Colors.backgroundDeep)
-                            .cornerRadius(14)
+                            .padding(.trailing, 8)
+                            
+                            TextField("", text: $vm.phone)
+                                .keyboardType(.phonePad)
+                                .multilineTextAlignment(.trailing)
+                                .foregroundColor(RSMSTheme.Colors.textSecondary)
+                                .frame(width: 140)
                         }
+                        .padding(.vertical, 4)
 
-                        // Employment Details
-                        VStack(alignment: .leading, spacing: 10) {
-                            StaffFormSectionHeader(title: "EMPLOYMENT DETAILS")
-
-                            VStack(spacing: 0) {
-                                StaffFormPickerRow(label: "Role", value: vm.role) {
-                                    showRolePicker = true
-                                }
-                                
-                                StaffFormDividerRow()
-
-                                StaffFormFieldRow(label: "Salary") {
-                                    TextField("", text: $vm.salary)
-                                        .keyboardType(.decimalPad)
-                                }
-
-                                StaffFormDividerRow()
-
-                                HStack {
-                                    Text("Joining Date")
-                                        .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                    Spacer()
-                                    DatePicker("", selection: $vm.joiningDate, displayedComponents: .date)
-                                        .labelsHidden()
-                                        .accentColor(RSMSTheme.Colors.accentGold)
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                            }
-                            .background(RSMSTheme.Colors.backgroundDeep)
-                            .cornerRadius(14)
+                        StaffFormRow(label: "Email") {
+                            TextField("", text: $vm.email)
+                                .keyboardType(.emailAddress)
+                                .textInputAutocapitalization(.never)
+                                .multilineTextAlignment(.trailing)
+                                .foregroundColor(RSMSTheme.Colors.textSecondary)
                         }
+                    }
+                    .listRowBackground(RSMSTheme.Colors.backgroundElevated)
 
-                        // Roster Management
-                        VStack(alignment: .leading, spacing: 10) {
-                            StaffFormSectionHeader(title: "ROSTER MANAGEMENT")
-
-                            VStack(spacing: 0) {
-                                HStack {
-                                    Text("Shift Start")
-                                        .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                    Spacer()
-                                    DatePicker("", selection: $vm.shiftStartTime, displayedComponents: .hourAndMinute)
-                                        .labelsHidden()
-                                        .environment(\.locale, Locale(identifier: "en_GB"))
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-
-                                StaffFormDividerRow()
-
-                                HStack {
-                                    Text("Shift End")
-                                        .foregroundColor(RSMSTheme.Colors.textPrimary)
-                                    Spacer()
-                                    DatePicker("", selection: $vm.shiftEndTime, displayedComponents: .hourAndMinute)
-                                        .labelsHidden()
-                                        .environment(\.locale, Locale(identifier: "en_GB"))
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-
-                                StaffFormDividerRow()
-
-                                StaffFormPickerRow(label: "Weekly Off", value: vm.weeklyOff) {
-                                    showOffDayPicker = true
+                    // Employment Details
+                    Section("EMPLOYMENT DETAILS") {
+                        Button { showRolePicker = true } label: {
+                            StaffFormRow(label: "Role") {
+                                HStack(spacing: 4) {
+                                    Text(vm.role)
+                                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(RSMSTheme.Colors.textTertiary)
                                 }
                             }
-                            .background(RSMSTheme.Colors.backgroundDeep)
-                            .cornerRadius(14)
+                        }
+                        
+                        StaffFormRow(label: "Salary") {
+                            HStack(spacing: 4) {
+                                Text("₹")
+                                    .foregroundColor(RSMSTheme.Colors.textTertiary)
+                                TextField("0", text: $vm.salary)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .foregroundColor(RSMSTheme.Colors.textSecondary)
+                            }
                         }
 
-                        if let error = staffVM.errorMessage {
+                        HStack {
+                            Text("Joining Date")
+                                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                                .font(.system(size: 16))
+                            Spacer()
+                            DatePicker("", selection: $vm.joiningDate, displayedComponents: .date)
+                                .labelsHidden()
+                                .accentColor(RSMSTheme.Colors.accentGold)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .listRowBackground(RSMSTheme.Colors.backgroundElevated)
+
+                    // Roster Management
+                    Section("ROSTER MANAGEMENT") {
+                        HStack {
+                            Text("Shift Start")
+                                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                                .font(.system(size: 16))
+                            Spacer()
+                            DatePicker("", selection: $vm.shiftStartTime, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                                .environment(\.locale, Locale(identifier: "en_GB"))
+                                .accentColor(RSMSTheme.Colors.accentGold)
+                        }
+                        .padding(.vertical, 4)
+
+                        HStack {
+                            Text("Shift End")
+                                .foregroundColor(RSMSTheme.Colors.textPrimary)
+                                .font(.system(size: 16))
+                            Spacer()
+                            DatePicker("", selection: $vm.shiftEndTime, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                                .environment(\.locale, Locale(identifier: "en_GB"))
+                                .accentColor(RSMSTheme.Colors.accentGold)
+                        }
+                        .padding(.vertical, 4)
+
+                        Button { showOffDayPicker = true } label: {
+                            StaffFormRow(label: "Weekly Off") {
+                                HStack(spacing: 4) {
+                                    Text(vm.weeklyOff)
+                                        .foregroundColor(RSMSTheme.Colors.textSecondary)
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(RSMSTheme.Colors.textTertiary)
+                                }
+                            }
+                        }
+                    }
+                    .listRowBackground(RSMSTheme.Colors.backgroundElevated)
+
+                    if let error = staffVM.errorMessage {
+                        Section {
                             Text(error)
                                 .font(.caption2)
                                 .foregroundColor(.red)
-                                .padding(.horizontal, 8)
                         }
-
-                        Spacer(minLength: 40)
-
+                        .listRowBackground(Color.clear)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
                 }
+                .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle(employeeToEdit == nil ? "Add Employee" : "Edit Employee")
             .navigationBarTitleDisplayMode(.inline)
