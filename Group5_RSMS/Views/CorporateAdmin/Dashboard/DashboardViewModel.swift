@@ -106,7 +106,7 @@ class DashboardViewModel {
         }
     }
 
-    var selectedTimeFrame: DashboardTimeFrame = .last30Days {
+    var selectedTimeFrame: DashboardTimeFrame = .yesterday {
         didSet {
             if oldValue != selectedTimeFrame {
                 Task { await fetchDashboardData(stores: stores) }

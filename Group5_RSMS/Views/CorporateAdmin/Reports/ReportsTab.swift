@@ -11,6 +11,7 @@ import SwiftUI
 struct ReportsTab: View {
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var showingProfile = false
 
     private var columns: [GridItem] {
         horizontalSizeClass == .regular
@@ -84,6 +85,22 @@ struct ReportsTab: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(RSMSTheme.Colors.backgroundPrimary, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingProfile = true
+                    } label: {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    }
+                    .accessibilityLabel("My Profile")
+                }
+            }
+            .sheet(isPresented: $showingProfile) {
+                AdminProfileView()
+                    .presentationDetents([.large])
+            }
         }
     }
 

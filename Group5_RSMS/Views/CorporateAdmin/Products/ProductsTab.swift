@@ -8,6 +8,7 @@ struct ProductsTab: View {
     @State private var selectedCategories: Set<ProductCategory> = []   // empty = All
     @State private var filterActive: Bool? = nil
     @State private var showAddProduct = false
+    @State private var showingProfile = false
     
     // 🛠️ CONFIGURATION
     private let supabaseURL = "https://bdgwzkpteyxhlgprlmye.supabase.co"
@@ -66,10 +67,22 @@ struct ProductsTab: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showAddProduct = true } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    HStack(spacing: 14) {
+                        Button { showAddProduct = true } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title3)
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                        .accessibilityLabel("Add Product")
+                        
+                        Button {
+                            showingProfile = true
+                        } label: {
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(RSMSTheme.Colors.accentGold)
+                        }
+                        .accessibilityLabel("My Profile")
                     }
                 }
             }
@@ -79,6 +92,10 @@ struct ProductsTab: View {
             }
             .refreshable { await appState.fetchProducts() }
             .sheet(isPresented: $showAddProduct) { AddProductView() }
+            .sheet(isPresented: $showingProfile) {
+                AdminProfileView()
+                    .presentationDetents([.large])
+            }
             .navigationDestination(for: Product.self) { product in
                 ProductDetailView(product: product)
             }

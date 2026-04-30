@@ -283,21 +283,7 @@ struct TaxSettingsView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     // Top Right: Status Badge
                     HStack {
-                        if isActive {
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(RSMSTheme.Colors.success)
-                                    .frame(width: 6, height: 6)
-                                Text("ACTIVE")
-                                    .font(.custom("HelveticaNeue-Bold", size: 10))
-                                    .foregroundStyle(RSMSTheme.Colors.success)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Color.black.opacity(0.4))
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
-                        }
+                    StatusDot(isActive: isActive)
                         
                         Spacer()
                         

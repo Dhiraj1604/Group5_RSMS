@@ -765,20 +765,7 @@ struct StockAnalysisStorePickerView: View {
                 HStack {
                     Spacer()
                     // Ultra-Minimal Status Dot
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(store.isActive == true ? RSMSTheme.Colors.success : .red)
-                            .frame(width: 6, height: 6)
-                            .shadow(color: store.isActive == true ? RSMSTheme.Colors.success : .red, radius: 4)
-                        Text(store.isActive == true ? "ACTIVE" : "INACTIVE")
-                            .font(.custom("HelveticaNeue-Bold", size: 10))
-                            .foregroundStyle(RSMSTheme.Colors.textSecondary)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.black.opacity(0.4))
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 0.5))
+                    StatusDot(isActive: store.isActive == true)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)

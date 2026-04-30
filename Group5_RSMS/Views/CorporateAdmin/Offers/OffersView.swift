@@ -23,6 +23,7 @@ struct OffersView: View {
     @State private var filterCategory: String = "All Categories"
     @State private var filterStoreId: UUID? = nil
     @State private var showPausedOnly = false  // kept for data compat, pill removed
+    @State private var showingProfile = false
 
     enum OfferTab: String, CaseIterable, Identifiable {
         case active    = "Active"
@@ -157,12 +158,24 @@ struct OffersView: View {
         .searchable(text: $searchText, prompt: "Search offers...")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showCreate = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(RSMSTheme.Colors.accentGold)
+                HStack(spacing: 14) {
+                    Button {
+                        showCreate = true
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    }
+                    .accessibilityLabel("Add Offer")
+                    
+                    Button {
+                        showingProfile = true
+                    } label: {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(RSMSTheme.Colors.accentGold)
+                    }
+                    .accessibilityLabel("My Profile")
                 }
             }
         }
@@ -170,6 +183,10 @@ struct OffersView: View {
             service.fetchOffers()
         } content: {
             CreateOfferView(service: service)
+        }
+        .sheet(isPresented: $showingProfile) {
+            AdminProfileView()
+                .presentationDetents([.large])
         }
         .sheet(item: $offerForDetail) { offer in
             NavigationStack {
