@@ -29,7 +29,8 @@ class DashboardViewModel {
     var storeKPIs: [StoreKPI] = []
 
     // MARK: - Trend State
-    var dailyRevenue: [DailyRevenue] = []
+    var dailyRevenue: [DailyRevenue] = []          // time-filtered (drives chart legend)
+    var allTimeDailyRevenue: [DailyRevenue] = []   // always all-time (drives AI forecast)
     var forecastRevenue: [DailyRevenue] = []
     var forecastOrders: [DailyRevenue] = []
     var predictedAOV: Double = 0
@@ -72,6 +73,7 @@ class DashboardViewModel {
 
     enum DashboardTimeFrame: String, CaseIterable, Identifiable {
         case today = "Today"
+        case yesterday = "Yesterday"
         case last7Days = "Last 7 Days"
         case last30Days = "Last 30 Days"
         case thisMonth = "This Month"
@@ -85,11 +87,21 @@ class DashboardViewModel {
             let now = Date()
             switch self {
             case .today: return calendar.startOfDay(for: now)
+            case .yesterday: return calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: now))
             case .last7Days: return calendar.date(byAdding: .day, value: -7, to: calendar.startOfDay(for: now))
             case .last30Days: return calendar.date(byAdding: .day, value: -30, to: calendar.startOfDay(for: now))
             case .thisMonth: return calendar.date(from: calendar.dateComponents([.year, .month], from: now))
             case .thisYear: return calendar.date(from: calendar.dateComponents([.year], from: now))
             case .allTime: return nil
+            }
+        }
+
+        var endDate: Date? {
+            let calendar = Calendar.current
+            let now = Date()
+            switch self {
+            case .yesterday: return calendar.startOfDay(for: now)
+            default: return nil
             }
         }
     }
@@ -280,17 +292,23 @@ class DashboardViewModel {
             if let startDate = self.selectedTimeFrame.startDate {
                 valid = valid.filter { order in
                     guard let orderDate = Self.parseDate(order.created_at) else { return false }
-                    return orderDate >= startDate
+                    let afterStart = orderDate >= startDate
+                    let beforeEnd = self.selectedTimeFrame.endDate.map { orderDate < $0 } ?? true
+                    return afterStart && beforeEnd
                 }
                 
                 validAuditLogs = validAuditLogs.filter { log in
                     guard let logDate = Self.parseDate(log.created_at) else { return false }
-                    return logDate >= startDate
+                    let afterStart = logDate >= startDate
+                    let beforeEnd = self.selectedTimeFrame.endDate.map { logDate < $0 } ?? true
+                    return afterStart && beforeEnd
                 }
                 
                 validExpenses = validExpenses.filter { exp in
                     guard let expDateStr = exp.created_at, let expDate = Self.parseDate(expDateStr) else { return false }
-                    return expDate >= startDate
+                    let afterStart = expDate >= startDate
+                    let beforeEnd = self.selectedTimeFrame.endDate.map { expDate < $0 } ?? true
+                    return afterStart && beforeEnd
                 }
             }
             
@@ -378,8 +396,15 @@ class DashboardViewModel {
                 self.conversionRate = (Double(uniqueOrderingCustomers) / Double(totalProfiles)) * 100
             }
 
-            // ── Revenue Trend (daily) ──
-            computeDailyRevenue(from: valid)
+            // ── Revenue Trend ──────────────────────────────────────────────────────
+            // dailyRevenue:        time-filtered — drives the visible chart in the AI card
+            // allTimeDailyRevenue: ALWAYS all historical data — drives the forecast regression
+            let allTimeOrders = orders.filter { order in
+                guard let s = order.status?.lowercased() else { return true }
+                return !Self.excludedStatuses.contains(s)
+            }
+            computeDailyRevenue(from: valid)         // filtered view for the chart
+            computeAllTimeDailyRevenue(from: allTimeOrders)  // full history for forecast
 
             // ── Basket Size ──
             computeBasketSize(from: filteredOrderItems)
@@ -405,10 +430,8 @@ class DashboardViewModel {
             // ── Financials (compute BEFORE AI forecast so context is correct) ──
             computeFinancials(from: filteredOrderItems, totalStockQuantity: totalStockQuantity)
 
-            // ── AI Forecast ──
+            // ── AI Forecast (always uses all-time data — independent of time filter) ──
             await computeForecast()
-
-            // (Financials already computed above)
 
             self.lastRefreshed = Date()
         } catch is CancellationError {
@@ -539,6 +562,27 @@ class DashboardViewModel {
         }
     }
 
+    /// Computes daily revenue from ALL historical orders (no time-frame filter).
+    /// Used exclusively for the AI forecast regression so the prediction
+    /// never changes when the user switches the 7D / 30D / 1Y segmented control.
+    private func computeAllTimeDailyRevenue(from orders: [OrderRow]) {
+        let cal = Calendar.current
+        var revByDay: [Date: Double] = [:]
+        var countByDay: [Date: Int] = [:]
+
+        for order in orders {
+            guard let dateStr = order.created_at,
+                  let date = Self.parseDate(dateStr) else { continue }
+            let day = cal.startOfDay(for: date)
+            revByDay[day, default: 0] += order.total_amount
+            countByDay[day, default: 0] += 1
+        }
+
+        self.allTimeDailyRevenue = revByDay.keys.sorted().map { day in
+            DailyRevenue(date: day, amount: revByDay[day] ?? 0, orderCount: countByDay[day] ?? 0)
+        }
+    }
+
     private func computeBasketSize(from items: [OrderItemRow]) {
         var itemsPerOrder: [UUID: Int] = [:]
         for item in items {
@@ -645,16 +689,16 @@ class DashboardViewModel {
         self.inventoryTurnover = avgInvValue > 0 ? (estimatedCOGS / avgInvValue) * 12 : 0
     }
 
-    /// Simple linear regression on daily revenue → 7-day forecast
-    /// PLUS actual AI API call for insights
+    /// Linear regression on ALL historical daily revenue → stable future forecast.
+    /// Uses allTimeDailyRevenue so the prediction never changes with the time filter.
     private func computeForecast() async {
-        let data = Array(dailyRevenue.suffix(30))
-        guard data.count >= 5 else { 
+        let data = Array(allTimeDailyRevenue.suffix(90))
+        guard data.count >= 5 else {
             forecastRevenue = []
             forecastOrders = []
             aiPredictions = ["Not enough data for AI forecast."]
             aiSuggestions = []
-            return 
+            return
         }
 
         let n = Double(data.count)

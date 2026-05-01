@@ -63,7 +63,7 @@ struct ReportsTab: View {
                             
                             NavigationLink(destination: AuditLogsView()) {
                                 bentoCard(
-                                    title: "Audit Intelligence",
+                                    title: "Audit Logs",
                                     subtitle: "Secure tracking of all administrative actions and changes.",
                                     icon: "shield.lefthalf.filled",
                                     color: RSMSTheme.Colors.accentGold,
